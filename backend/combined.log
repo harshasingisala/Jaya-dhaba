@@ -1,0 +1,687 @@
+{"level":"warn","message":"⚠️ Firebase Admin SDK not initialized: Missing FIREBASE_SERVICE_ACCOUNT_PATH","service":"booking-service","timestamp":"2026-04-06T17:11:52.115Z"}
+{"level":"warn","message":"⚠️ REDIS_URL not provided. Seat locks will not be Redis-backed.","service":"booking-service","timestamp":"2026-04-06T17:11:52.118Z"}
+{"address":"0.0.0.0","code":"EADDRINUSE","errno":-4091,"level":"error","message":"Server Binding Error: listen EADDRINUSE: address already in use 0.0.0.0:5000","port":5000,"service":"booking-service","stack":"Error: listen EADDRINUSE: address already in use 0.0.0.0:5000\n    at Server.setupListenHandle [as _listen2] (node:net:1948:16)\n    at listenInCluster (node:net:2005:12)\n    at node:net:2214:7\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)","syscall":"listen","timestamp":"2026-04-06T17:11:52.125Z"}
+{"level":"info","message":"MongoDB Connected 🔥","service":"booking-service","timestamp":"2026-04-06T17:11:52.144Z"}
+{"level":"warn","message":"⚠️ Firebase Admin SDK not initialized: Missing FIREBASE_SERVICE_ACCOUNT_PATH","service":"booking-service","timestamp":"2026-04-06T17:12:29.826Z"}
+{"level":"warn","message":"⚠️ REDIS_URL not provided. Seat locks will not be Redis-backed.","service":"booking-service","timestamp":"2026-04-06T17:12:29.830Z"}
+{"address":"0.0.0.0","code":"EADDRINUSE","errno":-4091,"level":"error","message":"Server Binding Error: listen EADDRINUSE: address already in use 0.0.0.0:5000","port":5000,"service":"booking-service","stack":"Error: listen EADDRINUSE: address already in use 0.0.0.0:5000\n    at Server.setupListenHandle [as _listen2] (node:net:1948:16)\n    at listenInCluster (node:net:2005:12)\n    at node:net:2214:7\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)","syscall":"listen","timestamp":"2026-04-06T17:12:29.837Z"}
+{"level":"info","message":"MongoDB Connected 🔥","service":"booking-service","timestamp":"2026-04-06T17:12:29.853Z"}
+{"level":"warn","message":"⚠️ Firebase Admin SDK not initialized: Missing FIREBASE_SERVICE_ACCOUNT_PATH","service":"booking-service","timestamp":"2026-04-06T17:13:04.004Z"}
+{"level":"warn","message":"⚠️ REDIS_URL not provided. Seat locks will not be Redis-backed.","service":"booking-service","timestamp":"2026-04-06T17:13:04.008Z"}
+{"level":"info","message":"Server running on http://0.0.0.0:5000 🚀","service":"booking-service","timestamp":"2026-04-06T17:13:04.022Z"}
+{"level":"info","message":"MongoDB Connected 🔥","service":"booking-service","timestamp":"2026-04-06T17:13:04.061Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-06T17:14:14.378Z"}
+{"level":"warn","message":"🛠️ Using Mock Firebase Sync (Bypassing Admin SDK)","service":"booking-service","timestamp":"2026-04-06T17:14:14.380Z"}
+{"isFirebaseInitialized":false,"level":"error","message":"Firebase Auth Logic Error Detail: E11000 duplicate key error collection: feedx.users index: pin_1 dup key: { pin: null }","service":"booking-service","stack":"MongoServerError: E11000 duplicate key error collection: feedx.users index: pin_1 dup key: { pin: null }\n    at InsertOneOperation.handleOk (C:\\Users\\harsh\\Desktop\\pass generator\\backend\\node_modules\\mongodb\\lib\\operations\\insert.js:51:19)\n    at tryOperation (C:\\Users\\harsh\\Desktop\\pass generator\\backend\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:217:34)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async executeOperation (C:\\Users\\harsh\\Desktop\\pass generator\\backend\\node_modules\\mongodb\\lib\\operations\\execute_operation.js:80:16)\n    at async Collection.insertOne (C:\\Users\\harsh\\Desktop\\pass generator\\backend\\node_modules\\mongodb\\lib\\collection.js:154:16)\n    at async model.$__save (C:\\Users\\harsh\\Desktop\\pass generator\\backend\\node_modules\\mongoose\\lib\\model.js:425:16)\n    at async model.save (C:\\Users\\harsh\\Desktop\\pass generator\\backend\\node_modules\\mongoose\\lib\\model.js:664:5)\n    at async exports.firebaseAuth (C:\\Users\\harsh\\Desktop\\pass generator\\backend\\src\\controllers\\authController.js:98:9)","timestamp":"2026-04-06T17:14:14.418Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-06T17:15:49.551Z"}
+{"level":"warn","message":"🛠️ Using Mock Firebase Sync (Bypassing Admin SDK)","service":"booking-service","timestamp":"2026-04-06T17:15:49.551Z"}
+{"level":"info","message":"✅ Sync Successful for dev@example.com","service":"booking-service","timestamp":"2026-04-06T17:15:49.560Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-06T17:15:49.645Z"}
+{"level":"info","message":"🛠️ Dev Auth Bypass: using dev@example.com","service":"booking-service","timestamp":"2026-04-06T17:15:49.649Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-06T17:15:49.656Z"}
+{"level":"info","message":"🛠️ Dev Auth Bypass: using dev@example.com","service":"booking-service","timestamp":"2026-04-06T17:15:49.658Z"}
+{"level":"warn","message":"⚠️ Firebase Admin SDK not initialized: Missing FIREBASE_SERVICE_ACCOUNT_PATH","service":"booking-service","timestamp":"2026-04-07T05:47:19.754Z"}
+{"level":"warn","message":"⚠️ REDIS_URL not provided. Seat locks will not be Redis-backed.","service":"booking-service","timestamp":"2026-04-07T05:47:19.756Z"}
+{"level":"info","message":"Server running on http://0.0.0.0:5000 🚀","service":"booking-service","timestamp":"2026-04-07T05:47:19.764Z"}
+{"level":"info","message":"MongoDB Connected 🔥","service":"booking-service","timestamp":"2026-04-07T05:47:19.781Z"}
+{"level":"warn","message":"⚠️ Firebase Admin SDK not initialized: Missing FIREBASE_SERVICE_ACCOUNT_PATH","service":"booking-service","timestamp":"2026-04-07T05:49:04.305Z"}
+{"level":"warn","message":"⚠️ REDIS_URL not provided. Seat locks will not be Redis-backed.","service":"booking-service","timestamp":"2026-04-07T05:49:04.308Z"}
+{"address":"0.0.0.0","code":"EADDRINUSE","errno":-4091,"level":"error","message":"Server Binding Error: listen EADDRINUSE: address already in use 0.0.0.0:5000","port":5000,"service":"booking-service","stack":"Error: listen EADDRINUSE: address already in use 0.0.0.0:5000\n    at Server.setupListenHandle [as _listen2] (node:net:1948:16)\n    at listenInCluster (node:net:2005:12)\n    at node:net:2214:7\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)","syscall":"listen","timestamp":"2026-04-07T05:49:04.316Z"}
+{"level":"info","message":"MongoDB Connected 🔥","service":"booking-service","timestamp":"2026-04-07T05:49:04.334Z"}
+{"level":"info","message":"127.0.0.1 - GET / HTTP/1.1 200 - - 3.534 ms","service":"booking-service","timestamp":"2026-04-07T06:03:48.934Z"}
+{"level":"info","message":"127.0.0.1 - GET /style.css HTTP/1.1 200 - - 2.049 ms","service":"booking-service","timestamp":"2026-04-07T06:03:49.402Z"}
+{"level":"info","message":"127.0.0.1 - GET /assets/logo.jpg HTTP/1.1 200 202160 - 2.155 ms","service":"booking-service","timestamp":"2026-04-07T06:03:49.523Z"}
+{"level":"info","message":"127.0.0.1 - GET /app.js HTTP/1.1 200 - - 1.003 ms","service":"booking-service","timestamp":"2026-04-07T06:03:49.533Z"}
+{"level":"info","message":"127.0.0.1 - GET /favicon.ico HTTP/1.1 200 - - 2.159 ms","service":"booking-service","timestamp":"2026-04-07T06:03:50.442Z"}
+{"level":"info","message":"127.0.0.1 - GET /favicon.ico HTTP/1.1 304 - - 1.769 ms","service":"booking-service","timestamp":"2026-04-07T06:03:56.223Z"}
+{"level":"info","message":"127.0.0.1 - GET / HTTP/1.1 304 - - 0.442 ms","service":"booking-service","timestamp":"2026-04-07T06:05:43.213Z"}
+{"level":"info","message":"127.0.0.1 - GET /style.css HTTP/1.1 200 - - 0.951 ms","service":"booking-service","timestamp":"2026-04-07T06:05:43.252Z"}
+{"level":"info","message":"127.0.0.1 - GET /assets/logo.jpg HTTP/1.1 304 - - 0.851 ms","service":"booking-service","timestamp":"2026-04-07T06:05:43.254Z"}
+{"level":"info","message":"127.0.0.1 - GET /app.js HTTP/1.1 200 - - 1.581 ms","service":"booking-service","timestamp":"2026-04-07T06:05:43.262Z"}
+{"level":"info","message":"127.0.0.1 - GET /favicon.ico HTTP/1.1 304 - - 0.516 ms","service":"booking-service","timestamp":"2026-04-07T06:05:44.075Z"}
+{"level":"info","message":"127.0.0.1 - GET / HTTP/1.1 200 - - 1.201 ms","service":"booking-service","timestamp":"2026-04-07T06:16:33.488Z"}
+{"level":"info","message":"127.0.0.1 - GET /style.css HTTP/1.1 200 - - 0.621 ms","service":"booking-service","timestamp":"2026-04-07T06:16:33.516Z"}
+{"level":"info","message":"127.0.0.1 - GET /assets/logo.jpg HTTP/1.1 200 202160 - 1.162 ms","service":"booking-service","timestamp":"2026-04-07T06:16:33.518Z"}
+{"level":"info","message":"127.0.0.1 - GET /app.js HTTP/1.1 200 - - 1.789 ms","service":"booking-service","timestamp":"2026-04-07T06:16:33.521Z"}
+{"level":"info","message":"127.0.0.1 - GET /favicon.ico HTTP/1.1 200 - - 0.954 ms","service":"booking-service","timestamp":"2026-04-07T06:16:34.374Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/register HTTP/1.1 200 62 - 31.812 ms","service":"booking-service","timestamp":"2026-04-07T06:17:32.675Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-07T06:17:32.679Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-07T06:17:32.679Z"}
+{"level":"info","message":"ℹ️ Dev Sync: admin@gmail.com (UID: mock_YWRtaW5AZ2)","service":"booking-service","timestamp":"2026-04-07T06:17:32.680Z"}
+{"level":"info","message":"✅ Sync Successful for admin@gmail.com","service":"booking-service","timestamp":"2026-04-07T06:17:32.699Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 311 - 21.042 ms","service":"booking-service","timestamp":"2026-04-07T06:17:32.700Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-07T06:17:32.711Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 200 925 - 6.665 ms","service":"booking-service","timestamp":"2026-04-07T06:17:32.712Z"}
+{"level":"info","message":"🛠️ Dev Auth Bypass: using admin@gmail.com","service":"booking-service","timestamp":"2026-04-07T06:17:32.769Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 200 2 - 7.711 ms","service":"booking-service","timestamp":"2026-04-07T06:17:32.774Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/seats?eventId=69d25caf77f53658eccf8d2b HTTP/1.1 200 - - 14.302 ms","service":"booking-service","timestamp":"2026-04-07T06:17:36.993Z"}
+{"level":"info","message":"🛠️ Dev Auth Bypass: using admin@gmail.com","service":"booking-service","timestamp":"2026-04-07T06:17:41.423Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/booking/create-order HTTP/1.1 200 223 - 216.625 ms","service":"booking-service","timestamp":"2026-04-07T06:17:41.638Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/config HTTP/1.1 200 45 - 0.411 ms","service":"booking-service","timestamp":"2026-04-07T06:17:41.641Z"}
+{"level":"info","message":"🛠️ Dev Auth Bypass: using admin@gmail.com","service":"booking-service","timestamp":"2026-04-07T06:17:51.060Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/booking/create-order HTTP/1.1 200 223 - 150.020 ms","service":"booking-service","timestamp":"2026-04-07T06:17:51.208Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/config HTTP/1.1 304 - - 0.413 ms","service":"booking-service","timestamp":"2026-04-07T06:17:51.212Z"}
+{"level":"warn","message":"⚠️ Firebase Admin SDK not initialized: Missing FIREBASE_SERVICE_ACCOUNT_PATH","service":"booking-service","timestamp":"2026-04-07T06:34:30.724Z"}
+{"level":"warn","message":"⚠️ REDIS_URL not provided. Seat locks will not be Redis-backed.","service":"booking-service","timestamp":"2026-04-07T06:34:30.727Z"}
+{"level":"info","message":"Server running on http://0.0.0.0:5000 🚀","service":"booking-service","timestamp":"2026-04-07T06:34:30.736Z"}
+{"level":"info","message":"MongoDB Connected 🔥","service":"booking-service","timestamp":"2026-04-07T06:34:30.769Z"}
+{"level":"info","message":"127.0.0.1 - GET / HTTP/1.1 200 - - 14.812 ms","service":"booking-service","timestamp":"2026-04-07T06:34:56.712Z"}
+{"level":"info","message":"127.0.0.1 - GET /style.css HTTP/1.1 200 - - 1.730 ms","service":"booking-service","timestamp":"2026-04-07T06:34:56.757Z"}
+{"level":"info","message":"127.0.0.1 - GET /assets/logo.jpg HTTP/1.1 200 202160 - 0.918 ms","service":"booking-service","timestamp":"2026-04-07T06:34:56.759Z"}
+{"level":"info","message":"127.0.0.1 - GET /app.js HTTP/1.1 200 - - 1.804 ms","service":"booking-service","timestamp":"2026-04-07T06:34:56.763Z"}
+{"level":"info","message":"127.0.0.1 - GET /favicon.ico HTTP/1.1 200 - - 2.236 ms","service":"booking-service","timestamp":"2026-04-07T06:34:57.764Z"}
+{"level":"info","message":"127.0.0.1 - GET /favicon.ico HTTP/1.1 304 - - 1.008 ms","service":"booking-service","timestamp":"2026-04-07T06:35:09.191Z"}
+{"level":"info","message":"127.0.0.1 - GET / HTTP/1.1 304 - - 1.983 ms","service":"booking-service","timestamp":"2026-04-07T06:40:55.991Z"}
+{"level":"info","message":"127.0.0.1 - GET /style.css HTTP/1.1 304 - - 0.473 ms","service":"booking-service","timestamp":"2026-04-07T06:40:56.031Z"}
+{"level":"info","message":"127.0.0.1 - GET /assets/logo.jpg HTTP/1.1 304 - - 0.361 ms","service":"booking-service","timestamp":"2026-04-07T06:40:56.033Z"}
+{"level":"info","message":"127.0.0.1 - GET /app.js HTTP/1.1 200 - - 0.783 ms","service":"booking-service","timestamp":"2026-04-07T06:40:56.038Z"}
+{"level":"info","message":"127.0.0.1 - GET /favicon.ico HTTP/1.1 304 - - 0.795 ms","service":"booking-service","timestamp":"2026-04-07T06:40:56.786Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/register HTTP/1.1 200 77 - 85.698 ms","service":"booking-service","timestamp":"2026-04-07T06:43:52.563Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-07T06:43:52.573Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-07T06:43:52.575Z"}
+{"level":"info","message":"ℹ️ Dev Sync: harshasingisala@gmail.com (UID: mock_aGFyc2hhc2)","service":"booking-service","timestamp":"2026-04-07T06:43:52.576Z"}
+{"level":"info","message":"✅ Sync Successful for harshasingisala@gmail.com","service":"booking-service","timestamp":"2026-04-07T06:43:52.611Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 339 - 40.262 ms","service":"booking-service","timestamp":"2026-04-07T06:43:52.613Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-07T06:43:52.648Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 200 925 - 3.523 ms","service":"booking-service","timestamp":"2026-04-07T06:43:52.649Z"}
+{"level":"info","message":"🛠️ Dev Auth Bypass: using harshasingisala@gmail.com","service":"booking-service","timestamp":"2026-04-07T06:43:52.682Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 200 2 - 6.946 ms","service":"booking-service","timestamp":"2026-04-07T06:43:52.686Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/seats?eventId=69d25caf77f53658eccf8d2b HTTP/1.1 200 - - 10.154 ms","service":"booking-service","timestamp":"2026-04-07T06:43:56.007Z"}
+{"level":"info","message":"🛠️ Dev Auth Bypass: using harshasingisala@gmail.com","service":"booking-service","timestamp":"2026-04-07T06:44:17.102Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/booking/create-order HTTP/1.1 200 227 - 298.826 ms","service":"booking-service","timestamp":"2026-04-07T06:44:17.398Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/config HTTP/1.1 200 73 - 0.332 ms","service":"booking-service","timestamp":"2026-04-07T06:44:17.402Z"}
+{"level":"info","message":"127.0.0.1 - GET /favicon.ico HTTP/1.1 304 - - 0.748 ms","service":"booking-service","timestamp":"2026-04-07T06:44:19.317Z"}
+{"level":"info","message":"🛠️ Dev Auth Bypass: using harshasingisala@gmail.com","service":"booking-service","timestamp":"2026-04-07T06:45:28.264Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/booking/create-order HTTP/1.1 200 227 - 179.701 ms","service":"booking-service","timestamp":"2026-04-07T06:45:28.439Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/config HTTP/1.1 304 - - 0.417 ms","service":"booking-service","timestamp":"2026-04-07T06:45:28.444Z"}
+{"level":"info","message":"127.0.0.1 - GET / HTTP/1.1 304 - - 1.949 ms","service":"booking-service","timestamp":"2026-04-07T06:47:04.441Z"}
+{"level":"info","message":"127.0.0.1 - GET /style.css HTTP/1.1 200 - - 0.795 ms","service":"booking-service","timestamp":"2026-04-07T06:47:04.475Z"}
+{"level":"info","message":"127.0.0.1 - GET /assets/logo.jpg HTTP/1.1 304 - - 1.385 ms","service":"booking-service","timestamp":"2026-04-07T06:47:04.476Z"}
+{"level":"info","message":"127.0.0.1 - GET /app.js HTTP/1.1 200 - - 0.766 ms","service":"booking-service","timestamp":"2026-04-07T06:47:04.480Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-07T06:47:04.735Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 304 - - 3.181 ms","service":"booking-service","timestamp":"2026-04-07T06:47:04.736Z"}
+{"level":"info","message":"🛠️ Dev Auth Bypass: using harshasingisala@gmail.com","service":"booking-service","timestamp":"2026-04-07T06:47:04.792Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 304 - - 3.174 ms","service":"booking-service","timestamp":"2026-04-07T06:47:04.794Z"}
+{"level":"info","message":"127.0.0.1 - GET /favicon.ico HTTP/1.1 304 - - 0.584 ms","service":"booking-service","timestamp":"2026-04-07T06:47:04.827Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/seats?eventId=69d25caf77f53658eccf8d2b HTTP/1.1 200 - - 6.619 ms","service":"booking-service","timestamp":"2026-04-07T06:47:06.194Z"}
+{"level":"info","message":"127.0.0.1 - GET / HTTP/1.1 304 - - 0.365 ms","service":"booking-service","timestamp":"2026-04-07T06:49:00.157Z"}
+{"level":"info","message":"127.0.0.1 - GET /assets/logo.jpg HTTP/1.1 304 - - 0.371 ms","service":"booking-service","timestamp":"2026-04-07T06:49:00.176Z"}
+{"level":"info","message":"127.0.0.1 - GET /style.css HTTP/1.1 200 - - 0.759 ms","service":"booking-service","timestamp":"2026-04-07T06:49:00.177Z"}
+{"level":"info","message":"127.0.0.1 - GET /app.js HTTP/1.1 304 - - 0.328 ms","service":"booking-service","timestamp":"2026-04-07T06:49:00.180Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-07T06:49:00.387Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 304 - - 1.923 ms","service":"booking-service","timestamp":"2026-04-07T06:49:00.388Z"}
+{"level":"info","message":"🛠️ Dev Auth Bypass: using harshasingisala@gmail.com","service":"booking-service","timestamp":"2026-04-07T06:49:00.445Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 304 - - 4.120 ms","service":"booking-service","timestamp":"2026-04-07T06:49:00.447Z"}
+{"level":"info","message":"127.0.0.1 - GET /favicon.ico HTTP/1.1 304 - - 1.131 ms","service":"booking-service","timestamp":"2026-04-07T06:49:00.483Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/seats?eventId=69d25caf77f53658eccf8d2b HTTP/1.1 304 - - 9.214 ms","service":"booking-service","timestamp":"2026-04-07T06:49:02.068Z"}
+{"level":"info","message":"127.0.0.1 - GET / HTTP/1.1 304 - - 0.762 ms","service":"booking-service","timestamp":"2026-04-07T06:57:09.717Z"}
+{"level":"info","message":"127.0.0.1 - GET /style.css HTTP/1.1 200 - - 0.642 ms","service":"booking-service","timestamp":"2026-04-07T06:57:09.745Z"}
+{"level":"info","message":"127.0.0.1 - GET /assets/logo.jpg HTTP/1.1 304 - - 1.200 ms","service":"booking-service","timestamp":"2026-04-07T06:57:09.746Z"}
+{"level":"info","message":"127.0.0.1 - GET /app.js HTTP/1.1 200 - - 0.755 ms","service":"booking-service","timestamp":"2026-04-07T06:57:09.750Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-07T06:57:10.039Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 304 - - 2.206 ms","service":"booking-service","timestamp":"2026-04-07T06:57:10.039Z"}
+{"level":"info","message":"🛠️ Dev Auth Bypass: using harshasingisala@gmail.com","service":"booking-service","timestamp":"2026-04-07T06:57:10.068Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 304 - - 5.071 ms","service":"booking-service","timestamp":"2026-04-07T06:57:10.071Z"}
+{"level":"info","message":"127.0.0.1 - GET /favicon.ico HTTP/1.1 304 - - 0.764 ms","service":"booking-service","timestamp":"2026-04-07T06:57:10.202Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/seats?eventId=69d25caf77f53658eccf8d2b HTTP/1.1 200 - - 5.936 ms","service":"booking-service","timestamp":"2026-04-07T06:57:20.580Z"}
+{"level":"info","message":"127.0.0.1 - GET / HTTP/1.1 304 - - 0.758 ms","service":"booking-service","timestamp":"2026-04-07T06:58:25.462Z"}
+{"level":"info","message":"127.0.0.1 - GET /style.css HTTP/1.1 304 - - 0.288 ms","service":"booking-service","timestamp":"2026-04-07T06:58:25.488Z"}
+{"level":"info","message":"127.0.0.1 - GET /assets/logo.jpg HTTP/1.1 304 - - 0.259 ms","service":"booking-service","timestamp":"2026-04-07T06:58:25.489Z"}
+{"level":"info","message":"127.0.0.1 - GET /app.js HTTP/1.1 304 - - 0.312 ms","service":"booking-service","timestamp":"2026-04-07T06:58:25.491Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-07T06:58:25.678Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 304 - - 2.413 ms","service":"booking-service","timestamp":"2026-04-07T06:58:25.679Z"}
+{"level":"info","message":"🛠️ Dev Auth Bypass: using harshasingisala@gmail.com","service":"booking-service","timestamp":"2026-04-07T06:58:25.746Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 304 - - 3.708 ms","service":"booking-service","timestamp":"2026-04-07T06:58:25.748Z"}
+{"level":"info","message":"127.0.0.1 - GET /favicon.ico HTTP/1.1 304 - - 0.546 ms","service":"booking-service","timestamp":"2026-04-07T06:58:25.797Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/seats?eventId=69d25caf77f53658eccf8d2b HTTP/1.1 200 - - 8.937 ms","service":"booking-service","timestamp":"2026-04-07T06:58:27.213Z"}
+{"level":"info","message":"127.0.0.1 - GET / HTTP/1.1 304 - - 1.216 ms","service":"booking-service","timestamp":"2026-04-07T07:06:41.586Z"}
+{"level":"info","message":"127.0.0.1 - GET /style.css HTTP/1.1 200 - - 0.883 ms","service":"booking-service","timestamp":"2026-04-07T07:06:41.614Z"}
+{"level":"info","message":"127.0.0.1 - GET /assets/logo.jpg HTTP/1.1 304 - - 0.404 ms","service":"booking-service","timestamp":"2026-04-07T07:06:41.616Z"}
+{"level":"info","message":"127.0.0.1 - GET /app.js HTTP/1.1 200 - - 0.710 ms","service":"booking-service","timestamp":"2026-04-07T07:06:41.619Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-07T07:06:41.860Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 304 - - 2.178 ms","service":"booking-service","timestamp":"2026-04-07T07:06:41.861Z"}
+{"level":"info","message":"🛠️ Dev Auth Bypass: using harshasingisala@gmail.com","service":"booking-service","timestamp":"2026-04-07T07:06:41.890Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 304 - - 4.746 ms","service":"booking-service","timestamp":"2026-04-07T07:06:41.894Z"}
+{"level":"info","message":"127.0.0.1 - GET /favicon.ico HTTP/1.1 304 - - 0.602 ms","service":"booking-service","timestamp":"2026-04-07T07:06:42.010Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/seats?eventId=69d25caf77f53658eccf8d2b HTTP/1.1 304 - - 4.080 ms","service":"booking-service","timestamp":"2026-04-07T07:06:43.482Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-07T07:06:49.811Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 304 - - 2.945 ms","service":"booking-service","timestamp":"2026-04-07T07:06:49.813Z"}
+{"level":"info","message":"🛠️ Dev Auth Bypass: using harshasingisala@gmail.com","service":"booking-service","timestamp":"2026-04-07T07:06:49.820Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 304 - - 4.045 ms","service":"booking-service","timestamp":"2026-04-07T07:06:49.822Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/seats?eventId=69d25caf77f53658eccf8d2a HTTP/1.1 200 - - 5.512 ms","service":"booking-service","timestamp":"2026-04-07T07:06:51.634Z"}
+{"level":"info","message":"127.0.0.1 - GET / HTTP/1.1 304 - - 0.958 ms","service":"booking-service","timestamp":"2026-04-07T07:08:42.911Z"}
+{"level":"info","message":"127.0.0.1 - GET /style.css HTTP/1.1 200 - - 0.640 ms","service":"booking-service","timestamp":"2026-04-07T07:08:42.949Z"}
+{"level":"info","message":"127.0.0.1 - GET /assets/logo.jpg HTTP/1.1 304 - - 0.268 ms","service":"booking-service","timestamp":"2026-04-07T07:08:42.950Z"}
+{"level":"info","message":"127.0.0.1 - GET /app.js HTTP/1.1 200 - - 0.627 ms","service":"booking-service","timestamp":"2026-04-07T07:08:42.955Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-07T07:08:43.444Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 304 - - 2.555 ms","service":"booking-service","timestamp":"2026-04-07T07:08:43.445Z"}
+{"level":"info","message":"🛠️ Dev Auth Bypass: using harshasingisala@gmail.com","service":"booking-service","timestamp":"2026-04-07T07:08:43.499Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 304 - - 5.491 ms","service":"booking-service","timestamp":"2026-04-07T07:08:43.502Z"}
+{"level":"info","message":"127.0.0.1 - GET /favicon.ico HTTP/1.1 304 - - 0.770 ms","service":"booking-service","timestamp":"2026-04-07T07:08:43.662Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/seats?eventId=69d25caf77f53658eccf8d2a HTTP/1.1 200 - - 4.507 ms","service":"booking-service","timestamp":"2026-04-07T07:08:45.694Z"}
+{"level":"warn","message":"⚠️ Firebase Admin SDK not initialized: Missing FIREBASE_SERVICE_ACCOUNT_PATH","service":"booking-service","timestamp":"2026-04-08T05:24:21.550Z"}
+{"level":"warn","message":"⚠️ REDIS_URL not provided. Seat locks will not be Redis-backed.","service":"booking-service","timestamp":"2026-04-08T05:24:21.553Z"}
+{"level":"info","message":"Server running on http://0.0.0.0:5000 🚀","service":"booking-service","timestamp":"2026-04-08T05:24:21.561Z"}
+{"level":"info","message":"MongoDB Connected 🔥","service":"booking-service","timestamp":"2026-04-08T05:24:21.579Z"}
+{"level":"info","message":"127.0.0.1 - HEAD /api/test HTTP/1.1 200 62 - 2.738 ms","service":"booking-service","timestamp":"2026-04-08T05:24:47.959Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/test HTTP/1.1 200 62 - 0.288 ms","service":"booking-service","timestamp":"2026-04-08T05:24:47.962Z"}
+{"level":"error","message":"Unhandled Error: Bad escaped character in JSON at position 9 (line 1 column 10)","method":"POST","service":"booking-service","stack":"SyntaxError: Bad escaped character in JSON at position 9 (line 1 column 10)\n    at JSON.parse (<anonymous>)\n    at parse (C:\\Users\\harsh\\Desktop\\pass generator\\backend\\node_modules\\body-parser\\lib\\types\\json.js:72:19)\n    at C:\\Users\\harsh\\Desktop\\pass generator\\backend\\node_modules\\body-parser\\lib\\read.js:162:18\n    at AsyncResource.runInAsyncScope (node:async_hooks:228:14)\n    at invokeCallback (C:\\Users\\harsh\\Desktop\\pass generator\\backend\\node_modules\\raw-body\\index.js:238:16)\n    at done (C:\\Users\\harsh\\Desktop\\pass generator\\backend\\node_modules\\raw-body\\index.js:227:7)\n    at IncomingMessage.onEnd (C:\\Users\\harsh\\Desktop\\pass generator\\backend\\node_modules\\raw-body\\index.js:287:7)\n    at IncomingMessage.emit (node:events:508:28)\n    at endReadableNT (node:internal/streams/readable:1729:12)\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)","timestamp":"2026-04-08T05:24:58.673Z","url":"/api/auth/firebase"}
+{"level":"error","message":"Unhandled Error: Expected property name or '}' in JSON at position 1 (line 1 column 2)","method":"POST","service":"booking-service","stack":"SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)\n    at JSON.parse (<anonymous>)\n    at parse (C:\\Users\\harsh\\Desktop\\pass generator\\backend\\node_modules\\body-parser\\lib\\types\\json.js:72:19)\n    at C:\\Users\\harsh\\Desktop\\pass generator\\backend\\node_modules\\body-parser\\lib\\read.js:162:18\n    at AsyncResource.runInAsyncScope (node:async_hooks:228:14)\n    at invokeCallback (C:\\Users\\harsh\\Desktop\\pass generator\\backend\\node_modules\\raw-body\\index.js:238:16)\n    at done (C:\\Users\\harsh\\Desktop\\pass generator\\backend\\node_modules\\raw-body\\index.js:227:7)\n    at IncomingMessage.onEnd (C:\\Users\\harsh\\Desktop\\pass generator\\backend\\node_modules\\raw-body\\index.js:287:7)\n    at IncomingMessage.emit (node:events:508:28)\n    at endReadableNT (node:internal/streams/readable:1729:12)\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)","timestamp":"2026-04-08T05:29:44.990Z","url":"/api/auth/firebase"}
+{"level":"warn","message":"⚠️ Firebase Admin SDK not initialized: Missing FIREBASE_SERVICE_ACCOUNT_PATH","service":"booking-service","timestamp":"2026-04-08T05:32:23.867Z"}
+{"level":"warn","message":"⚠️ REDIS_URL not provided. Seat locks will not be Redis-backed.","service":"booking-service","timestamp":"2026-04-08T05:32:23.870Z"}
+{"level":"info","message":"Server running on http://0.0.0.0:5000 🚀","service":"booking-service","timestamp":"2026-04-08T05:32:23.877Z"}
+{"level":"info","message":"MongoDB Connected 🔥","service":"booking-service","timestamp":"2026-04-08T05:32:23.893Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/test HTTP/1.1 200 62 - 11.926 ms","service":"booking-service","timestamp":"2026-04-08T05:34:23.549Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-08T05:34:42.023Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-08T05:34:42.025Z"}
+{"level":"info","message":"ℹ️ Dev Sync: dev@example.com (UID: mock_ZGV2QGV4YW)","service":"booking-service","timestamp":"2026-04-08T05:34:42.026Z"}
+{"level":"info","message":"✅ Sync Successful for dev@example.com","service":"booking-service","timestamp":"2026-04-08T05:34:42.142Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 318 - 130.670 ms","service":"booking-service","timestamp":"2026-04-08T05:34:42.143Z"}
+{"level":"info","message":"🛠️ Dev Auth Bypass: using harshasingisala@gmail.com","service":"booking-service","timestamp":"2026-04-08T05:34:42.312Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-08T05:34:42.323Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 200 925 - 17.275 ms","service":"booking-service","timestamp":"2026-04-08T05:34:42.324Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-08T05:34:42.327Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 304 - - 3.517 ms","service":"booking-service","timestamp":"2026-04-08T05:34:42.329Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 200 2 - 24.432 ms","service":"booking-service","timestamp":"2026-04-08T05:34:42.333Z"}
+{"level":"info","message":"🛠️ Dev Auth Bypass: using harshasingisala@gmail.com","service":"booking-service","timestamp":"2026-04-08T05:34:42.338Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 304 - - 4.871 ms","service":"booking-service","timestamp":"2026-04-08T05:34:42.340Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events/69d25caf77f53658eccf8d2b HTTP/1.1 200 454 - 10.839 ms","service":"booking-service","timestamp":"2026-04-08T05:34:45.020Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events/69d25caf77f53658eccf8d2b HTTP/1.1 304 - - 1.569 ms","service":"booking-service","timestamp":"2026-04-08T05:34:45.023Z"}
+{"level":"info","message":"🛠️ Dev Auth Bypass: using harshasingisala@gmail.com","service":"booking-service","timestamp":"2026-04-08T05:35:12.836Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/booking/create-order HTTP/1.1 200 227 - 251.904 ms","service":"booking-service","timestamp":"2026-04-08T05:35:13.085Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/config HTTP/1.1 200 73 - 0.542 ms","service":"booking-service","timestamp":"2026-04-08T05:35:13.093Z"}
+{"level":"info","message":"🛠️ Dev Auth Bypass: using harshasingisala@gmail.com","service":"booking-service","timestamp":"2026-04-08T05:37:32.978Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/booking/create-order HTTP/1.1 200 227 - 196.559 ms","service":"booking-service","timestamp":"2026-04-08T05:37:33.172Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/config HTTP/1.1 304 - - 0.396 ms","service":"booking-service","timestamp":"2026-04-08T05:37:33.179Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events/69d25caf77f53658eccf8d2b HTTP/1.1 200 464 - 2.137 ms","service":"booking-service","timestamp":"2026-04-08T05:41:15.165Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events/69d25caf77f53658eccf8d2b HTTP/1.1 304 - - 1.942 ms","service":"booking-service","timestamp":"2026-04-08T05:41:15.169Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-08T05:41:16.186Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 200 945 - 2.262 ms","service":"booking-service","timestamp":"2026-04-08T05:41:16.187Z"}
+{"level":"info","message":"🛠️ Dev Auth Bypass: using harshasingisala@gmail.com","service":"booking-service","timestamp":"2026-04-08T05:41:16.188Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 304 - - 5.071 ms","service":"booking-service","timestamp":"2026-04-08T05:41:16.190Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-08T05:41:16.191Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 304 - - 2.413 ms","service":"booking-service","timestamp":"2026-04-08T05:41:16.192Z"}
+{"level":"info","message":"🛠️ Dev Auth Bypass: using harshasingisala@gmail.com","service":"booking-service","timestamp":"2026-04-08T05:41:16.195Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 304 - - 4.248 ms","service":"booking-service","timestamp":"2026-04-08T05:41:16.197Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-08T05:42:03.579Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-08T05:42:03.580Z"}
+{"level":"info","message":"ℹ️ Dev Sync: dev@example.com (UID: mock_ZGV2QGV4YW)","service":"booking-service","timestamp":"2026-04-08T05:42:03.580Z"}
+{"level":"info","message":"✅ Sync Successful for dev@example.com","service":"booking-service","timestamp":"2026-04-08T05:42:03.585Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 318 - 6.129 ms","service":"booking-service","timestamp":"2026-04-08T05:42:03.586Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-08T05:42:14.048Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 304 - - 3.083 ms","service":"booking-service","timestamp":"2026-04-08T05:42:14.049Z"}
+{"level":"info","message":"🛠️ Dev Auth Bypass: using harshasingisala@gmail.com","service":"booking-service","timestamp":"2026-04-08T05:42:14.050Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 304 - - 6.314 ms","service":"booking-service","timestamp":"2026-04-08T05:42:14.053Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-08T05:42:14.054Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 304 - - 4.238 ms","service":"booking-service","timestamp":"2026-04-08T05:42:14.056Z"}
+{"level":"info","message":"🛠️ Dev Auth Bypass: using harshasingisala@gmail.com","service":"booking-service","timestamp":"2026-04-08T05:42:14.059Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 304 - - 3.793 ms","service":"booking-service","timestamp":"2026-04-08T05:42:14.062Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events/69d25caf77f53658eccf8d2a HTTP/1.1 200 478 - 1.788 ms","service":"booking-service","timestamp":"2026-04-08T05:42:20.367Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events/69d25caf77f53658eccf8d2a HTTP/1.1 304 - - 1.887 ms","service":"booking-service","timestamp":"2026-04-08T05:42:20.371Z"}
+{"level":"info","message":"🛠️ Dev Auth Bypass: using harshasingisala@gmail.com","service":"booking-service","timestamp":"2026-04-08T05:42:49.802Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/booking/create-order HTTP/1.1 200 227 - 184.715 ms","service":"booking-service","timestamp":"2026-04-08T05:42:49.985Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/config HTTP/1.1 304 - - 0.154 ms","service":"booking-service","timestamp":"2026-04-08T05:42:49.990Z"}
+{"level":"warn","message":"⚠️ Firebase Admin SDK not initialized: Missing FIREBASE_SERVICE_ACCOUNT_PATH","service":"booking-service","timestamp":"2026-04-08T05:44:44.784Z"}
+{"level":"warn","message":"⚠️ REDIS_URL not provided. Seat locks will not be Redis-backed.","service":"booking-service","timestamp":"2026-04-08T05:44:44.787Z"}
+{"level":"info","message":"Server running on http://0.0.0.0:5000 🚀","service":"booking-service","timestamp":"2026-04-08T05:44:44.794Z"}
+{"level":"info","message":"MongoDB Connected 🔥","service":"booking-service","timestamp":"2026-04-08T05:44:44.809Z"}
+{"level":"warn","message":"⚠️ Firebase Admin SDK not initialized: Missing FIREBASE_SERVICE_ACCOUNT_PATH","service":"booking-service","timestamp":"2026-04-08T06:10:50.389Z"}
+{"level":"warn","message":"⚠️ REDIS_URL not provided. Seat locks will not be Redis-backed.","service":"booking-service","timestamp":"2026-04-08T06:10:50.392Z"}
+{"level":"info","message":"Server running on http://0.0.0.0:5000 🚀","service":"booking-service","timestamp":"2026-04-08T06:10:50.399Z"}
+{"level":"info","message":"MongoDB Connected 🔥","service":"booking-service","timestamp":"2026-04-08T06:10:50.414Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-08T06:11:27.506Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-08T06:11:27.507Z"}
+{"level":"info","message":"ℹ️ Dev Sync: dev@example.com (UID: mock_ZGV2QGV4YW)","service":"booking-service","timestamp":"2026-04-08T06:11:27.507Z"}
+{"level":"info","message":"✅ Sync Successful for dev@example.com","service":"booking-service","timestamp":"2026-04-08T06:11:27.530Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 318 - 30.842 ms","service":"booking-service","timestamp":"2026-04-08T06:11:27.535Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-08T06:12:34.191Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-08T06:12:34.192Z"}
+{"level":"info","message":"ℹ️ Dev Sync: dev@example.com (UID: mock_ZGV2QGV4YW)","service":"booking-service","timestamp":"2026-04-08T06:12:34.192Z"}
+{"level":"info","message":"✅ Sync Successful for dev@example.com","service":"booking-service","timestamp":"2026-04-08T06:12:34.204Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 318 - 14.740 ms","service":"booking-service","timestamp":"2026-04-08T06:12:34.205Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events/69d25caf77f53658eccf8d2a HTTP/1.1 304 - - 2.423 ms","service":"booking-service","timestamp":"2026-04-08T06:12:35.176Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events/69d25caf77f53658eccf8d2a HTTP/1.1 304 - - 1.533 ms","service":"booking-service","timestamp":"2026-04-08T06:12:35.179Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-08T06:12:36.535Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 304 - - 4.850 ms","service":"booking-service","timestamp":"2026-04-08T06:12:36.536Z"}
+{"level":"info","message":"🛠️ Dev Auth Bypass: using harshasingisala@gmail.com","service":"booking-service","timestamp":"2026-04-08T06:12:36.537Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 304 - - 7.335 ms","service":"booking-service","timestamp":"2026-04-08T06:12:36.541Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-08T06:12:36.542Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 304 - - 3.073 ms","service":"booking-service","timestamp":"2026-04-08T06:12:36.543Z"}
+{"level":"info","message":"🛠️ Dev Auth Bypass: using harshasingisala@gmail.com","service":"booking-service","timestamp":"2026-04-08T06:12:36.545Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 304 - - 3.822 ms","service":"booking-service","timestamp":"2026-04-08T06:12:36.547Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events/69d25caf77f53658eccf8d2b HTTP/1.1 304 - - 1.788 ms","service":"booking-service","timestamp":"2026-04-08T06:12:41.795Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events/69d25caf77f53658eccf8d2b HTTP/1.1 304 - - 1.894 ms","service":"booking-service","timestamp":"2026-04-08T06:12:41.799Z"}
+{"level":"info","message":"🛠️ Dev Auth Bypass: using harshasingisala@gmail.com","service":"booking-service","timestamp":"2026-04-08T06:12:48.972Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/booking/create-order HTTP/1.1 200 223 - 274.286 ms","service":"booking-service","timestamp":"2026-04-08T06:12:49.244Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/config HTTP/1.1 304 - - 0.477 ms","service":"booking-service","timestamp":"2026-04-08T06:12:49.253Z"}
+{"level":"info","message":"🛠️ Dev Auth Bypass: using harshasingisala@gmail.com","service":"booking-service","timestamp":"2026-04-08T06:15:08.586Z"}
+{"level":"error","message":"Unhandled Error: seat is not defined","method":"POST","service":"booking-service","stack":"ReferenceError: seat is not defined\n    at exports.verifyPayment (C:\\Users\\harsh\\Desktop\\pass generator\\backend\\src\\controllers\\bookingController.js:50:5)\n    at Layer.handleRequest (C:\\Users\\harsh\\Desktop\\pass generator\\backend\\node_modules\\router\\lib\\layer.js:152:17)\n    at next (C:\\Users\\harsh\\Desktop\\pass generator\\backend\\node_modules\\router\\lib\\route.js:157:13)\n    at exports.verifyToken (C:\\Users\\harsh\\Desktop\\pass generator\\backend\\src\\middlewares\\authMiddleware.js:21:24)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)","timestamp":"2026-04-08T06:15:08.590Z","url":"/api/booking/verify-payment"}
+{"level":"info","message":"127.0.0.1 - POST /api/booking/verify-payment HTTP/1.1 500 31 - 16.817 ms","service":"booking-service","timestamp":"2026-04-08T06:15:08.597Z"}
+{"level":"warn","message":"⚠️ Firebase Admin SDK not initialized: Missing FIREBASE_SERVICE_ACCOUNT_PATH","service":"booking-service","timestamp":"2026-04-08T06:26:15.512Z"}
+{"level":"warn","message":"⚠️ REDIS_URL not provided. Seat locks will not be Redis-backed.","service":"booking-service","timestamp":"2026-04-08T06:26:15.516Z"}
+{"level":"info","message":"Server running on http://0.0.0.0:5000 🚀","service":"booking-service","timestamp":"2026-04-08T06:26:15.528Z"}
+{"level":"info","message":"MongoDB Connected 🔥","service":"booking-service","timestamp":"2026-04-08T06:26:15.551Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/booking/create-order HTTP/1.1 401 30 - 1.819 ms","service":"booking-service","timestamp":"2026-04-08T06:27:55.594Z"}
+{"level":"error","message":"Unhandled Error: ENOENT: no such file or directory, stat 'C:\\Users\\harsh\\Desktop\\pass generator\\frontend\\index.html'","method":"GET","service":"booking-service","stack":"Error: ENOENT: no such file or directory, stat 'C:\\Users\\harsh\\Desktop\\pass generator\\frontend\\index.html'","timestamp":"2026-04-08T06:42:42.031Z","url":"/"}
+{"level":"info","message":"127.0.0.1 - GET / HTTP/1.1 404 117 - 6.527 ms","service":"booking-service","timestamp":"2026-04-08T06:42:42.033Z"}
+{"level":"error","message":"Unhandled Error: ENOENT: no such file or directory, stat 'C:\\Users\\harsh\\Desktop\\pass generator\\frontend\\index.html'","method":"GET","service":"booking-service","stack":"Error: ENOENT: no such file or directory, stat 'C:\\Users\\harsh\\Desktop\\pass generator\\frontend\\index.html'","timestamp":"2026-04-08T06:42:42.090Z","url":"/favicon.ico"}
+{"level":"info","message":"127.0.0.1 - GET /favicon.ico HTTP/1.1 404 117 - 2.445 ms","service":"booking-service","timestamp":"2026-04-08T06:42:42.092Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/health HTTP/1.1 404 27 - 0.795 ms","service":"booking-service","timestamp":"2026-04-08T06:43:17.765Z"}
+{"level":"error","message":"Unhandled Error: ENOENT: no such file or directory, stat 'C:\\Users\\harsh\\Desktop\\pass generator\\frontend\\index.html'","method":"GET","service":"booking-service","stack":"Error: ENOENT: no such file or directory, stat 'C:\\Users\\harsh\\Desktop\\pass generator\\frontend\\index.html'","timestamp":"2026-04-08T06:43:35.914Z","url":"/"}
+{"level":"info","message":"127.0.0.1 - GET / HTTP/1.1 404 117 - 1.656 ms","service":"booking-service","timestamp":"2026-04-08T06:43:35.915Z"}
+{"level":"warn","message":"⚠️ Firebase Admin SDK not initialized: Missing FIREBASE_SERVICE_ACCOUNT_PATH","service":"booking-service","timestamp":"2026-04-08T06:45:43.949Z"}
+{"level":"warn","message":"⚠️ REDIS_URL not provided. Seat locks will not be Redis-backed.","service":"booking-service","timestamp":"2026-04-08T06:45:43.954Z"}
+{"address":"0.0.0.0","code":"EADDRINUSE","errno":-4091,"level":"error","message":"Server Binding Error: listen EADDRINUSE: address already in use 0.0.0.0:5000","port":5000,"service":"booking-service","stack":"Error: listen EADDRINUSE: address already in use 0.0.0.0:5000\n    at Server.setupListenHandle [as _listen2] (node:net:1948:16)\n    at listenInCluster (node:net:2005:12)\n    at node:net:2214:7\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)","syscall":"listen","timestamp":"2026-04-08T06:45:43.967Z"}
+{"level":"info","message":"MongoDB Connected 🔥","service":"booking-service","timestamp":"2026-04-08T06:45:43.996Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-08T06:47:42.984Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-08T06:47:42.985Z"}
+{"level":"info","message":"ℹ️ Dev Sync: dev@example.com (UID: mock_ZGV2QGV4YW)","service":"booking-service","timestamp":"2026-04-08T06:47:42.986Z"}
+{"level":"info","message":"✅ Sync Successful for dev@example.com","service":"booking-service","timestamp":"2026-04-08T06:47:43.031Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 318 - 52.351 ms","service":"booking-service","timestamp":"2026-04-08T06:47:43.033Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-08T06:48:40.281Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 200 945 - 7.897 ms","service":"booking-service","timestamp":"2026-04-08T06:48:40.283Z"}
+{"level":"info","message":"🛠️ Dev Auth Bypass: using harshasingisala@gmail.com","service":"booking-service","timestamp":"2026-04-08T06:48:40.285Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 200 2 - 11.829 ms","service":"booking-service","timestamp":"2026-04-08T06:48:40.290Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-08T06:48:40.291Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 304 - - 4.556 ms","service":"booking-service","timestamp":"2026-04-08T06:48:40.293Z"}
+{"level":"info","message":"🛠️ Dev Auth Bypass: using harshasingisala@gmail.com","service":"booking-service","timestamp":"2026-04-08T06:48:40.299Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 304 - - 6.814 ms","service":"booking-service","timestamp":"2026-04-08T06:48:40.302Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-08T06:51:22.111Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-08T06:51:22.112Z"}
+{"level":"info","message":"ℹ️ Dev Sync: dev@example.com (UID: mock_ZGV2QGV4YW)","service":"booking-service","timestamp":"2026-04-08T06:51:22.112Z"}
+{"level":"info","message":"✅ Sync Successful for dev@example.com","service":"booking-service","timestamp":"2026-04-08T06:51:22.126Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 318 - 15.706 ms","service":"booking-service","timestamp":"2026-04-08T06:51:22.127Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-08T06:51:22.190Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 304 - - 5.972 ms","service":"booking-service","timestamp":"2026-04-08T06:51:22.192Z"}
+{"level":"info","message":"🛠️ Dev Auth Bypass: using harshasingisala@gmail.com","service":"booking-service","timestamp":"2026-04-08T06:51:22.196Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 304 - - 12.159 ms","service":"booking-service","timestamp":"2026-04-08T06:51:22.199Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-08T06:51:22.201Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 304 - - 5.907 ms","service":"booking-service","timestamp":"2026-04-08T06:51:22.212Z"}
+{"level":"info","message":"🛠️ Dev Auth Bypass: using harshasingisala@gmail.com","service":"booking-service","timestamp":"2026-04-08T06:51:22.225Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 304 - - 12.654 ms","service":"booking-service","timestamp":"2026-04-08T06:51:22.229Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events/69d25caf77f53658eccf8d2b HTTP/1.1 304 - - 1.752 ms","service":"booking-service","timestamp":"2026-04-08T06:51:23.769Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events/69d25caf77f53658eccf8d2b HTTP/1.1 304 - - 1.969 ms","service":"booking-service","timestamp":"2026-04-08T06:51:23.772Z"}
+{"level":"info","message":"🛠️ Dev Auth Bypass: using harshasingisala@gmail.com","service":"booking-service","timestamp":"2026-04-08T06:51:28.518Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/booking/create-order HTTP/1.1 200 223 - 1290.954 ms","service":"booking-service","timestamp":"2026-04-08T06:51:29.809Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/config HTTP/1.1 304 - - 0.615 ms","service":"booking-service","timestamp":"2026-04-08T06:51:29.819Z"}
+{"level":"info","message":"🛠️ Dev Auth Bypass: using harshasingisala@gmail.com","service":"booking-service","timestamp":"2026-04-08T06:53:41.648Z"}
+{"level":"info","message":"🔍 Identifying Seat to Sell: SeatID=D28, EventID=69d25caf77f53658eccf8d2b","service":"booking-service","timestamp":"2026-04-08T06:53:41.651Z"}
+{"level":"error","message":"❌ Payment Verification Failed: Transaction numbers are only allowed on a replica set member or mongos","service":"booking-service","timestamp":"2026-04-08T06:53:41.665Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/booking/verify-payment HTTP/1.1 400 82 - 22.959 ms","service":"booking-service","timestamp":"2026-04-08T06:53:41.668Z"}
+{"level":"warn","message":"⚠️ Firebase Admin SDK not initialized: Missing FIREBASE_SERVICE_ACCOUNT_PATH","service":"booking-service","timestamp":"2026-04-08T06:57:20.635Z"}
+{"level":"warn","message":"⚠️ REDIS_URL not provided. Seat locks will not be Redis-backed.","service":"booking-service","timestamp":"2026-04-08T06:57:20.638Z"}
+{"level":"info","message":"Server running on http://0.0.0.0:5000 🚀","service":"booking-service","timestamp":"2026-04-08T06:57:20.645Z"}
+{"level":"info","message":"MongoDB Connected 🔥","service":"booking-service","timestamp":"2026-04-08T06:57:20.661Z"}
+{"level":"warn","message":"⚠️ Firebase Admin SDK not initialized: Missing FIREBASE_SERVICE_ACCOUNT_PATH","service":"booking-service","timestamp":"2026-04-08T07:04:12.247Z"}
+{"level":"warn","message":"⚠️ REDIS_URL not provided. Seat locks will not be Redis-backed.","service":"booking-service","timestamp":"2026-04-08T07:04:12.250Z"}
+{"address":"0.0.0.0","code":"EADDRINUSE","errno":-4091,"level":"error","message":"Server Binding Error: listen EADDRINUSE: address already in use 0.0.0.0:5000","port":5000,"service":"booking-service","stack":"Error: listen EADDRINUSE: address already in use 0.0.0.0:5000\n    at Server.setupListenHandle [as _listen2] (node:net:1948:16)\n    at listenInCluster (node:net:2005:12)\n    at node:net:2214:7\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)","syscall":"listen","timestamp":"2026-04-08T07:04:12.257Z"}
+{"level":"info","message":"MongoDB Connected 🔥","service":"booking-service","timestamp":"2026-04-08T07:04:12.274Z"}
+{"level":"warn","message":"⚠️ Firebase Admin SDK not initialized: Missing FIREBASE_SERVICE_ACCOUNT_PATH","service":"booking-service","timestamp":"2026-04-08T07:09:54.100Z"}
+{"level":"warn","message":"⚠️ REDIS_URL not provided. Seat locks will not be Redis-backed.","service":"booking-service","timestamp":"2026-04-08T07:09:54.103Z"}
+{"level":"info","message":"Server running on http://0.0.0.0:5000 🚀","service":"booking-service","timestamp":"2026-04-08T07:09:54.112Z"}
+{"level":"info","message":"MongoDB Connected 🔥","service":"booking-service","timestamp":"2026-04-08T07:09:54.127Z"}
+{"level":"warn","message":"⚠️ Firebase Admin SDK not initialized: Missing FIREBASE_SERVICE_ACCOUNT_PATH","service":"booking-service","timestamp":"2026-04-08T07:22:38.771Z"}
+{"level":"warn","message":"⚠️ REDIS_URL not provided. Seat locks will not be Redis-backed.","service":"booking-service","timestamp":"2026-04-08T07:22:38.774Z"}
+{"level":"info","message":"Server running on http://0.0.0.0:5000 🚀","service":"booking-service","timestamp":"2026-04-08T07:22:38.784Z"}
+{"level":"info","message":"MongoDB Connected 🔥","service":"booking-service","timestamp":"2026-04-08T07:22:38.804Z"}
+{"level":"warn","message":"⚠️ Firebase Admin SDK not initialized: Missing FIREBASE_SERVICE_ACCOUNT_PATH","service":"booking-service","timestamp":"2026-04-08T08:29:47.174Z"}
+{"level":"warn","message":"⚠️ REDIS_URL not provided. Seat locks will not be Redis-backed.","service":"booking-service","timestamp":"2026-04-08T08:29:47.182Z"}
+{"level":"info","message":"Server running on http://0.0.0.0:5000 🚀","service":"booking-service","timestamp":"2026-04-08T08:29:47.198Z"}
+{"level":"info","message":"MongoDB Connected 🔥","service":"booking-service","timestamp":"2026-04-08T08:29:47.236Z"}
+{"level":"info","message":"127.0.0.1 - GET / HTTP/1.1 200 - - 14.168 ms","service":"booking-service","timestamp":"2026-04-08T08:30:14.803Z"}
+{"level":"info","message":"127.0.0.1 - GET /assets/index-Bfux4z7o.css HTTP/1.1 200 - - 2.719 ms","service":"booking-service","timestamp":"2026-04-08T08:30:14.851Z"}
+{"level":"info","message":"127.0.0.1 - GET /assets/index-DFteZYh7.js HTTP/1.1 200 - - 5.551 ms","service":"booking-service","timestamp":"2026-04-08T08:30:14.876Z"}
+{"level":"info","message":"127.0.0.1 - GET /vite.svg HTTP/1.1 200 - - 3.998 ms","service":"booking-service","timestamp":"2026-04-08T08:30:35.887Z"}
+{"level":"info","message":"127.0.0.1 - GET /vite.svg HTTP/1.1 304 - - 1.863 ms","service":"booking-service","timestamp":"2026-04-08T08:30:35.892Z"}
+{"level":"info","message":"127.0.0.1 - GET /assets/Auth-2RxtihV0.js HTTP/1.1 200 - - 1.001 ms","service":"booking-service","timestamp":"2026-04-08T08:31:24.146Z"}
+{"level":"info","message":"127.0.0.1 - GET /assets/createLucideIcon-T4iIx6dK.js HTTP/1.1 200 - - 1.035 ms","service":"booking-service","timestamp":"2026-04-08T08:31:24.156Z"}
+{"level":"info","message":"127.0.0.1 - GET /assets/user-D_d5XjTo.js HTTP/1.1 200 376 - 8.024 ms","service":"booking-service","timestamp":"2026-04-08T08:31:24.173Z"}
+{"level":"info","message":"127.0.0.1 - GET /assets/mail-BgudlF2Y.js HTTP/1.1 200 395 - 0.903 ms","service":"booking-service","timestamp":"2026-04-08T08:31:24.185Z"}
+{"level":"info","message":"127.0.0.1 - GET /assets/chevron-right-BslY_hVQ.js HTTP/1.1 200 309 - 0.961 ms","service":"booking-service","timestamp":"2026-04-08T08:31:24.194Z"}
+{"level":"info","message":"127.0.0.1 - GET /vite.svg HTTP/1.1 304 - - 0.826 ms","service":"booking-service","timestamp":"2026-04-08T08:31:24.200Z"}
+{"level":"warn","message":"⚠️ Firebase Admin SDK not initialized: Missing FIREBASE_SERVICE_ACCOUNT_PATH","service":"booking-service","timestamp":"2026-04-08T08:42:39.989Z"}
+{"level":"warn","message":"⚠️ REDIS_URL not provided. Seat locks will not be Redis-backed.","service":"booking-service","timestamp":"2026-04-08T08:42:39.992Z"}
+{"level":"info","message":"Server running on http://0.0.0.0:5000 🚀","service":"booking-service","timestamp":"2026-04-08T08:42:39.999Z"}
+{"level":"info","message":"MongoDB Connected 🔥","service":"booking-service","timestamp":"2026-04-08T08:42:40.017Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-08T08:43:12.771Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-08T08:43:12.772Z"}
+{"level":"info","message":"ℹ️ Dev Sync: dev@example.com (UID: mock_ZGV2QGV4YW)","service":"booking-service","timestamp":"2026-04-08T08:43:12.772Z"}
+{"level":"info","message":"✅ Sync Successful for dev@example.com","service":"booking-service","timestamp":"2026-04-08T08:43:12.884Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 318 - 119.284 ms","service":"booking-service","timestamp":"2026-04-08T08:43:12.889Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-08T08:43:23.776Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-08T08:43:23.777Z"}
+{"level":"info","message":"ℹ️ Dev Sync: dev@example.com (UID: mock_ZGV2QGV4YW)","service":"booking-service","timestamp":"2026-04-08T08:43:23.777Z"}
+{"level":"info","message":"✅ Sync Successful for dev@example.com","service":"booking-service","timestamp":"2026-04-08T08:43:23.788Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 318 - 13.323 ms","service":"booking-service","timestamp":"2026-04-08T08:43:23.791Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-08T08:43:51.782Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-08T08:43:51.783Z"}
+{"level":"info","message":"ℹ️ Dev Sync: dev@example.com (UID: mock_ZGV2QGV4YW)","service":"booking-service","timestamp":"2026-04-08T08:43:51.783Z"}
+{"level":"info","message":"✅ Sync Successful for dev@example.com","service":"booking-service","timestamp":"2026-04-08T08:43:51.791Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 318 - 9.996 ms","service":"booking-service","timestamp":"2026-04-08T08:43:51.793Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-08T08:44:31.051Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-08T08:44:31.052Z"}
+{"level":"info","message":"ℹ️ Dev Sync: dev@example.com (UID: mock_ZGV2QGV4YW)","service":"booking-service","timestamp":"2026-04-08T08:44:31.052Z"}
+{"level":"info","message":"✅ Sync Successful for dev@example.com","service":"booking-service","timestamp":"2026-04-08T08:44:31.057Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 318 - 6.065 ms","service":"booking-service","timestamp":"2026-04-08T08:44:31.058Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-08T08:44:40.326Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-08T08:44:40.327Z"}
+{"level":"info","message":"ℹ️ Dev Sync: dev@example.com (UID: mock_ZGV2QGV4YW)","service":"booking-service","timestamp":"2026-04-08T08:44:40.327Z"}
+{"level":"info","message":"✅ Sync Successful for dev@example.com","service":"booking-service","timestamp":"2026-04-08T08:44:40.337Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 318 - 12.790 ms","service":"booking-service","timestamp":"2026-04-08T08:44:40.340Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-08T08:44:48.753Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-08T08:44:48.754Z"}
+{"level":"info","message":"ℹ️ Dev Sync: dev@example.com (UID: mock_ZGV2QGV4YW)","service":"booking-service","timestamp":"2026-04-08T08:44:48.754Z"}
+{"level":"info","message":"✅ Sync Successful for dev@example.com","service":"booking-service","timestamp":"2026-04-08T08:44:48.761Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 318 - 8.032 ms","service":"booking-service","timestamp":"2026-04-08T08:44:48.762Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-08T08:45:16.112Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-08T08:45:16.113Z"}
+{"level":"info","message":"ℹ️ Dev Sync: dev@example.com (UID: mock_ZGV2QGV4YW)","service":"booking-service","timestamp":"2026-04-08T08:45:16.113Z"}
+{"level":"info","message":"✅ Sync Successful for dev@example.com","service":"booking-service","timestamp":"2026-04-08T08:45:16.122Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 318 - 10.229 ms","service":"booking-service","timestamp":"2026-04-08T08:45:16.123Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-08T08:45:49.937Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-08T08:45:49.937Z"}
+{"level":"info","message":"ℹ️ Dev Sync: dev@example.com (UID: mock_ZGV2QGV4YW)","service":"booking-service","timestamp":"2026-04-08T08:45:49.937Z"}
+{"level":"info","message":"✅ Sync Successful for dev@example.com","service":"booking-service","timestamp":"2026-04-08T08:45:49.943Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 318 - 6.478 ms","service":"booking-service","timestamp":"2026-04-08T08:45:49.943Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-08T08:46:05.493Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-08T08:46:05.504Z"}
+{"level":"info","message":"ℹ️ Dev Sync: dev@example.com (UID: mock_ZGV2QGV4YW)","service":"booking-service","timestamp":"2026-04-08T08:46:05.507Z"}
+{"level":"info","message":"✅ Sync Successful for dev@example.com","service":"booking-service","timestamp":"2026-04-08T08:46:05.527Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 318 - 39.273 ms","service":"booking-service","timestamp":"2026-04-08T08:46:05.533Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: MISSING","service":"booking-service","timestamp":"2026-04-08T08:48:08.900Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-08T08:48:08.901Z"}
+{"level":"info","message":"ℹ️ Dev Sync: testuser@example.com (UID: test_uid_123)","service":"booking-service","timestamp":"2026-04-08T08:48:08.901Z"}
+{"level":"info","message":"✅ Sync Successful for testuser@example.com","service":"booking-service","timestamp":"2026-04-08T08:48:08.925Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 331 - 25.048 ms","service":"booking-service","timestamp":"2026-04-08T08:48:08.925Z"}
+{"level":"warn","message":"❌ [AUTH FAIL] Token prefix: eyJhbGciOi... (No valid sync found)","service":"booking-service","timestamp":"2026-04-08T08:48:09.073Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/booking/create-order HTTP/1.1 401 64 - 141.946 ms","service":"booking-service","timestamp":"2026-04-08T08:48:09.074Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: MISSING","service":"booking-service","timestamp":"2026-04-08T08:49:41.901Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-08T08:49:41.901Z"}
+{"level":"info","message":"ℹ️ Dev Sync: testuser@example.com (UID: test_uid_123)","service":"booking-service","timestamp":"2026-04-08T08:49:41.901Z"}
+{"level":"info","message":"✅ Sync Successful for testuser@example.com","service":"booking-service","timestamp":"2026-04-08T08:49:41.907Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 331 - 6.950 ms","service":"booking-service","timestamp":"2026-04-08T08:49:41.908Z"}
+{"level":"warn","message":"❌ [AUTH FAIL] Token prefix: eyJhbGciOi... (No valid sync found)","service":"booking-service","timestamp":"2026-04-08T08:49:41.916Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/booking/create-order HTTP/1.1 401 64 - 31.786 ms","service":"booking-service","timestamp":"2026-04-08T08:49:41.949Z"}
+{"level":"warn","message":"⚠️ Firebase Admin SDK not initialized: Missing FIREBASE_SERVICE_ACCOUNT_PATH","service":"booking-service","timestamp":"2026-04-08T09:46:15.368Z"}
+{"level":"warn","message":"⚠️ REDIS_URL not provided. Seat locks will not be Redis-backed.","service":"booking-service","timestamp":"2026-04-08T09:46:15.373Z"}
+{"level":"info","message":"Server running on http://0.0.0.0:5000 🚀","service":"booking-service","timestamp":"2026-04-08T09:46:15.385Z"}
+{"level":"info","message":"MongoDB Connected 🔥","service":"booking-service","timestamp":"2026-04-08T09:46:15.412Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/test HTTP/1.1 200 62 - 3.287 ms","service":"booking-service","timestamp":"2026-04-08T09:46:20.553Z"}
+{"level":"info","message":"127.0.0.1 - GET /favicon.ico HTTP/1.1 200 - - 7.611 ms","service":"booking-service","timestamp":"2026-04-08T09:46:20.622Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-08T09:47:09.314Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-08T09:47:09.314Z"}
+{"level":"info","message":"ℹ️ Dev Sync: dev@example.com (UID: mock_ZGV2QGV4YW)","service":"booking-service","timestamp":"2026-04-08T09:47:09.315Z"}
+{"level":"info","message":"✅ Sync Successful for dev@example.com","service":"booking-service","timestamp":"2026-04-08T09:47:09.344Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 318 - 35.420 ms","service":"booking-service","timestamp":"2026-04-08T09:47:09.346Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-08T09:47:34.245Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-08T09:47:34.254Z"}
+{"level":"info","message":"ℹ️ Dev Sync: dev@example.com (UID: mock_ZGV2QGV4YW)","service":"booking-service","timestamp":"2026-04-08T09:47:34.254Z"}
+{"level":"info","message":"✅ Sync Successful for dev@example.com","service":"booking-service","timestamp":"2026-04-08T09:47:34.280Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 318 - 39.778 ms","service":"booking-service","timestamp":"2026-04-08T09:47:34.285Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-08T09:47:50.601Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-08T09:47:50.606Z"}
+{"level":"info","message":"ℹ️ Dev Sync: dev@example.com (UID: mock_ZGV2QGV4YW)","service":"booking-service","timestamp":"2026-04-08T09:47:50.607Z"}
+{"level":"info","message":"✅ Sync Successful for dev@example.com","service":"booking-service","timestamp":"2026-04-08T09:47:50.624Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 318 - 29.551 ms","service":"booking-service","timestamp":"2026-04-08T09:47:50.632Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-08T09:48:11.587Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-08T09:48:11.588Z"}
+{"level":"info","message":"ℹ️ Dev Sync: dev@example.com (UID: mock_ZGV2QGV4YW)","service":"booking-service","timestamp":"2026-04-08T09:48:11.588Z"}
+{"level":"info","message":"✅ Sync Successful for dev@example.com","service":"booking-service","timestamp":"2026-04-08T09:48:11.596Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 318 - 9.418 ms","service":"booking-service","timestamp":"2026-04-08T09:48:11.597Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-08T09:48:18.685Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-08T09:48:18.686Z"}
+{"level":"info","message":"ℹ️ Dev Sync: dev@example.com (UID: mock_ZGV2QGV4YW)","service":"booking-service","timestamp":"2026-04-08T09:48:18.687Z"}
+{"level":"info","message":"✅ Sync Successful for dev@example.com","service":"booking-service","timestamp":"2026-04-08T09:48:18.701Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 318 - 17.784 ms","service":"booking-service","timestamp":"2026-04-08T09:48:18.703Z"}
+{"level":"warn","message":"⚠️ Firebase Admin SDK not initialized: Missing FIREBASE_SERVICE_ACCOUNT_PATH","service":"booking-service","timestamp":"2026-04-08T09:48:55.410Z"}
+{"level":"warn","message":"⚠️ REDIS_URL not provided. Seat locks will not be Redis-backed.","service":"booking-service","timestamp":"2026-04-08T09:48:55.419Z"}
+{"address":"0.0.0.0","code":"EADDRINUSE","errno":-4091,"level":"error","message":"Server Binding Error: listen EADDRINUSE: address already in use 0.0.0.0:5000","port":5000,"service":"booking-service","stack":"Error: listen EADDRINUSE: address already in use 0.0.0.0:5000\n    at Server.setupListenHandle [as _listen2] (node:net:1948:16)\n    at listenInCluster (node:net:2005:12)\n    at node:net:2214:7\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)","syscall":"listen","timestamp":"2026-04-08T09:48:55.444Z"}
+{"level":"info","message":"MongoDB Connected 🔥","service":"booking-service","timestamp":"2026-04-08T09:48:55.501Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-08T10:01:41.200Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-08T10:01:41.205Z"}
+{"level":"info","message":"ℹ️ Dev Sync: harshasingisala@gmail.com (UID: EwnbzppPHrcLSBAcLWtlmHkKF2p2)","service":"booking-service","timestamp":"2026-04-08T10:01:41.205Z"}
+{"level":"info","message":"✅ Sync Successful for harshasingisala@gmail.com","service":"booking-service","timestamp":"2026-04-08T10:01:41.218Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 339 - 21.866 ms","service":"booking-service","timestamp":"2026-04-08T10:01:41.222Z"}
+{"level":"warn","message":"⚠️ Firebase Admin SDK not initialized: Missing FIREBASE_SERVICE_ACCOUNT_PATH","service":"booking-service","timestamp":"2026-04-08T10:02:05.542Z"}
+{"level":"warn","message":"⚠️ REDIS_URL not provided. Seat locks will not be Redis-backed.","service":"booking-service","timestamp":"2026-04-08T10:02:05.547Z"}
+{"level":"info","message":"Server running on http://0.0.0.0:5000 🚀","service":"booking-service","timestamp":"2026-04-08T10:02:05.560Z"}
+{"level":"info","message":"MongoDB Connected 🔥","service":"booking-service","timestamp":"2026-04-08T10:02:05.595Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-08T10:02:15.642Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-08T10:02:15.643Z"}
+{"level":"info","message":"ℹ️ Dev Sync: harshasingisala@gmail.com (UID: EwnbzppPHrcLSBAcLWtlmHkKF2p2)","service":"booking-service","timestamp":"2026-04-08T10:02:15.644Z"}
+{"level":"info","message":"✅ Sync Successful for harshasingisala@gmail.com","service":"booking-service","timestamp":"2026-04-08T10:02:15.690Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 339 - 56.447 ms","service":"booking-service","timestamp":"2026-04-08T10:02:15.697Z"}
+{"level":"warn","message":"⚠️ Firebase Admin SDK not initialized: Missing FIREBASE_SERVICE_ACCOUNT_PATH","service":"booking-service","timestamp":"2026-04-09T05:40:09.441Z"}
+{"level":"warn","message":"⚠️ REDIS_URL not provided. Seat locks will not be Redis-backed.","service":"booking-service","timestamp":"2026-04-09T05:40:09.444Z"}
+{"level":"info","message":"Server running on http://0.0.0.0:5000 🚀","service":"booking-service","timestamp":"2026-04-09T05:40:09.452Z"}
+{"level":"info","message":"MongoDB Connected 🔥","service":"booking-service","timestamp":"2026-04-09T05:40:09.471Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/health HTTP/1.1 404 27 - 6.419 ms","service":"booking-service","timestamp":"2026-04-09T05:43:44.266Z"}
+{"level":"info","message":"127.0.0.1 - GET /favicon.ico HTTP/1.1 304 - - 4.055 ms","service":"booking-service","timestamp":"2026-04-09T05:43:44.331Z"}
+{"level":"warn","message":"⚠️ Firebase Admin SDK not initialized: Missing FIREBASE_SERVICE_ACCOUNT_PATH","service":"booking-service","timestamp":"2026-04-09T06:14:08.404Z"}
+{"level":"warn","message":"⚠️ REDIS_URL not provided. Seat locks will not be Redis-backed.","service":"booking-service","timestamp":"2026-04-09T06:14:08.408Z"}
+{"level":"info","message":"Server running on http://0.0.0.0:5000 🚀","service":"booking-service","timestamp":"2026-04-09T06:14:08.415Z"}
+{"level":"info","message":"MongoDB Connected 🔥","service":"booking-service","timestamp":"2026-04-09T06:14:08.430Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-09T06:14:23.580Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-09T06:14:23.581Z"}
+{"level":"info","message":"ℹ️ Dev Sync: harshasingisala@gmail.com (UID: EwnbzppPHrcLSBAcLWtlmHkKF2p2)","service":"booking-service","timestamp":"2026-04-09T06:14:23.581Z"}
+{"level":"info","message":"✅ Sync Successful for harshasingisala@gmail.com","service":"booking-service","timestamp":"2026-04-09T06:14:23.635Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 339 - 58.238 ms","service":"booking-service","timestamp":"2026-04-09T06:14:23.637Z"}
+{"level":"warn","message":"❌ [AUTH FAIL] Token prefix: eyJhbGciOi... (No valid sync found)","service":"booking-service","timestamp":"2026-04-09T06:14:23.911Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 401 64 - 100.468 ms","service":"booking-service","timestamp":"2026-04-09T06:14:23.912Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-09T06:14:23.913Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 304 - - 107.069 ms","service":"booking-service","timestamp":"2026-04-09T06:14:23.915Z"}
+{"level":"warn","message":"❌ [AUTH FAIL] Token prefix: eyJhbGciOi... (No valid sync found)","service":"booking-service","timestamp":"2026-04-09T06:14:23.918Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 401 64 - 0.673 ms","service":"booking-service","timestamp":"2026-04-09T06:14:23.919Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-09T06:14:23.922Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 304 - - 2.996 ms","service":"booking-service","timestamp":"2026-04-09T06:14:23.923Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events/69d25caf77f53658eccf8d2a HTTP/1.1 200 478 - 12.868 ms","service":"booking-service","timestamp":"2026-04-09T06:15:50.750Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events/69d25caf77f53658eccf8d2a HTTP/1.1 304 - - 2.140 ms","service":"booking-service","timestamp":"2026-04-09T06:15:50.754Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-09T07:12:40.228Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-09T07:12:40.233Z"}
+{"level":"info","message":"ℹ️ Dev Sync: harshasingisala@gmail.com (UID: EwnbzppPHrcLSBAcLWtlmHkKF2p2)","service":"booking-service","timestamp":"2026-04-09T07:12:40.238Z"}
+{"level":"info","message":"✅ Sync Successful for harshasingisala@gmail.com","service":"booking-service","timestamp":"2026-04-09T07:12:40.270Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 339 - 45.611 ms","service":"booking-service","timestamp":"2026-04-09T07:12:40.274Z"}
+{"level":"warn","message":"❌ [AUTH FAIL] Token prefix: eyJhbGciOi... (No valid sync found)","service":"booking-service","timestamp":"2026-04-09T07:12:40.439Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 401 64 - 19.317 ms","service":"booking-service","timestamp":"2026-04-09T07:12:40.455Z"}
+{"level":"warn","message":"❌ [AUTH FAIL] Token prefix: eyJhbGciOi... (No valid sync found)","service":"booking-service","timestamp":"2026-04-09T07:12:40.475Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 401 64 - 15.633 ms","service":"booking-service","timestamp":"2026-04-09T07:12:40.489Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-09T07:12:40.502Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 304 - - 69.025 ms","service":"booking-service","timestamp":"2026-04-09T07:12:40.503Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-09T07:12:40.507Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 304 - - 4.824 ms","service":"booking-service","timestamp":"2026-04-09T07:12:40.510Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-09T07:13:47.951Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-09T07:13:47.952Z"}
+{"level":"info","message":"ℹ️ Dev Sync: harshasingisala@gmail.com (UID: EwnbzppPHrcLSBAcLWtlmHkKF2p2)","service":"booking-service","timestamp":"2026-04-09T07:13:47.952Z"}
+{"level":"info","message":"✅ Sync Successful for harshasingisala@gmail.com","service":"booking-service","timestamp":"2026-04-09T07:13:47.959Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 339 - 8.014 ms","service":"booking-service","timestamp":"2026-04-09T07:13:47.959Z"}
+{"level":"warn","message":"❌ [AUTH FAIL] Token prefix: eyJhbGciOi... (No valid sync found)","service":"booking-service","timestamp":"2026-04-09T07:13:47.990Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 401 64 - 0.740 ms","service":"booking-service","timestamp":"2026-04-09T07:13:47.991Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-09T07:13:47.992Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 304 - - 4.107 ms","service":"booking-service","timestamp":"2026-04-09T07:13:47.993Z"}
+{"level":"warn","message":"❌ [AUTH FAIL] Token prefix: eyJhbGciOi... (No valid sync found)","service":"booking-service","timestamp":"2026-04-09T07:13:47.995Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 401 64 - 0.927 ms","service":"booking-service","timestamp":"2026-04-09T07:13:47.997Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-09T07:13:48.000Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 304 - - 2.365 ms","service":"booking-service","timestamp":"2026-04-09T07:13:48.001Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-09T07:13:59.265Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-09T07:13:59.267Z"}
+{"level":"info","message":"ℹ️ Dev Sync: harshasingisala@gmail.com (UID: EwnbzppPHrcLSBAcLWtlmHkKF2p2)","service":"booking-service","timestamp":"2026-04-09T07:13:59.267Z"}
+{"level":"info","message":"✅ Sync Successful for harshasingisala@gmail.com","service":"booking-service","timestamp":"2026-04-09T07:13:59.273Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 339 - 8.575 ms","service":"booking-service","timestamp":"2026-04-09T07:13:59.274Z"}
+{"level":"warn","message":"❌ [AUTH FAIL] Token prefix: eyJhbGciOi... (No valid sync found)","service":"booking-service","timestamp":"2026-04-09T07:13:59.306Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 401 64 - 1.827 ms","service":"booking-service","timestamp":"2026-04-09T07:13:59.308Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-09T07:13:59.309Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 304 - - 5.335 ms","service":"booking-service","timestamp":"2026-04-09T07:13:59.310Z"}
+{"level":"warn","message":"❌ [AUTH FAIL] Token prefix: eyJhbGciOi... (No valid sync found)","service":"booking-service","timestamp":"2026-04-09T07:13:59.313Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 401 64 - 1.936 ms","service":"booking-service","timestamp":"2026-04-09T07:13:59.315Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-09T07:13:59.318Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 304 - - 1.940 ms","service":"booking-service","timestamp":"2026-04-09T07:13:59.318Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-09T07:14:36.246Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-09T07:14:36.246Z"}
+{"level":"info","message":"ℹ️ Dev Sync: harshasingisala@gmail.com (UID: EwnbzppPHrcLSBAcLWtlmHkKF2p2)","service":"booking-service","timestamp":"2026-04-09T07:14:36.246Z"}
+{"level":"info","message":"✅ Sync Successful for harshasingisala@gmail.com","service":"booking-service","timestamp":"2026-04-09T07:14:36.252Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 339 - 6.806 ms","service":"booking-service","timestamp":"2026-04-09T07:14:36.252Z"}
+{"level":"warn","message":"❌ [AUTH FAIL] Token prefix: eyJhbGciOi... (No valid sync found)","service":"booking-service","timestamp":"2026-04-09T07:14:36.288Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 401 64 - 0.965 ms","service":"booking-service","timestamp":"2026-04-09T07:14:36.289Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-09T07:14:36.294Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 304 - - 9.361 ms","service":"booking-service","timestamp":"2026-04-09T07:14:36.295Z"}
+{"level":"warn","message":"❌ [AUTH FAIL] Token prefix: eyJhbGciOi... (No valid sync found)","service":"booking-service","timestamp":"2026-04-09T07:14:36.298Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 401 64 - 0.970 ms","service":"booking-service","timestamp":"2026-04-09T07:14:36.299Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-09T07:14:36.303Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 304 - - 2.667 ms","service":"booking-service","timestamp":"2026-04-09T07:14:36.303Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-09T07:16:20.352Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-09T07:16:20.352Z"}
+{"level":"info","message":"ℹ️ Dev Sync: harshasingisala@gmail.com (UID: EwnbzppPHrcLSBAcLWtlmHkKF2p2)","service":"booking-service","timestamp":"2026-04-09T07:16:20.353Z"}
+{"level":"info","message":"✅ Sync Successful for harshasingisala@gmail.com","service":"booking-service","timestamp":"2026-04-09T07:16:20.360Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 339 - 8.420 ms","service":"booking-service","timestamp":"2026-04-09T07:16:20.360Z"}
+{"level":"warn","message":"❌ [AUTH FAIL] Token prefix: eyJhbGciOi... (No valid sync found)","service":"booking-service","timestamp":"2026-04-09T07:16:20.398Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 401 64 - 1.620 ms","service":"booking-service","timestamp":"2026-04-09T07:16:20.399Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-09T07:16:20.400Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 304 - - 6.122 ms","service":"booking-service","timestamp":"2026-04-09T07:16:20.403Z"}
+{"level":"warn","message":"❌ [AUTH FAIL] Token prefix: eyJhbGciOi... (No valid sync found)","service":"booking-service","timestamp":"2026-04-09T07:16:20.405Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 401 64 - 0.751 ms","service":"booking-service","timestamp":"2026-04-09T07:16:20.406Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-09T07:16:20.410Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 304 - - 2.497 ms","service":"booking-service","timestamp":"2026-04-09T07:16:20.411Z"}
+{"level":"warn","message":"⚠️ Firebase Admin SDK not initialized: Missing FIREBASE_SERVICE_ACCOUNT_PATH","service":"booking-service","timestamp":"2026-04-09T09:39:55.667Z"}
+{"level":"warn","message":"⚠️ REDIS_URL not provided. Seat locks will not be Redis-backed.","service":"booking-service","timestamp":"2026-04-09T09:39:55.671Z"}
+{"level":"info","message":"Server running on http://0.0.0.0:5000 🚀","service":"booking-service","timestamp":"2026-04-09T09:39:55.678Z"}
+{"level":"info","message":"MongoDB Connected 🔥","service":"booking-service","timestamp":"2026-04-09T09:39:55.697Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-09T09:41:01.183Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-09T09:41:01.185Z"}
+{"level":"info","message":"ℹ️ Dev Sync: harshasingisala@gmail.com (UID: EwnbzppPHrcLSBAcLWtlmHkKF2p2)","service":"booking-service","timestamp":"2026-04-09T09:41:01.186Z"}
+{"level":"info","message":"✅ Sync Successful for harshasingisala@gmail.com","service":"booking-service","timestamp":"2026-04-09T09:41:01.263Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 339 - 89.497 ms","service":"booking-service","timestamp":"2026-04-09T09:41:01.270Z"}
+{"level":"warn","message":"❌ [AUTH FAIL] Token prefix: eyJhbGciOi... (No valid sync found)","service":"booking-service","timestamp":"2026-04-09T09:41:01.673Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 401 64 - 195.848 ms","service":"booking-service","timestamp":"2026-04-09T09:41:01.674Z"}
+{"level":"warn","message":"❌ [AUTH FAIL] Token prefix: eyJhbGciOi... (No valid sync found)","service":"booking-service","timestamp":"2026-04-09T09:41:01.676Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 401 64 - 1.034 ms","service":"booking-service","timestamp":"2026-04-09T09:41:01.677Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-09T09:41:01.679Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 200 945 - 206.753 ms","service":"booking-service","timestamp":"2026-04-09T09:41:01.680Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-09T09:41:01.689Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 304 - - 4.622 ms","service":"booking-service","timestamp":"2026-04-09T09:41:01.691Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events/69d25caf77f53658eccf8d2b HTTP/1.1 200 464 - 16.969 ms","service":"booking-service","timestamp":"2026-04-09T09:42:11.817Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events/69d25caf77f53658eccf8d2b HTTP/1.1 304 - - 1.710 ms","service":"booking-service","timestamp":"2026-04-09T09:42:11.820Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events/69d25caf77f53658eccf8d2b HTTP/1.1 304 - - 1.770 ms","service":"booking-service","timestamp":"2026-04-09T09:42:21.420Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events/69d25caf77f53658eccf8d2b HTTP/1.1 304 - - 1.798 ms","service":"booking-service","timestamp":"2026-04-09T09:42:21.424Z"}
+{"level":"warn","message":"❌ [AUTH FAIL] Token prefix: eyJhbGciOi... (No valid sync found)","service":"booking-service","timestamp":"2026-04-09T09:42:22.547Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 401 64 - 2.135 ms","service":"booking-service","timestamp":"2026-04-09T09:42:22.549Z"}
+{"level":"warn","message":"❌ [AUTH FAIL] Token prefix: eyJhbGciOi... (No valid sync found)","service":"booking-service","timestamp":"2026-04-09T09:42:22.552Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 401 64 - 0.687 ms","service":"booking-service","timestamp":"2026-04-09T09:42:22.553Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-09T09:42:22.555Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 304 - - 6.015 ms","service":"booking-service","timestamp":"2026-04-09T09:42:22.556Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-09T09:42:22.559Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 304 - - 2.284 ms","service":"booking-service","timestamp":"2026-04-09T09:42:22.560Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events/69d25caf77f53658eccf8d2a HTTP/1.1 200 478 - 5.888 ms","service":"booking-service","timestamp":"2026-04-09T09:42:25.437Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events/69d25caf77f53658eccf8d2a HTTP/1.1 304 - - 3.156 ms","service":"booking-service","timestamp":"2026-04-09T09:42:25.444Z"}
+{"level":"warn","message":"❌ [AUTH FAIL] Token prefix: eyJhbGciOi... (No valid sync found)","service":"booking-service","timestamp":"2026-04-09T09:42:37.981Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/booking/create-order HTTP/1.1 401 64 - 0.872 ms","service":"booking-service","timestamp":"2026-04-09T09:42:37.982Z"}
+{"level":"warn","message":"⚠️ Firebase Admin SDK not initialized: Missing FIREBASE_SERVICE_ACCOUNT_PATH","service":"booking-service","timestamp":"2026-04-15T18:43:38.573Z"}
+{"level":"warn","message":"⚠️ REDIS_URL not provided. Seat locks will not be Redis-backed.","service":"booking-service","timestamp":"2026-04-15T18:43:38.579Z"}
+{"level":"info","message":"Server running on http://0.0.0.0:5000 🚀","service":"booking-service","timestamp":"2026-04-15T18:43:38.595Z"}
+{"level":"info","message":"MongoDB Connected 🔥","service":"booking-service","timestamp":"2026-04-15T18:43:38.650Z"}
+{"level":"warn","message":"⚠️ Firebase Admin SDK not initialized: Missing FIREBASE_SERVICE_ACCOUNT_PATH","service":"booking-service","timestamp":"2026-04-15T18:53:14.678Z"}
+{"level":"warn","message":"⚠️ REDIS_URL not provided. Seat locks will not be Redis-backed.","service":"booking-service","timestamp":"2026-04-15T18:53:14.681Z"}
+{"address":"0.0.0.0","code":"EADDRINUSE","errno":-4091,"level":"error","message":"Server Binding Error: listen EADDRINUSE: address already in use 0.0.0.0:5000","port":5000,"service":"booking-service","stack":"Error: listen EADDRINUSE: address already in use 0.0.0.0:5000\n    at Server.setupListenHandle [as _listen2] (node:net:1948:16)\n    at listenInCluster (node:net:2005:12)\n    at node:net:2214:7\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)","syscall":"listen","timestamp":"2026-04-15T18:53:14.688Z"}
+{"level":"info","message":"MongoDB Connected 🔥","service":"booking-service","timestamp":"2026-04-15T18:53:14.711Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-15T18:57:24.683Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-15T18:57:24.685Z"}
+{"level":"info","message":"ℹ️ Dev Sync: harshasingisala@gmail.com (UID: EwnbzppPHrcLSBAcLWtlmHkKF2p2)","service":"booking-service","timestamp":"2026-04-15T18:57:24.686Z"}
+{"level":"info","message":"✅ Sync Successful for harshasingisala@gmail.com","service":"booking-service","timestamp":"2026-04-15T18:57:24.757Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 339 - 78.447 ms","service":"booking-service","timestamp":"2026-04-15T18:57:24.759Z"}
+{"level":"warn","message":"❌ [AUTH FAIL] Token prefix: eyJhbGciOi... (No valid sync found)","service":"booking-service","timestamp":"2026-04-15T18:57:27.105Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 401 64 - 175.502 ms","service":"booking-service","timestamp":"2026-04-15T18:57:27.106Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-15T18:57:27.108Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 200 945 - 181.327 ms","service":"booking-service","timestamp":"2026-04-15T18:57:27.110Z"}
+{"level":"warn","message":"❌ [AUTH FAIL] Token prefix: eyJhbGciOi... (No valid sync found)","service":"booking-service","timestamp":"2026-04-15T18:57:27.111Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 401 64 - 1.333 ms","service":"booking-service","timestamp":"2026-04-15T18:57:27.113Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-15T18:57:27.117Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 304 - - 4.815 ms","service":"booking-service","timestamp":"2026-04-15T18:57:27.119Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-15T18:57:27.824Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-15T18:57:27.825Z"}
+{"level":"info","message":"ℹ️ Dev Sync: harshasingisala@gmail.com (UID: EwnbzppPHrcLSBAcLWtlmHkKF2p2)","service":"booking-service","timestamp":"2026-04-15T18:57:27.825Z"}
+{"level":"info","message":"✅ Sync Successful for harshasingisala@gmail.com","service":"booking-service","timestamp":"2026-04-15T18:57:27.836Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 339 - 12.810 ms","service":"booking-service","timestamp":"2026-04-15T18:57:27.837Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-15T19:02:45.200Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-15T19:02:45.200Z"}
+{"level":"info","message":"ℹ️ Dev Sync: harshasingial@gmail.com (UID: yy21MN7IgrXJetNhEdw0SOzGmg72)","service":"booking-service","timestamp":"2026-04-15T19:02:45.200Z"}
+{"level":"info","message":"✅ Sync Successful for harshasingial@gmail.com","service":"booking-service","timestamp":"2026-04-15T19:02:45.208Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 342 - 8.588 ms","service":"booking-service","timestamp":"2026-04-15T19:02:45.209Z"}
+{"level":"warn","message":"❌ [AUTH FAIL] Token prefix: eyJhbGciOi... (No valid sync found)","service":"booking-service","timestamp":"2026-04-15T19:02:56.845Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 401 64 - 0.630 ms","service":"booking-service","timestamp":"2026-04-15T19:02:56.845Z"}
+{"level":"warn","message":"❌ [AUTH FAIL] Token prefix: eyJhbGciOi... (No valid sync found)","service":"booking-service","timestamp":"2026-04-15T19:02:56.848Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 401 64 - 0.738 ms","service":"booking-service","timestamp":"2026-04-15T19:02:56.848Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-15T19:02:56.849Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 304 - - 3.859 ms","service":"booking-service","timestamp":"2026-04-15T19:02:56.850Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-15T19:02:56.852Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 304 - - 2.049 ms","service":"booking-service","timestamp":"2026-04-15T19:02:56.853Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-15T19:02:57.561Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-15T19:02:57.561Z"}
+{"level":"info","message":"ℹ️ Dev Sync: harshasingial@gmail.com (UID: yy21MN7IgrXJetNhEdw0SOzGmg72)","service":"booking-service","timestamp":"2026-04-15T19:02:57.561Z"}
+{"level":"info","message":"✅ Sync Successful for harshasingial@gmail.com","service":"booking-service","timestamp":"2026-04-15T19:02:57.566Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 342 - 5.234 ms","service":"booking-service","timestamp":"2026-04-15T19:02:57.566Z"}
+{"level":"warn","message":"❌ [AUTH FAIL] Token prefix: eyJhbGciOi... (No valid sync found)","service":"booking-service","timestamp":"2026-04-15T19:03:03.651Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 401 64 - 0.397 ms","service":"booking-service","timestamp":"2026-04-15T19:03:03.651Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-15T19:03:03.652Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 304 - - 2.179 ms","service":"booking-service","timestamp":"2026-04-15T19:03:03.653Z"}
+{"level":"warn","message":"❌ [AUTH FAIL] Token prefix: eyJhbGciOi... (No valid sync found)","service":"booking-service","timestamp":"2026-04-15T19:03:03.654Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 401 64 - 0.668 ms","service":"booking-service","timestamp":"2026-04-15T19:03:03.655Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-15T19:03:03.658Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 304 - - 2.259 ms","service":"booking-service","timestamp":"2026-04-15T19:03:03.659Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-15T19:03:04.123Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-15T19:03:04.123Z"}
+{"level":"info","message":"ℹ️ Dev Sync: harshasingial@gmail.com (UID: yy21MN7IgrXJetNhEdw0SOzGmg72)","service":"booking-service","timestamp":"2026-04-15T19:03:04.123Z"}
+{"level":"info","message":"✅ Sync Successful for harshasingial@gmail.com","service":"booking-service","timestamp":"2026-04-15T19:03:04.128Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 342 - 5.499 ms","service":"booking-service","timestamp":"2026-04-15T19:03:04.129Z"}
+{"level":"warn","message":"❌ [AUTH FAIL] Token prefix: eyJhbGciOi... (No valid sync found)","service":"booking-service","timestamp":"2026-04-15T19:05:19.968Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 401 64 - 0.580 ms","service":"booking-service","timestamp":"2026-04-15T19:05:19.969Z"}
+{"level":"warn","message":"❌ [AUTH FAIL] Token prefix: eyJhbGciOi... (No valid sync found)","service":"booking-service","timestamp":"2026-04-15T19:05:19.971Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 401 64 - 0.640 ms","service":"booking-service","timestamp":"2026-04-15T19:05:19.972Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-15T19:05:19.973Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 304 - - 3.517 ms","service":"booking-service","timestamp":"2026-04-15T19:05:19.973Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-15T19:05:19.975Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 304 - - 2.043 ms","service":"booking-service","timestamp":"2026-04-15T19:05:19.976Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-15T19:05:20.668Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-15T19:05:20.668Z"}
+{"level":"info","message":"ℹ️ Dev Sync: harshasingial@gmail.com (UID: yy21MN7IgrXJetNhEdw0SOzGmg72)","service":"booking-service","timestamp":"2026-04-15T19:05:20.669Z"}
+{"level":"info","message":"✅ Sync Successful for harshasingial@gmail.com","service":"booking-service","timestamp":"2026-04-15T19:05:20.675Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 342 - 7.401 ms","service":"booking-service","timestamp":"2026-04-15T19:05:20.676Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-15T19:05:41.952Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-15T19:05:41.953Z"}
+{"level":"info","message":"ℹ️ Dev Sync: harshasingial@gmail.com (UID: yy21MN7IgrXJetNhEdw0SOzGmg72)","service":"booking-service","timestamp":"2026-04-15T19:05:41.953Z"}
+{"level":"info","message":"✅ Sync Successful for harshasingial@gmail.com","service":"booking-service","timestamp":"2026-04-15T19:05:41.957Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 342 - 4.643 ms","service":"booking-service","timestamp":"2026-04-15T19:05:41.957Z"}
+{"level":"warn","message":"❌ [AUTH FAIL] Token prefix: eyJhbGciOi... (No valid sync found)","service":"booking-service","timestamp":"2026-04-15T19:07:34.293Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 401 64 - 0.640 ms","service":"booking-service","timestamp":"2026-04-15T19:07:34.294Z"}
+{"level":"warn","message":"❌ [AUTH FAIL] Token prefix: eyJhbGciOi... (No valid sync found)","service":"booking-service","timestamp":"2026-04-15T19:07:34.295Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 401 64 - 0.520 ms","service":"booking-service","timestamp":"2026-04-15T19:07:34.296Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-15T19:07:34.297Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 304 - - 2.805 ms","service":"booking-service","timestamp":"2026-04-15T19:07:34.297Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-15T19:07:34.300Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 304 - - 2.086 ms","service":"booking-service","timestamp":"2026-04-15T19:07:34.300Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-15T19:07:34.917Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-15T19:07:34.918Z"}
+{"level":"info","message":"ℹ️ Dev Sync: harshasingial@gmail.com (UID: yy21MN7IgrXJetNhEdw0SOzGmg72)","service":"booking-service","timestamp":"2026-04-15T19:07:34.918Z"}
+{"level":"info","message":"✅ Sync Successful for harshasingial@gmail.com","service":"booking-service","timestamp":"2026-04-15T19:07:34.932Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 342 - 16.582 ms","service":"booking-service","timestamp":"2026-04-15T19:07:34.934Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-15T19:09:35.952Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-15T19:09:35.953Z"}
+{"level":"info","message":"ℹ️ Dev Sync: harshasingial@gmail.com (UID: yy21MN7IgrXJetNhEdw0SOzGmg72)","service":"booking-service","timestamp":"2026-04-15T19:09:35.953Z"}
+{"level":"info","message":"✅ Sync Successful for harshasingial@gmail.com","service":"booking-service","timestamp":"2026-04-15T19:09:35.958Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 342 - 6.470 ms","service":"booking-service","timestamp":"2026-04-15T19:09:35.959Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-15T19:12:05.196Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-15T19:12:05.196Z"}
+{"level":"info","message":"ℹ️ Dev Sync: harshasingial@gmail.com (UID: yy21MN7IgrXJetNhEdw0SOzGmg72)","service":"booking-service","timestamp":"2026-04-15T19:12:05.197Z"}
+{"level":"info","message":"✅ Sync Successful for harshasingial@gmail.com","service":"booking-service","timestamp":"2026-04-15T19:12:05.202Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 342 - 6.498 ms","service":"booking-service","timestamp":"2026-04-15T19:12:05.203Z"}
+{"level":"warn","message":"❌ [AUTH FAIL] Token prefix: eyJhbGciOi... (No valid sync found)","service":"booking-service","timestamp":"2026-04-15T19:12:09.249Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 401 64 - 0.577 ms","service":"booking-service","timestamp":"2026-04-15T19:12:09.249Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-15T19:12:09.250Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 304 - - 2.963 ms","service":"booking-service","timestamp":"2026-04-15T19:12:09.251Z"}
+{"level":"warn","message":"❌ [AUTH FAIL] Token prefix: eyJhbGciOi... (No valid sync found)","service":"booking-service","timestamp":"2026-04-15T19:12:09.251Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/booking/user/bookings HTTP/1.1 401 64 - 0.480 ms","service":"booking-service","timestamp":"2026-04-15T19:12:09.252Z"}
+{"level":"info","message":"Fetched 2 events from database","service":"booking-service","timestamp":"2026-04-15T19:12:09.254Z"}
+{"level":"info","message":"127.0.0.1 - GET /api/events HTTP/1.1 304 - - 1.768 ms","service":"booking-service","timestamp":"2026-04-15T19:12:09.254Z"}
+{"level":"info","message":"🔐 Auth Sync Attempt: Token Present","service":"booking-service","timestamp":"2026-04-15T19:12:09.831Z"}
+{"level":"warn","message":"🛠️ Using Dev/Mock Auth Sync","service":"booking-service","timestamp":"2026-04-15T19:12:09.831Z"}
+{"level":"info","message":"ℹ️ Dev Sync: harshasingial@gmail.com (UID: yy21MN7IgrXJetNhEdw0SOzGmg72)","service":"booking-service","timestamp":"2026-04-15T19:12:09.831Z"}
+{"level":"info","message":"✅ Sync Successful for harshasingial@gmail.com","service":"booking-service","timestamp":"2026-04-15T19:12:09.835Z"}
+{"level":"info","message":"127.0.0.1 - POST /api/auth/firebase HTTP/1.1 200 342 - 4.592 ms","service":"booking-service","timestamp":"2026-04-15T19:12:09.836Z"}

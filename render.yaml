@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: booking-server
+    env: node
+    plan: starter # Starter plan is better for 1000+ users than free
+    buildCommand: npm install && cd ../backend && npm install
+    startCommand: cd backend && node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        fromValue: ${MONGO_URI}
+      - key: JWT_SECRET
+        fromValue: ${JWT_SECRET}
+      - key: RAZORPAY_KEY_ID
+        fromValue: ${RAZORPAY_KEY_ID}
+      - key: RAZORPAY_KEY_SECRET
+        fromValue: ${RAZORPAY_KEY_SECRET}
+      - key: ADMIN_PASSWORD_HASH
+        fromValue: ${ADMIN_PASSWORD_HASH}
+      - key: REDIS_URL
+        fromValue: ${REDIS_URL}
+
+  - type: redis
+    name: booking-redis
+    plan: starter
+    ipAllowList: [] # Adjust as needed for security

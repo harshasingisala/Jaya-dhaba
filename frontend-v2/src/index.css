@@ -1,0 +1,116 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-primary: #6C5CE7;
+  --color-secondary: #00F3FF;
+  --color-error: #FF4757;
+}
+
+@layer base {
+  body {
+    @apply bg-[#030712] text-slate-100 font-body antialiased selection:bg-primary/30;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-slate-900/40 backdrop-blur-xl border border-white/10;
+  }
+
+  /* Custom Scrollbar */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-slate-950;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-slate-800 rounded-full hover:bg-primary/50 transition-colors;
+  }
+
+  /* BASE SEAT */
+  .seat {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.25s ease;
+  }
+
+  /* 🔵 AVAILABLE (CYBER BLUE) */
+  .seat-available {
+    background: rgba(0, 170, 255, 0.15);
+    border: 1px solid rgba(0, 170, 255, 0.5);
+    color: #00d4ff;
+    box-shadow: 0 0 8px rgba(0, 170, 255, 0.2);
+  }
+
+  /* ✨ HOVER EFFECT */
+  .seat-available:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 15px rgba(0, 200, 255, 0.6);
+  }
+
+  /* 🟡 SELECTED */
+  .seat-selected {
+    background: rgba(255, 204, 0, 0.2);
+    border: 1px solid #facc15;
+    color: #facc15;
+    box-shadow: 0 0 15px rgba(250, 204, 21, 0.6);
+    animation: pulse 1.5s infinite;
+  }
+
+  /* ⚫ LOCKED */
+  .seat-locked {
+    background: rgba(100, 116, 139, 0.2);
+    border: 1px solid #64748b;
+    color: #94a3b8;
+    cursor: not-allowed;
+  }
+
+  /* 🔴 SOLD */
+  .seat-sold {
+    background: rgba(239, 68, 68, 0.2);
+    border: 1px solid #ef4444;
+    color: #ef4444;
+    cursor: not-allowed;
+  }
+
+  .seat-grid {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 6px;
+  }
+
+  /* Screen Curve */
+  .screen-curve {
+    width: 700px;
+    height: 40px;
+    border-top: 4px solid rgba(0, 243, 255, 0.4);
+    border-radius: 50% 50% 0 0;
+    box-shadow: 0 -15px 30px rgba(0, 243, 255, 0.15);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 5px rgba(250,204,21,0.4); }
+  50% { box-shadow: 0 0 20px rgba(250,204,21,0.8); }
+  100% { box-shadow: 0 0 5px rgba(250,204,21,0.4); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
