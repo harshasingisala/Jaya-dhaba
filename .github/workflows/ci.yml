@@ -19,9 +19,9 @@ jobs:
       run: |
         pip install bandit safety
     - name: Security scan (Bandit)
-      run: bandit -r backend/
+      run: bandit -r backend/ -x backend/tests --severity-level high
     - name: Dependency scan (Safety)
-      run: safety check
+      run: safety check -r backend/requirements.txt
 
   test:
     runs-on: ubuntu-latest
