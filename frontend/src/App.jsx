@@ -1,5 +1,6 @@
 import { Routes, Route, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
+import { Analytics } from "@vercel/analytics/react";
 import SmoothScroll from "./components/SmoothScroll";
 import Preloader from "./components/Preloader";
 import FloatingBookBar from "./components/FloatingBookBar";
@@ -76,6 +77,7 @@ function App() {
       <div className="app-container antialiased heritage-stone-bg min-h-screen">
         <AnimatedRoutes />
       </div>
+      <Analytics />
     </SmoothScroll>
   );
 }
