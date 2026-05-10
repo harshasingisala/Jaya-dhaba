@@ -47,7 +47,7 @@ jobs:
   deploy:
     needs: test
     runs-on: ubuntu-22.04
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && vars.ENABLE_SSH_DEPLOY == 'true'
     steps:
       - uses: actions/checkout@v4
       - name: SSH deploy
