@@ -1,0 +1,31 @@
+{
+  "name": "Jaya Dhaba | Sovereign Heritage",
+  "short_name": "Jaya Dhaba",
+  "description": "Where Heritage Meets the Golden Hour. Premium vegetarian dining in Secunderabad.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAF9F6",
+  "theme_color": "#C05621",
+  "icons": [
+    {
+      "src": "https://img.icons8.com/color/48/curry.png",
+      "sizes": "48x48",
+      "type": "image/png"
+    },
+    {
+      "src": "https://img.icons8.com/color/96/curry.png",
+      "sizes": "96x96",
+      "type": "image/png"
+    },
+    {
+      "src": "https://img.icons8.com/color/192/curry.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://img.icons8.com/color/512/curry.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

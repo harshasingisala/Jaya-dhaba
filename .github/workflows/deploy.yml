@@ -1,0 +1,60 @@
+name: test-build-deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Backend dependencies
+        run: python -m pip install -r backend/requirements.txt
+      - name: Backend tests
+        run: |
+          export FLASK_ENV=testing
+          export FLASK_SECRET_KEY="$(openssl rand -hex 48)"
+          export JWT_SECRET_KEY="$(openssl rand -hex 48)"
+          export ADMIN_BOOTSTRAP_EMAIL=admin@example.com
+          export ADMIN_BOOTSTRAP_PASSWORD=AdminPass123!
+          export STAFF_BOOTSTRAP_EMAIL=staff@example.com
+          export STAFF_BOOTSTRAP_PASSWORD=StaffPass123!
+          export STRIPE_SECRET_KEY="sk_""test_$(openssl rand -hex 8)"
+          export STRIPE_WEBHOOK_SECRET="wh""sec_$(openssl rand -hex 8)"
+          export COOKIE_SECURE=false
+          python -m pytest backend/tests/ --tb=short -q
+      - name: Security grep
+        run: |
+          ! grep -rn "execute(f" backend/
+          ! grep -rn "sk_live_\|sk_test_\|AKIA\|hardcoded_secret" backend/
+          test ! -f backend/.env
+      - name: Frontend build
+        run: |
+          npm --prefix frontend ci
+          npm --prefix frontend run build
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-22.04
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - name: SSH deploy
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            cd /var/www/restaurant
+            bash scripts/deploy.sh
+            curl -f https://${{ secrets.DOMAIN }}/api/health

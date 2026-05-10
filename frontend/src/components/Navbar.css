@@ -1,0 +1,37 @@
+.navbar {
+  @apply fixed top-0 w-full z-50 transition-all duration-500 border-b;
+}
+
+.navbar.transparent {
+  @apply bg-transparent border-transparent py-4;
+}
+
+.navbar.scrolled {
+  @apply bg-white/80 backdrop-blur-xl border-black/5 py-2 shadow-premium;
+}
+
+.nav-link {
+  @apply bg-transparent border-none cursor-pointer transition-colors relative py-2;
+}
+
+.nav-link:hover {
+  @apply text-primary;
+}
+
+.nav-link.active {
+  @apply text-primary;
+}
+
+.nav-link.active::after {
+  content: '';
+  @apply absolute bottom-0 left-0 w-full h-0.5 bg-primary rounded-full;
+}
+
+/* Ensure icons and text align perfectly */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+.navbar input:focus {
+  @apply outline-none ring-0;
+}
