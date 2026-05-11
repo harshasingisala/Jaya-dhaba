@@ -1,0 +1,19 @@
+.sticky-cart-bar {
+  @apply fixed bottom-8 left-1/2 -translate-x-1/2 z-[400] bg-white rounded-full p-2 pl-6 flex items-center gap-6 border border-black/5 shadow-premium cursor-pointer transition-all hover:scale-105 active:scale-95;
+}
+
+.cart-summary {
+  @apply flex flex-col;
+}
+
+.cart-count-pill {
+  @apply text-[9px] font-black uppercase tracking-widest text-primary;
+}
+
+.cart-total-price {
+  @apply text-lg font-serif italic font-bold text-on-surface;
+}
+
+.cart-cta {
+  @apply sunset-gradient text-white px-8 py-4 rounded-full flex items-center gap-2 text-xs font-black uppercase tracking-widest shadow-lg;
+}

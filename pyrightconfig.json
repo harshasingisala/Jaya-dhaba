@@ -1,0 +1,18 @@
+{
+    "include": [
+        "backend"
+    ],
+    "exclude": [
+        "**/node_modules",
+        "**/__pycache__"
+    ],
+    "executionEnvironments": [
+        {
+            "root": "backend",
+            "pythonVersion": "3.14",
+            "extraPaths": [
+                "."
+            ]
+        }
+    ]
+}
