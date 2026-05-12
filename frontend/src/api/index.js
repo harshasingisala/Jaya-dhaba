@@ -4,6 +4,8 @@ import { API_BASE_URL } from './config.js';
 import { supabase } from '../supabaseClient.js';
 
 const BASE_URL = API_BASE_URL;
+const SESSION_KEY = 'user';
+let redirectingToLogin = false;
 
 const API_TO_UI_STATUS = {
   pending: 'Placed',
@@ -35,10 +37,29 @@ function getCsrfToken() {
 
 function getAuthToken() {
   try {
-    const user = JSON.parse(localStorage.getItem('user') || 'null');
+    const user = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null');
     return user?.access_token || user?.token || '';
   } catch {
     return '';
+  }
+}
+
+function handleExpiredSession() {
+  if (redirectingToLogin) return;
+  if (window.location.pathname.startsWith('/admin/login')) return;
+  if (!localStorage.getItem(SESSION_KEY)) return;
+
+  redirectingToLogin = true;
+  localStorage.removeItem(SESSION_KEY);
+  window.location.href = '/admin/login';
+}
+
+function isTokenExpired(token) {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return (payload.exp - 10) * 1000 < Date.now();
+  } catch {
+    return false;
   }
 }
 
@@ -61,6 +82,10 @@ async function request(path, options = {}) {
     ...(options.headers || {}),
   };
   const token = getAuthToken();
+  if (token && isTokenExpired(token)) {
+    handleExpiredSession();
+    throw new Error('Session expired');
+  }
   if (token && !headers.Authorization) headers.Authorization = `Bearer ${token}`;
   if (!['GET', 'HEAD', 'OPTIONS'].includes(method) && !headers['X-CSRF-Token']) {
     headers['X-CSRF-Token'] = await ensureCsrfToken();
@@ -73,8 +98,11 @@ async function request(path, options = {}) {
     headers,
   });
   const payload = await res.json().catch(() => ({}));
+  if (res.status === 401 || res.status === 422) {
+    handleExpiredSession();
+  }
   if (!res.ok) {
-    throw new Error(payload.message || payload.error || `Request failed (${res.status})`);
+    throw new Error(payload.msg || payload.message || payload.error || `Request failed (${res.status})`);
   }
   return payload?.data ?? payload;
 }
