@@ -40,6 +40,7 @@ def create_app(overrides: dict | None = None) -> Flask:
         or (os.getenv("FLASK_SECRET_KEY") if not is_production else None)
         or (None if is_production else "development-secret"),
         JWT_SECRET_KEY=os.getenv("JWT_SECRET_KEY")
+        or os.getenv("SECRET_KEY")
         or (None if is_production else "development-jwt-secret"),
         JWT_ACCESS_TOKEN_EXPIRES=15 * 60,
         DATABASE_URL=os.getenv("DATABASE_URL", ""),
@@ -273,8 +274,6 @@ def _validate_runtime_config(app: Flask, cors_origins: list[str], is_production:
         errors.append("SQLite is forbidden as the production order store")
     elif not database_url.startswith(("postgresql://", "postgresql+psycopg://", "postgresql+psycopg2://")):
         errors.append("DATABASE_URL must be a PostgreSQL connection string for Supabase")
-    if app.config.get("DOMAIN") in {"", "localhost", "127.0.0.1"}:
-        errors.append("DOMAIN must be the production hostname")
     for origin in cors_origins:
         if origin == "*":
             errors.append("Wildcard CORS origins are forbidden in production")
