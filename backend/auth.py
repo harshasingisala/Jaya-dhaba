@@ -30,7 +30,7 @@ REFRESH_COOKIE = "refresh_token"
 
 def cookie_samesite() -> str:
     app_env = (os.getenv("APP_ENV") or os.getenv("FLASK_ENV") or "").lower()
-    return "Strict" if app_env == "production" else "Lax"
+    return "None" if app_env == "production" else "Lax"
 
 # Role hierarchy
 ROLE_RANK = {
