@@ -9,9 +9,13 @@ const AppContext = createContext(null);
 const load = (key, fallback) => {
   try {
     const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(fallback) && !Array.isArray(parsed)) return fallback;
+    return parsed ?? fallback;
   } catch (err) {
     console.error('[JAYA_DEBUG] Caught error in load:', err);
+    localStorage.removeItem(key);
     return fallback;
   }
 };
