@@ -4,9 +4,9 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Generator
 
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine, event, select
 from sqlalchemy.orm import Session, sessionmaker, scoped_session
-from sqlalchemy.pool import NullPool
+from sqlalchemy.pool import QueuePool
 
 from models import Base, User, MenuCategory, RestaurantTable, MenuItem
 from utils.encryption import Encryptor
@@ -38,17 +38,37 @@ def configure(database_url: str):
     if not DATABASE_URL:
         raise RuntimeError("DATABASE_URL is required; production must use Supabase Postgres")
     app_env = (os.getenv("APP_ENV") or os.getenv("FLASK_ENV") or "").lower()
-    if app_env not in {"test", "testing"} and DATABASE_URL.startswith("sqlite"):
+    if app_env not in {"development", "dev", "local", "test", "testing"} and DATABASE_URL.startswith("sqlite"):
         raise RuntimeError("SQLite is forbidden outside tests; set DATABASE_URL to Supabase Postgres")
     if DATABASE_URL.startswith("postgresql"):
-        engine = create_engine(DATABASE_URL, pool_pre_ping=True, pool_size=10, max_overflow=20)
+        postgres_pool_size = 10 if app_env == "production" else 20
+        postgres_max_overflow = 5 if app_env == "production" else 40
+        engine = create_engine(
+            DATABASE_URL,
+            pool_pre_ping=True,
+            pool_size=postgres_pool_size,
+            max_overflow=postgres_max_overflow,
+            pool_timeout=30,
+        )
     else:
-        engine = create_engine(DATABASE_URL, pool_pre_ping=True, poolclass=NullPool)
+        engine = create_engine(
+            DATABASE_URL,
+            pool_pre_ping=True,
+            pool_size=1,
+            max_overflow=0,
+            pool_timeout=30,
+            poolclass=QueuePool,
+            connect_args={"check_same_thread": False, "timeout": 30},
+        )
+
+        @event.listens_for(engine, "connect")
+        def _set_sqlite_pragmas(dbapi_connection, _connection_record):
+            cursor = dbapi_connection.cursor()
+            cursor.execute("PRAGMA journal_mode=WAL")
+            cursor.execute("PRAGMA busy_timeout=30000")
+            cursor.close()
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     db_session = scoped_session(SessionLocal)
-
-
-configure(DATABASE_URL)
 
 
 def utc_now() -> datetime:
@@ -80,10 +100,113 @@ def get_db() -> Generator[Session, None, None]:
 def init_db(seed: bool = True):
     Base.metadata.create_all(bind=engine)
     _ensure_sqlite_compatibility()
+    _ensure_settings_schema()
+    _ensure_order_lifecycle_schema()
+    _ensure_contact_submissions_schema()
+    _ensure_order_number_counter()
     if engine.dialect.name == "postgresql":
         return
     if seed:
         seed_db()
+
+
+def _ensure_order_number_counter():
+    with engine.begin() as conn:
+        max_order_number = conn.execute(text("SELECT COALESCE(MAX(order_number), 0) FROM orders")).scalar() or 0
+        if engine.dialect.name == "postgresql":
+            conn.execute(
+                text(
+                    """
+                    INSERT INTO order_number_counter (name, next_value)
+                    VALUES ('orders', :next_value)
+                    ON CONFLICT (name) DO UPDATE
+                    SET next_value = GREATEST(order_number_counter.next_value, EXCLUDED.next_value)
+                    """
+                ),
+                {"next_value": int(max_order_number) + 1},
+            )
+        else:
+            conn.execute(
+                text(
+                    """
+                    INSERT INTO order_number_counter (name, next_value)
+                    VALUES ('orders', :next_value)
+                    ON CONFLICT(name) DO UPDATE
+                    SET next_value = MAX(order_number_counter.next_value, excluded.next_value)
+                    """
+                ),
+                {"next_value": int(max_order_number) + 1},
+            )
+
+
+def _ensure_contact_submissions_schema():
+    with engine.begin() as conn:
+        if engine.dialect.name == "postgresql":
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS contact_submissions (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(100) NOT NULL,
+                    email VARCHAR(200) NOT NULL,
+                    phone VARCHAR(20),
+                    subject VARCHAR(200),
+                    message TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    is_read BOOLEAN DEFAULT FALSE
+                )
+            """))
+            return
+
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS contact_submissions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name VARCHAR(100) NOT NULL,
+                email VARCHAR(200) NOT NULL,
+                phone VARCHAR(20),
+                subject VARCHAR(200),
+                message TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                is_read INTEGER DEFAULT 0
+            )
+        """))
+
+
+def _ensure_settings_schema():
+    with engine.begin() as conn:
+        if engine.dialect.name == "postgresql":
+            conn.execute(text("ALTER TABLE settings ADD COLUMN IF NOT EXISTS upi_id VARCHAR(120) NOT NULL DEFAULT ''"))
+            return
+
+        columns = [row[1] for row in conn.execute(text("PRAGMA table_info(settings)")).fetchall()]
+        if "upi_id" not in columns:
+            conn.execute(text("ALTER TABLE settings ADD COLUMN upi_id VARCHAR(120) NOT NULL DEFAULT ''"))
+
+
+def _ensure_order_lifecycle_schema():
+    with engine.begin() as conn:
+        if engine.dialect.name == "postgresql":
+            conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS is_archived BOOLEAN NOT NULL DEFAULT false"))
+            conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ"))
+            conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS preparing_at TIMESTAMPTZ"))
+            conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS served_at TIMESTAMPTZ"))
+            conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS source VARCHAR(20) NOT NULL DEFAULT 'customer'"))
+            conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_method VARCHAR(20) NOT NULL DEFAULT ''"))
+            conn.execute(text("UPDATE orders SET status = 'pending' WHERE status IS NULL"))
+            return
+
+        columns = [row[1] for row in conn.execute(text("PRAGMA table_info(orders)")).fetchall()]
+        if "is_archived" not in columns:
+            conn.execute(text("ALTER TABLE orders ADD COLUMN is_archived BOOLEAN NOT NULL DEFAULT 0"))
+        if "archived_at" not in columns:
+            conn.execute(text("ALTER TABLE orders ADD COLUMN archived_at DATETIME"))
+        if "preparing_at" not in columns:
+            conn.execute(text("ALTER TABLE orders ADD COLUMN preparing_at DATETIME"))
+        if "served_at" not in columns:
+            conn.execute(text("ALTER TABLE orders ADD COLUMN served_at DATETIME"))
+        if "source" not in columns:
+            conn.execute(text("ALTER TABLE orders ADD COLUMN source VARCHAR(20) NOT NULL DEFAULT 'customer'"))
+        if "payment_method" not in columns:
+            conn.execute(text("ALTER TABLE orders ADD COLUMN payment_method VARCHAR(20) NOT NULL DEFAULT ''"))
+        conn.execute(text("UPDATE orders SET status = 'pending' WHERE status IS NULL"))
 
 
 def _ensure_sqlite_compatibility():
@@ -103,10 +226,14 @@ def _ensure_sqlite_compatibility():
         return False
 
     def _rewrite_table(create_sql: str, table_name: str, indexes: list[str]) -> None:
+        old_columns = [row[1] for row in conn.execute(text(f"PRAGMA table_info({table_name})")).fetchall()]
         conn.execute(text("PRAGMA foreign_keys=OFF"))
         conn.execute(text(f"DROP TABLE IF EXISTS {table_name}_new"))
         conn.execute(text(create_sql))
-        conn.execute(text(f"INSERT INTO {table_name}_new SELECT * FROM {table_name}"))
+        new_columns = [row[1] for row in conn.execute(text(f"PRAGMA table_info({table_name}_new)")).fetchall()]
+        common_columns = [column for column in old_columns if column in new_columns]
+        quoted_columns = ", ".join(f'"{column}"' for column in common_columns)
+        conn.execute(text(f"INSERT INTO {table_name}_new ({quoted_columns}) SELECT {quoted_columns} FROM {table_name}"))
         conn.execute(text(f"DROP TABLE {table_name}"))
         conn.execute(text(f"ALTER TABLE {table_name}_new RENAME TO {table_name}"))
         for index_sql in indexes:
@@ -212,6 +339,31 @@ def _ensure_sqlite_compatibility():
             "ON payments (razorpay_order_id) WHERE razorpay_order_id IS NOT NULL"
         ))
 
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS settings (
+                id INTEGER NOT NULL PRIMARY KEY,
+                name VARCHAR(120) NOT NULL,
+                tagline VARCHAR(160) NOT NULL,
+                hours VARCHAR(120) NOT NULL,
+                contact VARCHAR(40) NOT NULL,
+                status VARCHAR(40) NOT NULL,
+                address VARCHAR(240) NOT NULL,
+                tax_rate INTEGER NOT NULL,
+                currency VARCHAR(10) NOT NULL,
+                upi_id VARCHAR(120) NOT NULL DEFAULT '',
+                updated_at DATETIME NOT NULL
+            )
+        """))
+        conn.execute(text("""
+            INSERT INTO settings
+            (id, name, tagline, hours, contact, status, address, tax_rate, currency, updated_at)
+            VALUES
+            (1, 'Jaya Dhaba', 'Heritage Restored. Flavor Perfected.',
+             '11:00 AM - 11:00 PM', '07386185823', 'open',
+             'East Marredpally, Secunderabad', 5, 'INR', CURRENT_TIMESTAMP)
+            ON CONFLICT(id) DO NOTHING
+        """))
+
 
 def seed_db():
     with get_db() as db:
@@ -229,11 +381,12 @@ def seed_db():
         # 2. Seed Categories
         categories_data = [
             ("Starters", 10, 2.5, 2.5),
-            ("Mains", 20, 2.5, 2.5),
-            ("Biryani", 30, 2.5, 2.5),
+            ("Biryani", 20, 2.5, 2.5),
+            ("Curries", 30, 2.5, 2.5),
             ("Breads", 40, 2.5, 2.5),
-            ("Desserts", 50, 9.0, 9.0),  # Example higher tax for sweets/luxury
-            ("Drinks", 60, 9.0, 9.0),
+            ("Rice", 50, 2.5, 2.5),
+            ("Beverages", 60, 2.5, 2.5),
+            ("Desserts", 70, 2.5, 2.5),
         ]
         for name, order, cgst, sgst in categories_data:
             exists = db.execute(select(MenuCategory).filter_by(name=name)).scalar_one_or_none()
@@ -247,30 +400,75 @@ def seed_db():
 
         # 3. Seed Menu Items
         menu_data = [
-            ("biryani", "Biryani", "Chicken Biryani", "Slow-cooked dum biryani with saffron rice.", 299, "/biryani.png", ["best-seller", "spicy"]),
-            ("haleem", "Biryani", "Hyderabadi Haleem", "Slow-cooked heritage meat stew with wheat and lentils.", 349, "/haleem.png", ["seasonal", "heritage"]),
-            ("kofta", "Mains", "Malai Kofta - Golden Heritage", "Silky cashew gravy with cottage cheese melt-in-the-mouth balls.", 329, "/kofta.png", ["premium", "vegetarian"]),
-            ("paneer", "Mains", "Paneer Tikka", "Charcoal-grilled paneer with herbs.", 249, "/paneer.png", ["vegetarian"]),
-            ("tandoori", "Starters", "Tandoori Chicken", "Clay oven roasted chicken with rich spices.", 349, "/chicken.png", ["spicy"]),
-            ("naan", "Breads", "Butter Naan", "Soft, buttery naan.", 59, "/naan.png", ["vegetarian"]),
-            ("mutton", "Biryani", "Mutton Rogan Josh", "Rich Kashmiri gravy with slow-cooked mutton.", 429, "/mutton.png", ["premium", "spicy"]),
-            ("kheer", "Desserts", "Jaya Special Kheer", "Traditional rice pudding flavored with saffron and cardamom.", 129, "/kheer.png", ["dessert", "vegetarian"]),
-            ("double", "Desserts", "Special Double Ka Meetha", "Fried bread dessert soaked in mawa and saffron milk.", 149, "/double.png", ["dessert", "premium"]),
-            ("lassi", "Drinks", "Rose Lassi", "Cooling yogurt drink with rose petals.", 89, "/lassi.png", ["drink", "vegetarian"]),
-            ("manchurian", "Mains", "Veg Manchurian Dry", "Crispy veg balls in spicy soy-garlic glaze.", 249, "/kofta.png", ["vegetarian", "oriental"]),
-            ("chicken65", "Starters", "Chicken 65", "Spicy, deep-fried chicken tempered with curry leaves.", 299, "/chicken.png", ["non-veg", "spicy"]),
+            ("chicken65", "Starters", "Chicken 65", "Spicy fried chicken tempered with curry leaves.", 160, "/chicken.png", ["non-veg", "spicy"]),
+            ("paneer-tikka", "Starters", "Paneer Tikka", "Charcoal-grilled paneer with dhaba masala.", 150, "/paneer.png", ["vegetarian"]),
+            ("veg-manchurian", "Starters", "Veg Manchurian Dry", "Crispy veg bites in soy-garlic glaze.", 120, "/kofta.png", ["vegetarian"]),
+            ("chilli-chicken", "Starters", "Chilli Chicken", "Indo-Chinese chicken with peppers.", 170, "/chicken.png", ["non-veg"]),
+            ("masala-papad", "Starters", "Masala Papad", "Crisp papad topped with onion, tomato and lime.", 80, "/naan.png", ["vegetarian"]),
+            ("veg-biryani", "Biryani", "Veg Dum Biryani", "Dum rice with seasonal vegetables and saffron.", 150, "/biryani.png", ["vegetarian"]),
+            ("chicken-biryani", "Biryani", "Chicken Biryani", "Hyderabadi dum biryani with tender chicken.", 220, "/biryani.png", ["best-seller"]),
+            ("mutton-biryani", "Biryani", "Mutton Biryani", "Slow-cooked mutton dum biryani.", 280, "/biryani.png", ["premium"]),
+            ("egg-biryani", "Biryani", "Egg Biryani", "Fragrant rice layered with boiled eggs and masala.", 170, "/biryani.png", ["spicy"]),
+            ("family-biryani", "Biryani", "Chicken Family Pack Biryani", "Generous chicken biryani pack for sharing.", 520, "/biryani.png", ["family"]),
+            ("butter-chicken", "Curries", "Butter Chicken", "Creamy tomato gravy with tandoori chicken.", 240, "/mutton.png", ["non-veg"]),
+            ("chicken-curry", "Curries", "Dhaba Chicken Curry", "Home-style chicken curry with robust masala.", 210, "/chicken.png", ["spicy"]),
+            ("mutton-rogan", "Curries", "Mutton Rogan Josh", "Rich mutton curry with Kashmiri spices.", 270, "/mutton.png", ["premium"]),
+            ("paneer-butter", "Curries", "Paneer Butter Masala", "Paneer cubes in creamy makhani gravy.", 190, "/paneer.png", ["vegetarian"]),
+            ("dal-tadka", "Curries", "Dal Tadka", "Yellow dal tempered with ghee, garlic and cumin.", 130, "/kofta.png", ["vegetarian"]),
+            ("tandoori-roti", "Breads", "Tandoori Roti", "Whole wheat roti from the tandoor.", 25, "/naan.png", ["vegetarian"]),
+            ("butter-naan", "Breads", "Butter Naan", "Soft naan brushed with butter.", 45, "/naan.png", ["vegetarian"]),
+            ("garlic-naan", "Breads", "Garlic Naan", "Naan topped with garlic and coriander.", 55, "/naan.png", ["vegetarian"]),
+            ("plain-paratha", "Breads", "Plain Paratha", "Layered tawa paratha.", 45, "/naan.png", ["vegetarian"]),
+            ("rumali-roti", "Breads", "Rumali Roti", "Thin soft roti folded fresh.", 35, "/naan.png", ["vegetarian"]),
+            ("jeera-rice", "Rice", "Jeera Rice", "Basmati rice tossed with cumin.", 110, "/biryani.png", ["vegetarian"]),
+            ("plain-rice", "Rice", "Plain Rice", "Steamed rice for curry pairings.", 90, "/biryani.png", ["vegetarian"]),
+            ("curd-rice", "Rice", "Curd Rice", "Cooling curd rice with tempering.", 100, "/biryani.png", ["vegetarian"]),
+            ("veg-fried-rice", "Rice", "Veg Fried Rice", "Wok-tossed rice with vegetables.", 130, "/biryani.png", ["vegetarian"]),
+            ("egg-fried-rice", "Rice", "Egg Fried Rice", "Fried rice with egg and spring onion.", 140, "/biryani.png", ["egg"]),
+            ("sweet-lassi", "Beverages", "Sweet Lassi", "Thick chilled yogurt drink.", 70, "/lassi.png", ["vegetarian"]),
+            ("rose-lassi", "Beverages", "Rose Lassi", "Cooling lassi with rose syrup.", 80, "/lassi.png", ["vegetarian"]),
+            ("buttermilk", "Beverages", "Masala Buttermilk", "Spiced chaas with roasted cumin.", 50, "/lassi.png", ["vegetarian"]),
+            ("lime-soda", "Beverages", "Fresh Lime Soda", "Sweet or salted lime soda.", 60, "/lassi.png", ["vegetarian"]),
+            ("tea", "Beverages", "Irani Chai", "Strong tea with milk and cardamom.", 30, "/lassi.png", ["vegetarian"]),
+            ("double-meetha", "Desserts", "Double Ka Meetha", "Hyderabadi bread dessert with rabdi.", 100, "/double.png", ["vegetarian"]),
+            ("kheer", "Desserts", "Jaya Special Kheer", "Rice pudding with saffron and cardamom.", 90, "/kheer.png", ["vegetarian"]),
+            ("gulab-jamun", "Desserts", "Gulab Jamun", "Warm milk-solid dumplings in syrup.", 80, "/kheer.png", ["vegetarian"]),
+            ("qubani", "Desserts", "Qubani Ka Meetha", "Apricot dessert with cream.", 120, "/double.png", ["vegetarian"]),
+            ("ice-cream", "Desserts", "Vanilla Ice Cream", "Classic vanilla scoop.", 70, "/kheer.png", ["vegetarian"]),
         ]
+        canonical_names = set()
         for client_id, cat_name, name, desc, price, img, tags in menu_data:
+            canonical_names.add(name)
             exists = db.execute(select(MenuItem).filter_by(name=name)).scalar_one_or_none()
-            if not exists:
+            if exists:
+                exists.category_id = cat_map[cat_name]
+                exists.description = desc
+                exists.price = price
+                exists.image_url = img
+                exists.dietary_tags = tags
+                exists.available = True
+                exists.deleted_at = None
+            else:
                 db.add(MenuItem(
                     category_id=cat_map[cat_name],
                     name=name,
                     description=desc,
                     price=price,
                     image_url=img,
-                    dietary_tags=tags
+                    dietary_tags=tags,
+                    available=True
                 ))
+
+        legacy_demo_names = {
+            "Hyderabadi Haleem",
+            "Malai Kofta - Golden Heritage",
+            "Tandoori Chicken",
+            "Special Double Ka Meetha",
+        }
+        for item in db.execute(select(MenuItem).where(MenuItem.name.in_(legacy_demo_names))).scalars():
+            if item.name not in canonical_names:
+                item.available = False
+                item.deleted_at = utc_now()
 
         # 4. Bootstrap Admin
         admin_email = os.getenv("ADMIN_BOOTSTRAP_EMAIL", "admin@jayadhaba.in")

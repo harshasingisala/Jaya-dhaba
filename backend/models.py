@@ -155,11 +155,16 @@ class Order(Base):
     
     public_token_hash: Mapped[str] = mapped_column(String(255))
     order_type: Mapped[str] = mapped_column(String(20), default="dine_in")  # dine_in, pickup, delivery
+    source: Mapped[str] = mapped_column(String(20), default="customer")
+    payment_method: Mapped[str] = mapped_column(String(20), default="")
     pickup_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
     
     status_history: Mapped[list] = mapped_column(JSON, default=list)
     confirmed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    preparing_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
     served_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    is_archived: Mapped[bool] = mapped_column(Boolean, default=False)
+    archived_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
     
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
@@ -167,6 +172,46 @@ class Order(Base):
     user: Mapped["User"] = relationship(back_populates="orders")
     items: Mapped[List["OrderItem"]] = relationship(back_populates="order", cascade="all, delete-orphan")
     payment = relationship("Payment", back_populates="order")
+
+    def to_dict(self):
+        return {
+            "id": str(self.id),
+            "order_number": self.order_number,
+            "status": self.status,
+            "is_archived": bool(self.is_archived),
+            "subtotal": int(self.subtotal or 0),
+            "tax": int(self.tax or 0),
+            "total": int(self.total or 0),
+            "items": [
+                {
+                    "name": item.menu_item.name if item.menu_item else "",
+                    "qty": item.qty,
+                    "unit_price": item.unit_price,
+                    "special_note": item.special_note,
+                }
+                for item in self.items
+            ],
+            "customer_name": self.guest_name,
+            "customer_phone": self.guest_phone,
+            "guest_name": self.guest_name,
+            "guest_phone": self.guest_phone,
+            "order_type": self.order_type,
+            "source": self.source,
+            "payment_method": self.payment_method,
+            "table_id": str(self.table_id) if self.table_id else None,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "preparing_at": self.preparing_at.isoformat() if self.preparing_at else None,
+            "served_at": self.served_at.isoformat() if self.served_at else None,
+            "archived_at": self.archived_at.isoformat() if self.archived_at else None,
+        }
+
+
+class OrderNumberCounter(Base):
+    __tablename__ = "order_number_counter"
+
+    name: Mapped[str] = mapped_column(String(40), primary_key=True)
+    next_value: Mapped[int] = mapped_column(Integer, nullable=False)
 
 
 class OrderItem(Base):

@@ -45,6 +45,8 @@ class OrderCreate(BaseModel):
     table_id: Optional[uuid.UUID] = None  # Optional for online/delivery orders
     items: List[OrderItemRequest] = Field(..., min_items=1)
     order_type: str = Field("dine_in", pattern="^(dine_in|pickup|delivery)$")
+    source: str = Field("customer", pattern="^(customer|manual)$")
+    payment_method: Optional[str] = Field("", pattern="^(|cash|upi|card|razorpay)$")
     guest_name: Optional[str] = ""
     guest_phone: Optional[str] = ""
     pickup_time: Optional[datetime] = None
