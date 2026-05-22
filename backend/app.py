@@ -1,10 +1,8 @@
 import os
-import time
 from pathlib import Path
-from datetime import timezone, timedelta
 from urllib.parse import urlparse
 
-from flask import Flask, jsonify, request, make_response
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from dotenv import load_dotenv
@@ -16,6 +14,7 @@ if os.getenv("FLASK_ENV") != "testing":
 
 import db
 from auth import optional_user
+from realtime import init_realtime
 from security_middleware import init_security_middleware
 from routes import register_blueprints
 from validators import ValidationError
@@ -33,9 +32,15 @@ if SENTRY_DSN:
 
 def create_app(overrides: dict | None = None) -> Flask:
     app = Flask(__name__)
+    runtime_env = (os.getenv("APP_ENV") or os.getenv("FLASK_ENV") or "").lower()
+    is_production = runtime_env == "production"
+    is_development = os.environ.get("FLASK_ENV") == "development"
     app.config.update(
-        SECRET_KEY=os.getenv("FLASK_SECRET_KEY", "development-secret"),
-        JWT_SECRET_KEY=os.getenv("JWT_SECRET_KEY", "development-jwt-secret"),
+        SECRET_KEY=os.getenv("SECRET_KEY")
+        or (os.getenv("FLASK_SECRET_KEY") if not is_production else None)
+        or (None if is_production else "development-secret"),
+        JWT_SECRET_KEY=os.getenv("JWT_SECRET_KEY")
+        or (None if is_production else "development-jwt-secret"),
         JWT_ACCESS_TOKEN_EXPIRES=15 * 60,
         DATABASE_URL=os.getenv("DATABASE_URL", ""),
         TAX_BASIS_POINTS=int(os.getenv("TAX_BASIS_POINTS", "500")),
@@ -48,28 +53,32 @@ def create_app(overrides: dict | None = None) -> Flask:
         GOOGLE_API_KEY=os.getenv("GOOGLE_API_KEY", ""),
         CHATBOT_ENABLED=os.getenv("CHATBOT_ENABLED", "false").lower() == "true",
         COOKIE_SECURE=os.getenv("COOKIE_SECURE", "true").lower() == "true",
+        SESSION_COOKIE_SECURE=os.getenv("SESSION_COOKIE_SECURE", "true").lower() == "true",
+        SESSION_COOKIE_HTTPONLY=True,
+        SESSION_COOKIE_SAMESITE="Lax",
+        WTF_CSRF_SSL_STRICT=os.getenv("WTF_CSRF_SSL_STRICT", "true").lower() == "true",
         TESTING=False,
     )
+    app.debug = is_development
     if overrides:
         app.config.update(overrides)
 
-    is_production = (os.getenv("APP_ENV") or os.getenv("FLASK_ENV") or "").lower() == "production"
     configured_origins = [
         origin.strip()
         for origin in os.getenv("CORS_ORIGINS", "").split(",")
         if origin.strip()
     ]
-    if configured_origins:
-        cors_origins = configured_origins
-    elif is_production:
-        cors_origins = []
-    else:
-        cors_origins = [
-            "http://localhost:5174",
-            "http://127.0.0.1:5174",
-        ]
+    cors_origins = configured_origins or [
+        "https://www.jayadhaba.online",
+        "https://jayadhaba.online",
+    ]
     if not is_production:
-        for origin in ("http://localhost:5174", "http://127.0.0.1:5174"):
+        for origin in (
+            "http://localhost:5173",
+            "http://localhost:5174",
+            "http://127.0.0.1:5173",
+            "http://127.0.0.1:5174",
+        ):
             if origin not in cors_origins:
                 cors_origins.append(origin)
 
@@ -90,6 +99,7 @@ def create_app(overrides: dict | None = None) -> Flask:
 
     # Auth & Database
     JWTManager(app)
+    init_realtime(app)
     db.configure(app.config["DATABASE_URL"])
     db.init_db(seed=not app.config.get("TESTING"))
 
@@ -116,13 +126,11 @@ def create_app(overrides: dict | None = None) -> Flask:
 
     @app.get("/api/health")
     def health():
-        started = time.monotonic()
-        try:
-            with db.get_db() as session:
-                session.execute(db.select(1))
-        except Exception as exc:
-            return jsonify({"success": False, "status": "degraded", "db": str(exc)}), 503
-        return jsonify({"success": True, "status": "ok", "db_ms": int((time.monotonic() - started) * 1000)})
+        return jsonify({"status": "ok", "version": "1.0.0"}), 200
+
+    @app.get("/health")
+    def health_check():
+        return jsonify({"status": "ok", "version": "1.0.0"}), 200
 
     @app.errorhandler(ValidationError)
     def handle_validation_error(error: ValidationError):
@@ -241,12 +249,20 @@ def _validate_runtime_config(app: Flask, cors_origins: list[str], is_production:
     database_url = app.config.get("DATABASE_URL", "")
     secret_key = app.config.get("SECRET_KEY", "")
     jwt_secret = app.config.get("JWT_SECRET_KEY", "")
-    if secret_key in {"", "development-secret"} or len(secret_key) < 32:
-        errors.append("FLASK_SECRET_KEY must be a non-default secret of at least 32 characters")
-    if jwt_secret in {"", "development-jwt-secret"} or len(jwt_secret) < 32:
+    if not secret_key or secret_key == "development-secret" or len(secret_key) < 32:
+        errors.append("SECRET_KEY must be a non-default environment secret of at least 32 characters")
+    if not jwt_secret or jwt_secret == "development-jwt-secret" or len(jwt_secret) < 32:
         errors.append("JWT_SECRET_KEY must be a non-default secret of at least 32 characters")
     if not app.config.get("COOKIE_SECURE"):
         errors.append("COOKIE_SECURE=true is required in production")
+    if not app.config.get("SESSION_COOKIE_SECURE"):
+        errors.append("SESSION_COOKIE_SECURE=true is required in production")
+    if not app.config.get("SESSION_COOKIE_HTTPONLY"):
+        errors.append("SESSION_COOKIE_HTTPONLY=true is required in production")
+    if app.config.get("SESSION_COOKIE_SAMESITE") != "Lax":
+        errors.append("SESSION_COOKIE_SAMESITE=Lax is required in production")
+    if not app.config.get("WTF_CSRF_SSL_STRICT"):
+        errors.append("WTF_CSRF_SSL_STRICT=true is required in production")
     if not app.config.get("RAZORPAY_KEY_ID") or not app.config.get("RAZORPAY_KEY_SECRET"):
         errors.append("RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET are required in production")
     if not app.config.get("RAZORPAY_WEBHOOK_SECRET"):
@@ -259,10 +275,10 @@ def _validate_runtime_config(app: Flask, cors_origins: list[str], is_production:
         errors.append("DATABASE_URL must be a PostgreSQL connection string for Supabase")
     if app.config.get("DOMAIN") in {"", "localhost", "127.0.0.1"}:
         errors.append("DOMAIN must be the production hostname")
-    if not cors_origins:
-        errors.append("CORS_ORIGINS must be set in production")
-
     for origin in cors_origins:
+        if origin == "*":
+            errors.append("Wildcard CORS origins are forbidden in production")
+            continue
         parsed = urlparse(origin)
         if parsed.scheme != "https":
             errors.append(f"CORS origin must use https: {origin}")
