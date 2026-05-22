@@ -480,6 +480,10 @@ def seed_db():
                 password_hash=hash_password(admin_pass),
                 role="owner"
             ))
+        elif os.getenv("ADMIN_BOOTSTRAP_PASSWORD"):
+            exists.password_hash = hash_password(admin_pass)
+            if exists.role not in {"owner", "admin"}:
+                exists.role = "owner"
 
         db.commit()
 
