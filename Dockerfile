@@ -28,4 +28,4 @@ RUN mkdir -p /run/restaurant
 EXPOSE 10000
 
 # Flask-SocketIO requires one Eventlet worker so admin realtime rooms stay coherent.
-CMD ["sh", "-c", "gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:${PORT:-10000} app:create_app()"]
+CMD ["sh", "-c", "gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:${PORT:-10000} 'app:create_app()'"]

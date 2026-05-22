@@ -1,1 +1,1 @@
-web: cd backend && gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:${PORT:-10000} app:create_app()
+web: cd backend && gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:${PORT:-10000} 'app:create_app()'
