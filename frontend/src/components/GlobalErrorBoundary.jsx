@@ -2,6 +2,8 @@ import React from 'react';
 import { Info, RefreshCcw } from 'lucide-react';
 
 const volatileStorageKeys = [
+  'user',
+  'admin_token',
   'jd_cart',
   'jd_favorites',
   'jd_orders',
