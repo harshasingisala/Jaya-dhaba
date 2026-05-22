@@ -1,55 +1,91 @@
 from __future__ import annotations
 
+import base64
+import hashlib
+import hmac
+import json
 import secrets
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, time, timedelta, timezone
 from typing import List
 
 from flask import Blueprint, current_app, g, jsonify, request
-from sqlalchemy import select, func, update
+from sqlalchemy import select, text
 
 import db
 from models import Order, OrderItem, MenuItem, MenuCategory, RestaurantTable, User
 from auth import require_role, log_audit
+from auth import request_ip
+from rate_limits import enforce_limit
 from validators import validate_schema
 from schemas import OrderCreate, OrderStatusUpdate
 from services.billing import calculate_order_totals
 from services.inventory import deduct_stock_for_order
 from events import broker, order_topic_id
+from realtime import broadcast
 
 bp = Blueprint("orders", __name__, url_prefix="/api")
 audit = log_audit
 
 def allocate_order_number(session):
-    highest = session.execute(select(func.max(Order.order_number))).scalar_one_or_none()
-    return (int(highest) if highest else 0) + 1
+    row = session.execute(
+        text(
+            """
+            UPDATE order_number_counter
+            SET next_value = next_value + 1
+            WHERE name = 'orders'
+            RETURNING next_value - 1 AS order_number
+            """
+        )
+    ).mappings().one_or_none()
+    if row is None:
+        session.execute(text("INSERT INTO order_number_counter (name, next_value) VALUES ('orders', 2)"))
+        return 1
+    return int(row["order_number"])
 
 
 STAFF_ROLES = {"staff", "manager", "owner", "admin"}
+IST = timezone(timedelta(hours=5, minutes=30))
+
+
+def _sign_pending_intent(payload: dict) -> str:
+    body = json.dumps(payload, separators=(",", ":"), sort_keys=True, default=str).encode("utf-8")
+    signature = hmac.new(current_app.config["SECRET_KEY"].encode("utf-8"), body, hashlib.sha256).hexdigest()
+    return base64.urlsafe_b64encode(body).decode("ascii") + "." + signature
 
 
 def serialize_order(order: Order, *, include_public_token: bool = False) -> dict:
+    items = []
+    for item in order.items:
+        items.append({
+            "name": item.menu_item.name,
+            "qty": item.qty,
+            "quantity": item.qty,
+            "unit_price": item.unit_price,
+            "special_note": item.special_note,
+        })
     payload = {
         "id": str(order.id),
         "order_number": order.order_number,
         "status": order.status,
+        "is_archived": bool(getattr(order, "is_archived", False)),
         "subtotal": int(order.subtotal or 0),
         "tax": int(order.tax or 0),
         "total": int(order.total or 0),
+        "customer_name": order.guest_name,
+        "customer_phone": order.guest_phone,
         "guest_name": order.guest_name,
         "guest_phone": order.guest_phone,
         "order_type": order.order_type,
+        "source": getattr(order, "source", "customer"),
+        "payment_method": getattr(order, "payment_method", "") or "",
         "table_id": str(order.table_id) if order.table_id else None,
         "created_at": order.created_at.isoformat(),
         "updated_at": order.updated_at.isoformat() if order.updated_at else None,
-        "items": [
-            {
-                "name": item.menu_item.name,
-                "qty": item.qty,
-                "unit_price": item.unit_price,
-                "special_note": item.special_note
-            } for item in order.items
-        ]
+        "preparing_at": order.preparing_at.isoformat() if getattr(order, "preparing_at", None) else None,
+        "served_at": order.served_at.isoformat() if getattr(order, "served_at", None) else None,
+        "archived_at": order.archived_at.isoformat() if getattr(order, "archived_at", None) else None,
+        "items": items,
     }
     if include_public_token:
         payload["public_token"] = order.public_token_hash
@@ -94,8 +130,57 @@ def order_access(conn, order_ref, public_token: str | None = None):
     return None
 
 
+def _parse_order_ids(raw_ids) -> tuple[list[uuid.UUID], str | None]:
+    if not isinstance(raw_ids, list) or not raw_ids:
+        return [], "order_ids must be a non-empty list"
+    parsed: list[uuid.UUID] = []
+    for raw_id in raw_ids:
+        try:
+            parsed.append(uuid.UUID(str(raw_id)))
+        except (TypeError, ValueError):
+            return [], f"Invalid order id: {raw_id}"
+    return parsed, None
+
+
+def _apply_lifecycle_status(order: Order, status: str, now: datetime) -> None:
+    order.status = status
+    order.version += 1
+    if status == "preparing":
+        order.preparing_at = now
+    elif status == "served":
+        if not order.preparing_at:
+            order.preparing_at = now
+        order.served_at = now
+    elif status == "pending":
+        order.preparing_at = None
+        order.served_at = None
+
+
+def _orders_paused() -> bool:
+    with db.connect(current_app.config["DATABASE_URL"]) as conn:
+        row = conn.execute("SELECT value FROM site_settings WHERE key = 'orders_paused'").fetchone()
+    return bool(row and row["value"] == "true")
+
+
+@bp.get("/orders/status")
+def public_order_status():
+    return jsonify({"success": True, "paused": _orders_paused()})
+
+
+@bp.get("/orders/pause")
+@require_role("staff")
+def get_orders_pause_alias():
+    return jsonify({"success": True, "paused": _orders_paused()})
+
+
 @bp.post("/orders")
 def create_order():
+    user = getattr(g, "current_user", None)
+    rate_user = user["id"] if user else "guest"
+    rate = enforce_limit(f"orders:create:{rate_user}:{request_ip()}", 60, 60)
+    if rate is not None:
+        return rate
+
     # Read raw JSON and defensively normalize menu_item_id values that may include UI suffixes
     # -- LOG RAW INPUT BEFORE ANY VALIDATION OR NORMALIZATION --
     try:
@@ -105,6 +190,11 @@ def create_order():
         current_app.logger.debug("[orders.create_order] Failed to read raw request bytes")
 
     raw = request.get_json(silent=True) or {}
+    if raw.get("source") != "manual":
+        with db.connect(current_app.config["DATABASE_URL"]) as conn:
+            paused_row = conn.execute("SELECT value FROM site_settings WHERE key = 'orders_paused'").fetchone()
+        if paused_row and paused_row["value"] == "true":
+            return jsonify({"success": False, "message": "Orders are paused right now"}), 409
     current_app.logger.debug("[orders.create_order] Parsed JSON before normalization: %s", raw)
     items_raw = raw.get("items", [])
     for it in items_raw:
@@ -137,6 +227,43 @@ def create_order():
         return jsonify({"success": False, "message": "Idempotency-Key header is required"}), 400
 
     with db.get_db() as session:
+        if schema.payment_method == "razorpay":
+            items_req = [item.model_dump() for item in schema.items]
+            totals = calculate_order_totals(session, items_req)
+            for item_req in schema.items:
+                menu_item = session.execute(select(MenuItem).filter_by(id=item_req.menu_item_id, available=True)).scalar_one_or_none()
+                if not menu_item:
+                    return jsonify({"success": False, "message": f"Item {item_req.menu_item_id} is unavailable"}), 409
+            intent_payload = {
+                "user_id": str(user_id) if user_id else None,
+                "table_id": str(schema.table_id) if schema.table_id else None,
+                "guest_name": schema.guest_name or "",
+                "guest_phone": schema.guest_phone or "",
+                "order_type": schema.order_type,
+                "source": schema.source,
+                "payment_method": "razorpay",
+                "pickup_time": schema.pickup_time.isoformat() if schema.pickup_time else None,
+                "idempotency_key": idempotency_key,
+                "items": [
+                    {
+                        "menu_item_id": str(item.menu_item_id),
+                        "qty": item.qty,
+                        "special_note": item.special_note,
+                    }
+                    for item in schema.items
+                ],
+                "totals": totals,
+            }
+            return jsonify({
+                "success": True,
+                "pending": True,
+                "pending_intent": _sign_pending_intent(intent_payload),
+                "total": totals["total"],
+                "subtotal": totals["subtotal"],
+                "tax": totals["tax"],
+                "idempotency_key": idempotency_key,
+            }), 200
+
         # Check for existing order
         existing = session.execute(select(Order).filter_by(idempotency_key=idempotency_key)).scalar_one_or_none()
         if existing:
@@ -171,6 +298,8 @@ def create_order():
             guest_phone=schema.guest_phone,
             public_token_hash=secrets.token_urlsafe(32), # Simplified for now
             order_type=schema.order_type,
+            source=schema.source,
+            payment_method=schema.payment_method or "",
             pickup_time=schema.pickup_time
         )
         if new_order.order_number is None:
@@ -201,6 +330,8 @@ def create_order():
 
         broker.publish("kitchen", "order.created", serialized)
         broker.publish(f"order:{order_topic_id(new_order.id)}", "order.created", serialized)
+        broadcast("orders_update", {"action": "new_order", "order": serialized})
+        broadcast("analytics_update", {"action": "orders_changed"})
         
         return jsonify({
             "success": True,
@@ -237,9 +368,143 @@ def get_order_by_number(order_number: int):
 @bp.get("/admin/orders")
 @require_role("staff")
 def list_admin_orders():
+    status = request.args.get("status", "all")
+    allowed_statuses = {"pending", "preparing", "served", "all"}
+    if status not in allowed_statuses:
+        return jsonify({"success": False, "message": "Invalid status"}), 400
     with db.get_db() as session:
-        rows = session.execute(select(Order).order_by(Order.created_at.desc()).limit(250)).scalars().all()
+        query = select(Order).where(Order.is_archived.is_(False))
+        if status != "all":
+            query = query.where(Order.status == status)
+        rows = session.execute(query.order_by(Order.created_at.desc()).limit(250)).scalars().all()
         return jsonify({"success": True, "data": [serialize_order(order) for order in rows]})
+
+
+@bp.patch("/admin/orders/bulk-status")
+@require_role("staff")
+def bulk_order_status():
+    data = request.get_json(silent=True) or {}
+    status = data.get("status")
+    if status not in {"pending", "preparing", "served"}:
+        return jsonify({"success": False, "message": "Invalid status"}), 400
+    order_ids, error = _parse_order_ids(data.get("order_ids"))
+    if error:
+        return jsonify({"success": False, "message": error}), 400
+
+    now = datetime.now(timezone.utc)
+    with db.get_db() as session:
+        orders = session.execute(
+            select(Order).where(Order.id.in_(order_ids), Order.is_archived.is_(False))
+        ).scalars().all()
+        for order in orders:
+            old_status = order.status
+            _apply_lifecycle_status(order, status, now)
+            history = list(order.status_history or [])
+            history.append({"status": status, "ts": now.isoformat(), "reason": "bulk"})
+            order.status_history = history
+            audit(session, "order.bulk_status", "order", order.id, {"from": old_status, "to": status})
+        session.commit()
+
+    id_payload = [str(order_id) for order_id in order_ids]
+    broadcast("orders_update", {
+        "action": "status_changed",
+        "order_ids": id_payload,
+        "status": status,
+        "timestamp": now.isoformat(),
+    })
+    broadcast("analytics_update", {"action": "orders_changed"})
+    return jsonify({"success": True, "updated": len(orders), "status": status})
+
+
+@bp.patch("/admin/orders/bulk-archive")
+@require_role("staff")
+def bulk_archive_orders():
+    data = request.get_json(silent=True) or {}
+    order_ids, error = _parse_order_ids(data.get("order_ids"))
+    if error:
+        return jsonify({"success": False, "message": error}), 400
+
+    now = datetime.now(timezone.utc)
+    with db.get_db() as session:
+        orders = session.execute(
+            select(Order).where(Order.id.in_(order_ids), Order.is_archived.is_(False))
+        ).scalars().all()
+        for order in orders:
+            order.is_archived = True
+            order.archived_at = now
+            audit(session, "order.archive", "order", order.id)
+        session.commit()
+
+    id_payload = [str(order_id) for order_id in order_ids]
+    broadcast("orders_update", {"action": "archived", "order_ids": id_payload})
+    broadcast("analytics_update", {"action": "orders_changed"})
+    return jsonify({"success": True, "archived": len(orders)})
+
+
+@bp.patch("/admin/orders/clear-served")
+@require_role("staff")
+def clear_served_orders():
+    now = datetime.now(timezone.utc)
+    with db.get_db() as session:
+        orders = session.execute(
+            select(Order).where(Order.status == "served", Order.is_archived.is_(False))
+        ).scalars().all()
+        for order in orders:
+            order.is_archived = True
+            order.archived_at = now
+            audit(session, "order.clear_served", "order", order.id)
+        order_ids = [str(order.id) for order in orders]
+        cleared_count = len(orders)
+        session.commit()
+
+    broadcast("orders_update", {"action": "cleared", "count": cleared_count, "order_ids": order_ids})
+    broadcast("analytics_update", {"action": "orders_changed"})
+    return jsonify({"success": True, "cleared": cleared_count})
+
+
+@bp.get("/admin/orders/archive")
+@require_role("staff")
+def archived_orders():
+    archived_date = request.args.get("date")
+    with db.get_db() as session:
+        query = select(Order).where(Order.is_archived.is_(True))
+        if archived_date:
+            day = datetime.strptime(archived_date, "%Y-%m-%d").date()
+            start_utc = datetime.combine(day, time.min, tzinfo=IST).astimezone(timezone.utc)
+            end_utc = start_utc + timedelta(days=1)
+            query = query.where(Order.archived_at >= start_utc, Order.archived_at < end_utc)
+        rows = session.execute(
+            query.order_by(Order.archived_at.desc()).limit(200)
+        ).scalars().all()
+        return jsonify({"success": True, "data": [serialize_order(order) for order in rows]})
+
+
+@bp.get("/admin/orders/stats")
+@require_role("staff")
+def order_stats():
+    today_ist = datetime.now(IST).date()
+    start_utc = datetime.combine(today_ist, time.min, tzinfo=IST).astimezone(timezone.utc)
+    end_utc = start_utc + timedelta(days=1)
+    with db.get_db() as session:
+        active_orders = session.execute(
+            select(Order).where(Order.is_archived.is_(False))
+        ).scalars().all()
+        today_orders = session.execute(
+            select(Order).where(Order.created_at >= start_utc, Order.created_at < end_utc)
+        ).scalars().all()
+
+    counts = {"pending": 0, "preparing": 0, "served": 0}
+    for order in active_orders:
+        if order.status in counts:
+            counts[order.status] += 1
+    today_revenue = sum(int(order.total or 0) for order in today_orders)
+    return jsonify({
+        "success": True,
+        **counts,
+        "total_active": len(active_orders),
+        "today_revenue": today_revenue,
+        "today_orders": len(today_orders),
+    })
 
 
 @bp.patch("/admin/orders/<uuid:order_id>/status")
@@ -280,6 +545,13 @@ def update_order_status(order_id: uuid.UUID):
         serialized = serialize_order(order)
         broker.publish("kitchen", "order.updated", serialized)
         broker.publish(f"order:{order_topic_id(order.id)}", "order.updated", serialized)
+        broadcast("orders_update", {
+            "action": "status_changed",
+            "order_ids": [str(order.id)],
+            "status": new_status,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        })
+        broadcast("analytics_update", {"action": "orders_changed"})
         
         return jsonify({
             "success": True,

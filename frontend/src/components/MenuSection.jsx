@@ -7,9 +7,7 @@ import { useStore } from "../store/useStore";
 import MagneticButton from "./MagneticButton";
 import { motion } from "framer-motion";
 
-const categories = ["All", "Biryani", "Starters", "Gravy", "Breads", "Beverages"];
-
-function MenuItem({ item, onAddClicked }) {
+function MenuItem({ item, onAddClicked, disabled }) {
   const ref = useTilt();
   
   return (
@@ -19,13 +17,13 @@ function MenuItem({ item, onAddClicked }) {
         className="bg-white p-5 rounded-[2.5rem] card-hover h-full flex flex-col group border border-heritage-espresso/5 relative overflow-hidden"
       >
         <div className="relative overflow-hidden rounded-[1.8rem] mb-5 aspect-square bg-heritage-stone">
-           <img src={item.img} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" />
+           <img src={item.img} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt={item.name} loading="lazy" width="420" height="420" />
         </div>
         <h3 className="text-xl font-serif italic text-heritage-espresso mb-1">{item.name}</h3>
         <p className="text-[11px] text-heritage-espresso/40 mb-5 font-sans font-medium line-clamp-2">{item.desc}</p>
         <div className="mt-auto flex justify-between items-center z-10 relative">
            <span className="font-black text-heritage-espresso/90 tracking-tighter text-lg font-sans">₹{item.price}</span>
-           <button onClick={() => onAddClicked(item)} className="bg-heritage-gold/10 text-heritage-gold hover:bg-heritage-gold hover:text-white px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all">
+           <button disabled={disabled} onClick={() => onAddClicked(item)} className="bg-heritage-gold/10 text-heritage-gold hover:bg-heritage-gold hover:text-white px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-40 disabled:cursor-not-allowed">
             Add to Ledger
            </button>
         </div>
@@ -35,7 +33,7 @@ function MenuItem({ item, onAddClicked }) {
 }
 
 export function MenuSectionComponent() {
-  const { menuItems, addToCart } = useApp();
+  const { menuItems, addToCart, ordersPaused, menuUnavailable } = useApp();
   const [activeTab, setActiveTab] = useState("All");
   const [customizingItem, setCustomizingItem] = useState(null);
   const { menuExpanded, setMenuExpanded } = useStore();
@@ -51,6 +49,7 @@ export function MenuSectionComponent() {
   };
 
   const filteredItems = menuItems.filter(i => activeTab === "All" || i.category === activeTab);
+  const categories = ["All", ...Array.from(new Set(menuItems.map((item) => item.category).filter(Boolean)))];
   const signatureItems = filteredItems.filter(i => i.isSignature || true).slice(0, 3); // Fallback if no isSignature
   const itemsToShow = menuExpanded ? filteredItems : signatureItems;
 
@@ -89,6 +88,18 @@ export function MenuSectionComponent() {
         </Reveal>
         
         {/* TABS ROW */}
+        {menuUnavailable && menuItems.length === 0 && (
+          <div className="mb-8 rounded-2xl bg-amber-50 border border-amber-200 px-6 py-4 text-amber-800 text-sm font-black uppercase tracking-widest">
+            We're warming up — menu will load in a few seconds. Refresh if it doesn't appear.
+          </div>
+        )}
+
+        {ordersPaused && (
+          <div className="mb-8 rounded-2xl bg-red-50 border border-red-200 px-6 py-4 text-red-700 text-sm font-black uppercase tracking-widest">
+            We are not accepting new orders right now. Please try again shortly.
+          </div>
+        )}
+
         <div className="flex flex-col md:flex-row justify-between items-center mb-16 px-2 gap-8">
           <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 w-full md:w-auto">
             {categories.map(cat => (
@@ -105,12 +116,12 @@ export function MenuSectionComponent() {
 
         <div className="flex flex-col gap-12">
           <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {itemsToShow.map(item => (
-              <MenuItem key={item.id} item={item} onAddClicked={setCustomizingItem} />
+            {!menuUnavailable && itemsToShow.map(item => (
+              <MenuItem key={item.id} item={item} onAddClicked={setCustomizingItem} disabled={ordersPaused} />
             ))}
           </div>
 
-          {!menuExpanded && filteredItems.length > 3 && (
+          {!menuUnavailable && !menuExpanded && filteredItems.length > 3 && (
             <div className="flex justify-center mt-8">
                <MagneticButton 
                  className="px-10 py-4 border border-heritage-espresso/20 text-heritage-espresso rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-heritage-espresso hover:text-white transition-colors"

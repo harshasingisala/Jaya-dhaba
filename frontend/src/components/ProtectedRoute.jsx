@@ -1,20 +1,30 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
+import { isTokenExpired } from "../api";
 
 export default function ProtectedRoute({ children, allowedRoles = [] }) {
-  const userStr = localStorage.getItem("user");
-  const user = userStr ? JSON.parse(userStr) : null;
+  const location = useLocation();
+  const userStr = localStorage.getItem("user") || sessionStorage.getItem("user");
 
-  if (user && user.expiresAt && Date.now() > user.expiresAt) {
-    localStorage.removeItem("user");
-    return <Navigate to="/admin/login" replace />;
+  let user = null;
+  try {
+    user = userStr ? JSON.parse(userStr) : null;
+  } catch {
+    user = null;
   }
 
-  if (!user) {
-    return <Navigate to="/admin/login" replace />;
+  const token = user?.access_token || user?.token;
+  const isExpired = Boolean(token && isTokenExpired(token));
+
+  if (!token || isExpired) {
+    if (isExpired) {
+      localStorage.removeItem("user");
+      sessionStorage.removeItem("user");
+    }
+    return <Navigate to="/admin/login" state={{ from: location }} replace={true} />;
   }
 
   if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
-    return <Navigate to="/admin" replace />;
+    return <Navigate to="/admin" replace={true} />;
   }
 
   return children;

@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api';
 import { useToast } from '../../context/ToastContext';
+import PageMeta from '../../components/SEO/PageMeta';
 
 export default function Login() {
   const { login } = useAuth();
@@ -25,10 +26,12 @@ export default function Login() {
         body: JSON.stringify(formData)
       });
       
+      localStorage.setItem('admin_token', res.access_token);
       login({ ...res.user, access_token: res.access_token });
       showToast('🔑 Access granted. Welcome back.', 'success');
       navigate('/admin');
     } catch (err) {
+      console.error('[JAYA_DEBUG] Caught error in handleSubmit:', err);
       showToast('❌ Identity verification failed.', 'error');
     } finally {
       setLoading(false);
@@ -37,6 +40,12 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-10 relative overflow-hidden heritage-stone-bg">
+      <PageMeta
+        title="Admin Login"
+        description="Jaya Dhaba private admin login."
+        url="/admin/login"
+        robots="noindex, nofollow"
+      />
       
       {/* Background Aura */}
       <div className="absolute inset-0 bg-gradient-to-tr from-heritage-terracotta/5 via-transparent to-heritage-gold/5 pointer-events-none" />

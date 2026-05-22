@@ -1,9 +1,17 @@
 import secrets
+import os
 from flask import Flask, request, jsonify, make_response, current_app
 from rate_limits import enforce_limit
 
 CSRF_COOKIE = "csrf_token"
 CSRF_HEADER = "X-CSRF-Token"
+
+
+def request_ip() -> str:
+    forwarded = request.headers.get("X-Forwarded-For", "")
+    if forwarded:
+        return forwarded.split(",")[-1].strip()
+    return forwarded or request.remote_addr or "0.0.0.0"
 
 
 def init_security_middleware(app: Flask):
@@ -12,12 +20,17 @@ def init_security_middleware(app: Flask):
     def security_checks():
         # 1. Rate Limiting (Global & Auth)
         if not current_app.config.get("TESTING"):
-            ip = request.remote_addr or "unknown"
+            if request.method == "OPTIONS" or request.path.startswith("/socket.io"):
+                return None
+            runtime_env = (os.getenv("APP_ENV") or os.getenv("FLASK_ENV") or "").lower()
+            if runtime_env == "development":
+                return None
+            ip = request_ip()
             if request.path.startswith("/api/auth/"):
                 limit = enforce_limit(f"rate:auth:{ip}", 20, 60)
                 if limit: return limit
             else:
-                limit = enforce_limit(f"rate:global:{ip}", 100, 60)
+                limit = enforce_limit(f"rate:global:{ip}", 500, 60)
                 if limit: return limit
 
         # 2. CSRF Protection (Double Submit Cookie)

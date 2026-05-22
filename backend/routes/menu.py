@@ -4,6 +4,7 @@ import json
 import os
 import threading
 import uuid
+from datetime import datetime, timezone
 from io import BytesIO
 from uuid import uuid4
 
@@ -14,6 +15,7 @@ from audit import audit
 from auth import require_role
 from cache import menu_cache
 from events import broker, stream_topic
+from realtime import broadcast
 from validators import ValidationError, body, boolean, integer, raw_text, reject_unknown, tags, url
 
 
@@ -52,6 +54,19 @@ def serialize_category(row) -> dict:
     return {"id": row["id"], "name": row["name"], "display_order": row["display_order"], "active": bool(row["active"])}
 
 
+def fetch_menu_item_payload(conn, item_id: str) -> dict | None:
+    row = conn.execute(
+        """
+        SELECT i.*, c.name AS category_name
+        FROM menu_items i
+        JOIN menu_categories c ON c.id = i.category_id
+        WHERE i.id = ?
+        """,
+        (item_id,),
+    ).fetchone()
+    return serialize_item(row) if row else None
+
+
 def get_celebration_for_table(conn, table_id: int) -> dict | None:
     row = conn.execute(
         """
@@ -72,8 +87,8 @@ def get_celebration_for_table(conn, table_id: int) -> dict | None:
     return {"type": row["celebration_type"], "message": messages.get(row["celebration_type"], "")}
 
 
-def load_menu(table_token: str | None = None) -> dict:
-    cache_key = f"menu:{table_token or 'public'}"
+def load_menu(table_token: str | None = None, include_unavailable: bool = False) -> dict:
+    cache_key = f"menu:{table_token or 'public'}:{'admin' if include_unavailable else 'public'}"
     cached = menu_cache.get(cache_key)
     if cached is not None:
         return cached
@@ -84,14 +99,17 @@ def load_menu(table_token: str | None = None) -> dict:
             if not table:
                 raise ValidationError("Table QR token was not found", "qr_token", 404)
         categories = conn.execute("SELECT * FROM menu_categories WHERE active = true ORDER BY display_order, name").fetchall()
+        availability_filter = "" if include_unavailable else "AND i.available = true"
         items = conn.execute(
             """
             SELECT i.*, c.name AS category_name
             FROM menu_items i
             JOIN menu_categories c ON c.id = i.category_id
             WHERE c.active = true
+              AND i.deleted_at IS NULL
+              {availability_filter}
             ORDER BY c.display_order, i.name
-            """
+            """.format(availability_filter=availability_filter)
         ).fetchall()
         celebration = get_celebration_for_table(conn, table["id"]) if table else None
     payload = {
@@ -170,7 +188,7 @@ def table_from_token(qr_token):
 @bp.get("/admin/menu")
 @require_role("staff")
 def admin_menu():
-    return jsonify(load_menu())
+    return jsonify(load_menu(include_unavailable=True))
 
 
 @bp.get("/menu/<item_id>")
@@ -192,6 +210,7 @@ def menu_item(item_id: str):
 
 
 @bp.post("/admin/menu")
+@bp.post("/menu/items")
 @require_role("staff")
 def create_menu_item():
     data = body()
@@ -236,12 +255,17 @@ def create_menu_item():
             ),
         )
         audit(conn, "menu.create", "menu_item", item_id)
+        item_payload = fetch_menu_item_payload(conn, item_id)
     menu_cache.invalidate("menu:")
+    broker.publish("menu_updates", "menu.updated", {"type": "created", "item_id": item_id})
     broker.publish("kitchen", "menu.updated", {"item_id": item_id})
+    broadcast("menu_update", {"action": "created", "item_id": item_id, "item": item_payload})
     return jsonify({"id": item_id}), 201
 
 
 @bp.patch("/admin/menu/<item_id>")
+@bp.put("/menu/items/<item_id>")
+@bp.patch("/menu/items/<item_id>")
 @require_role("staff")
 def update_menu_item(item_id: str):
     data = body()
@@ -279,7 +303,7 @@ def update_menu_item(item_id: str):
                 integer(data.get("price"), "price", 0, 100000) if "price" in data else existing["price"],
                 url(data.get("image_url"), "image_url", required=False) if "image_url" in data else existing["image_url"],
                 db.encode_json(tags(data.get("dietary_tags"))) if "dietary_tags" in data else existing["dietary_tags"],
-                1 if boolean(data.get("available"), "available") else 0 if "available" in data else existing["available"],
+                (1 if boolean(data.get("available"), "available") else 0) if "available" in data else existing["available"],
                 raw_text(data.get("chef_note"), "chef_note", 1000, required=False, allow_empty=True) if "chef_note" in data else existing["chef_note"],
                 ingredients_value,
                 integer(data.get("spice_level"), "spice_level", 0, 5) if "spice_level" in data else existing["spice_level"],
@@ -293,12 +317,16 @@ def update_menu_item(item_id: str):
             ),
         )
         audit(conn, "menu.update", "menu_item", item_id, {"fields": sorted(data.keys())})
+        item_payload = fetch_menu_item_payload(conn, item_id)
     menu_cache.invalidate("menu:")
+    broker.publish("menu_updates", "menu.updated", {"type": "updated", "item_id": item_id})
     broker.publish("kitchen", "menu.updated", {"item_id": item_id})
+    broadcast("menu_update", {"action": "updated", "item_id": item_id, "item": item_payload})
     return jsonify({"status": "ok"})
 
 
 @bp.patch("/admin/menu/<item_id>/availability")
+@bp.patch("/menu/items/<item_id>/availability")
 @require_role("staff")
 def toggle_availability(item_id: str):
     data = body()
@@ -309,9 +337,11 @@ def toggle_availability(item_id: str):
             raise ValidationError("Menu item not found", "item_id", 404)
         conn.execute("UPDATE menu_items SET available = ?, updated_at = ? WHERE id = ?", (1 if available else 0, db.utc_now(), item_id))
         audit(conn, "menu.availability", "menu_item", item_id, {"from": bool(before["available"]), "to": available})
+        item_payload = fetch_menu_item_payload(conn, item_id)
     menu_cache.invalidate("menu:")
     broker.publish("menu_updates", "menu.updated", {"type": "availability", "item_id": item_id, "available": available})
     broker.publish("kitchen", "menu.updated", {"item_id": item_id})
+    broadcast("menu_update", {"action": "updated", "item_id": item_id, "item": item_payload})
     return jsonify({"status": "ok", "available": available})
 
 
@@ -421,14 +451,20 @@ def item_ratings(item_id: str):
 
 
 @bp.delete("/admin/menu/<item_id>")
-@require_role("admin")
+@bp.delete("/menu/items/<item_id>")
+@require_role("staff")
 def delete_menu_item(item_id: str):
     with db.transaction(current_app.config["DATABASE_URL"]) as conn:
         existing = conn.execute("SELECT id FROM menu_items WHERE id = ?", (item_id,)).fetchone()
         if not existing:
             raise ValidationError("Menu item not found", "item_id", 404)
-        conn.execute("DELETE FROM menu_items WHERE id = ?", (item_id,))
+        conn.execute(
+            "UPDATE menu_items SET deleted_at = ?, available = ?, updated_at = ? WHERE id = ?",
+            (datetime.now(timezone.utc), 0, datetime.now(timezone.utc), item_id),
+        )
         audit(conn, "menu.delete", "menu_item", item_id)
     menu_cache.invalidate("menu:")
+    broker.publish("menu_updates", "menu.updated", {"type": "deleted", "item_id": item_id})
     broker.publish("kitchen", "menu.updated", {"item_id": item_id})
+    broadcast("menu_update", {"action": "deleted", "item_id": item_id, "item": None})
     return jsonify({"status": "ok"})

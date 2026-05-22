@@ -10,7 +10,10 @@ const load = (key, fallback) => {
   try {
     const raw = localStorage.getItem(key);
     return raw ? JSON.parse(raw) : fallback;
-  } catch { return fallback; }
+  } catch (err) {
+    console.error('[JAYA_DEBUG] Caught error in load:', err);
+    return fallback;
+  }
 };
 
 export function AppProvider({ children }) {
@@ -29,7 +32,10 @@ export function AppProvider({ children }) {
   const [points, setPoints] = useState(() => Number(localStorage.getItem("jd_points") || 0));
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [syncQueue, setSyncQueue] = useState(() => load("jd_sync_queue", []));
-  const [menuItems, setMenuItems] = useState(() => load("jd_menu", []));
+  const [menuItems, setMenuItems] = useState([]);
+  const [menuError, setMenuError] = useState(null);
+  const [menuUnavailable, setMenuUnavailable] = useState(false);
+  const [ordersPaused, setOrdersPaused] = useState(false);
 
   useEffect(() => localStorage.setItem("jd_cart", JSON.stringify(cart)), [cart]);
   useEffect(() => localStorage.setItem("jd_favorites", JSON.stringify(favorites)), [favorites]);
@@ -41,7 +47,6 @@ export function AppProvider({ children }) {
   }, [theme]);
   useEffect(() => localStorage.setItem("jd_points", String(points)), [points]);
   useEffect(() => localStorage.setItem("jd_sync_queue", JSON.stringify(syncQueue)), [syncQueue]);
-  useEffect(() => localStorage.setItem("jd_menu", JSON.stringify(menuItems)), [menuItems]);
 
   // Fetch menu items from backend
   useEffect(() => {
@@ -49,6 +54,8 @@ export function AppProvider({ children }) {
       try {
         const data = await api.getMenu(restaurantId);
         setMenuItems(data);
+        setMenuError(null);
+        setMenuUnavailable(false);
         
         // Update cart items to ensure they have correct integer IDs
         setCart(prevCart => {
@@ -65,10 +72,31 @@ export function AppProvider({ children }) {
         });
       } catch (error) {
         console.error('Failed to fetch menu:', error);
-        // Keep existing menu items if fetch fails
+        setMenuError({ at: Date.now() });
+        setMenuItems([]);
+        window.setTimeout(async () => {
+          try {
+            const retryData = await api.getMenu(restaurantId);
+            setMenuItems(retryData);
+            setMenuError(null);
+            setMenuUnavailable(false);
+          } catch (retryError) {
+            console.error('Failed to fetch menu after cold-start retry:', retryError);
+            setMenuUnavailable(true);
+          }
+        }, 8000);
       }
     };
     fetchMenu();
+    api.getOrderPauseStatus().then((data) => setOrdersPaused(!!data.paused)).catch(() => {});
+    const timer = window.setInterval(fetchMenu, 10000);
+    const pauseTimer = window.setInterval(() => {
+      api.getOrderPauseStatus().then((data) => setOrdersPaused(!!data.paused)).catch(() => {});
+    }, 10000);
+    return () => {
+      window.clearInterval(timer);
+      window.clearInterval(pauseTimer);
+    };
   }, [restaurantId]);
 
   useEffect(() => {
@@ -116,7 +144,9 @@ export function AppProvider({ children }) {
     });
     setCartOpen(true);
     vibrate(15);
-    trackEvent("add_to_cart", { restaurantId, item: item.id, qty, spiceLevel }).catch(() => { });
+    trackEvent("add_to_cart", { restaurantId, item: item.id, qty, spiceLevel }).catch((err) => {
+      console.error('[JAYA_DEBUG] Caught error in addToCart trackEvent:', err);
+    });
   };
 
   const addItemsToCart = (items) => {
@@ -180,6 +210,9 @@ export function AppProvider({ children }) {
     isOffline,
     vibrate,
     syncQueue,
+    menuError,
+    menuUnavailable,
+    ordersPaused,
     setSyncQueue
   };
 

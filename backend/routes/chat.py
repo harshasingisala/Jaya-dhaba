@@ -1,228 +1,446 @@
 from __future__ import annotations
 
-import json
+import os
 import threading
 
-import uuid
-
-from flask import Blueprint, Response, current_app, g, jsonify, request, stream_with_context
+import google.generativeai as genai
+from flask import (
+    Blueprint,
+    current_app,
+    jsonify,
+)
 
 import db
 from audit import audit
-from rate_limits import enforce_limit
-from validators import ValidationError, body, raw_text, reject_unknown
-
+from validators import (
+    ValidationError,
+    body,
+    raw_text,
+    reject_unknown,
+)
 
 bp = Blueprint("chat", __name__, url_prefix="/api")
 
 
+SYSTEM_PROMPT = """You are Jaya, the friendly AI assistant for
+Jaya Dhaba, a Hyderabadi restaurant in East Marredpally,
+Secunderabad. Help customers with menu, reservations, hours,
+and directions. Keep answers short and warm.
+Hours: 11AM-11PM daily. Phone: {}.""".format(
+    os.environ.get("RESTAURANT_PHONE")
+    or os.environ.get("JAYA_DHABA_PHONE")
+    or os.environ.get("CONTACT_PHONE")
+    or ""
+)
+
+
+def get_gemini_reply(message: str, history: list) -> str:
+    api_key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        raise ValueError("missing_key")
+
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel(
+        model_name="gemini-1.5-flash",
+        system_instruction=SYSTEM_PROMPT,
+    )
+
+    chat_history = []
+    for turn in history[-10:]:
+        role = "user" if turn.get("role") == "user" else "model"
+        chat_history.append({"role": role, "parts": [turn.get("text", "")]})
+
+    chat = model.start_chat(history=chat_history)
+    response = chat.send_message(message)
+    return response.text.strip()
+
+
+# =========================================================
+# SYSTEM PROMPT
+# =========================================================
 def build_system_prompt(conn) -> str:
     rows = conn.execute(
         """
-        SELECT c.name AS category, mi.name, mi.description, mi.price, mi.dietary_tags
+        SELECT c.name AS category,
+               mi.name,
+               mi.description,
+               mi.price,
+               mi.dietary_tags
         FROM menu_items mi
-        JOIN menu_categories c ON c.id = mi.category_id
-        WHERE mi.available = true
+        JOIN menu_categories c
+            ON c.id = mi.category_id
+        WHERE mi.available = 1
         ORDER BY c.display_order, mi.name
         """
     ).fetchall()
+
     by_category: dict[str, list[str]] = {}
+
     for row in rows:
-        allergens = ", ".join(db.decode_json(row["dietary_tags"], []))
-        line = f"  • {row['name']} (₹{int(row['price'])}): {row['description']} [{allergens}]"
-        by_category.setdefault(row["category"], []).append(line)
-    menu_block = "\n".join(f"{name}:\n" + "\n".join(items) for name, items in by_category.items())
-    try:
-        combos = conn.execute("SELECT trigger_category, suggested_item_ids FROM pairing_rules WHERE active = true ORDER BY priority DESC LIMIT 10").fetchall()
-        combo_text = ", ".join(
-            [f"{row['trigger_category']} → {', '.join(str(x) for x in db.decode_json(row['suggested_item_ids'], []))}" for row in combos]
-        ) or "No active combos"
-    except Exception:
-        combo_text = "No active combos"
+        tags = ", ".join(
+            db.decode_json(
+                row["dietary_tags"],
+                []
+            )
+        )
+
+        item_line = (
+            f"• {row['name']} "
+            f"(₹{int(row['price'])})\n"
+            f"  {row['description']}\n"
+            f"  Tags: {tags}"
+        )
+
+        by_category.setdefault(
+            row["category"],
+            []
+        ).append(item_line)
+
+    menu_block = "\n\n".join(
+        f"{category}:\n" + "\n".join(items)
+        for category, items in by_category.items()
+    )
 
     try:
-        pricing = conn.execute("SELECT name, discount_type, discount_value FROM pricing_rules WHERE active = true ORDER BY id DESC LIMIT 15").fetchall()
-        pricing_text = ", ".join(
-            [f"{row['name']} ({row['discount_type']} {row['discount_value']})" for row in pricing]
-        ) or "No active promotions"
+        offers = conn.execute(
+            """
+            SELECT trigger_category,
+                   suggested_item_ids
+            FROM pairing_rules
+            WHERE active = 1
+            ORDER BY priority DESC
+            LIMIT 10
+            """
+        ).fetchall()
+
+        combo_text = "\n".join([
+            (
+                f"• {row['trigger_category']} "
+                f"→ {', '.join(str(x) for x in db.decode_json(row['suggested_item_ids'], []))}"
+            )
+            for row in offers
+        ]) or "No active offers"
+
     except Exception:
-        pricing_text = "No active promotions"
+        combo_text = "No active offers"
+
+    try:
+        promotions = conn.execute(
+            """
+            SELECT name,
+                   discount_type,
+                   discount_value
+            FROM pricing_rules
+            WHERE active = 1
+            ORDER BY id DESC
+            LIMIT 10
+            """
+        ).fetchall()
+
+        promotion_text = "\n".join([
+            (
+                f"• {row['name']} "
+                f"({row['discount_type']} "
+                f"{row['discount_value']})"
+            )
+            for row in promotions
+        ]) or "No active promotions"
+
+    except Exception:
+        promotion_text = "No active promotions"
 
     try:
         settings_rows = conn.execute(
-            "SELECT key, value FROM site_settings WHERE key IN ('restaurant_phone','restaurant_hours')"
+            """
+            SELECT key, value
+            FROM site_settings
+            """
         ).fetchall()
-        settings = {row["key"]: row["value"] for row in settings_rows}
+
+        settings = {
+            row["key"]: row["value"]
+            for row in settings_rows
+        }
+
     except Exception:
         settings = {}
-    return (
-        "You are Jaya — warm, witty, deeply knowledgeable AI concierge for Jaya Dhaba,\n"
-        "a legendary heritage restaurant in East Marredpally, Hyderabad.\n"
-        "You speak like a friendly local who genuinely loves food.\n\n"
-        "Answer EVERYTHING — food, order help, jokes, general knowledge, anything.\n"
-        "Never rude. Never refuse reasonable questions. Always bring it back to\n"
-        "how Jaya Dhaba can make the customer's day better.\n\n"
-        "CURRENT FULL MENU (live from kitchen):\n"
-        f"{menu_block}\n\n"
-        f"ACTIVE COMBO OFFERS: {combo_text}\n"
-        f"ACTIVE PROMOTIONS TODAY: {pricing_text}\n\n"
-        "RESTAURANT INFO:\n"
-        "Name: Jaya Dhaba | Address: East Marredpally, Secunderabad, Hyderabad\n"
-        f"Phone: {settings.get('restaurant_phone', '')} | Hours: {settings.get('restaurant_hours', '')}\n"
-        "Specialty: Biryani, Curries, Chinese, Roti | Signature: Dum Chicken Biryani\n\n"
-        "RULES: Use ₹ not Rs · bullets for lists · 2-4 sentences max unless listing\n"
-        "· order status → tracking page · never invent prices or dishes"
-    )
+
+    return f"""
+You are Jaya.
+
+You are NOT a robotic support bot.
+
+You are a warm, funny, smart, charismatic AI concierge
+for Jaya Dhaba in Hyderabad.
+
+You speak naturally like a real modern human.
+
+Your vibe:
+- Friendly
+- Witty
+- Chill
+- Smart
+- Slightly playful
+- Emotionally aware
+- Confident
+- Helpful
+
+You can:
+- Talk casually
+- Crack jokes
+- Recommend food
+- Answer random questions
+- Have natural conversations
+- Guide users
+- Talk like a premium AI assistant
+
+VERY IMPORTANT:
+Never sound robotic.
+
+Bad Example:
+"How may I assist you today?"
+
+Good Example:
+"Yooo 😄 What are you craving today?"
+
+IMPORTANT:
+Always feel conversational and human.
+
+You should feel like:
+- ChatGPT
+- Gemini
+- A premium restaurant AI assistant
+
+not like:
+- FAQ bot
+- customer support machine
+
+You are deeply connected to Jaya Dhaba.
+
+Naturally connect conversations back to:
+- food
+- dining
+- cravings
+- Hyderabad food culture
+- restaurant experiences
+
+BUT DON'T FORCE IT.
+
+Examples:
+
+If user says:
+"The weather is nice"
+
+You can say:
+"Perfect biryani weather honestly 😄"
+
+If user says:
+"Tell me a joke"
+
+You can say:
+"Why did the biryani break up with the curry? 😂
+Too much emotional gravy."
+
+If user says:
+"Who owns this restaurant?"
+
+Answer:
+"Jaya Dhaba is owned by Sunil Kumar Behera 😄"
+
+RULES:
+- Never invent prices
+- Never invent dishes
+- Keep answers concise
+- Use emojis naturally
+- Sound modern
+- Sound premium
+- Avoid long boring paragraphs
+
+=========================================================
+RESTAURANT INFO
+=========================================================
+
+Restaurant Name:
+Jaya Dhaba
+
+Owner:
+Sunil Kumar Behera
+
+Location:
+East Marredpally, Hyderabad
+
+Phone:
+{settings.get("restaurant_phone", "")}
+
+Hours:
+{settings.get("restaurant_hours", "")}
+
+Specialties:
+- Chicken Biryani
+- Chicken 65
+- Dhaba curries
+- Fried rice
+- Fresh breads
+- Lassi and buttermilk
+
+=========================================================
+ACTIVE OFFERS
+=========================================================
+
+{combo_text}
+
+=========================================================
+ACTIVE PROMOTIONS
+=========================================================
+
+{promotion_text}
+
+=========================================================
+FULL MENU
+=========================================================
+
+{menu_block}
+"""
 
 
-def save_chat_log(session_id: str, user_id: str | None, message: str, full_response: str, database_url: str):
-    with db.transaction(database_url) as conn:
+# =========================================================
+# SAVE CHAT LOG
+# =========================================================
+def save_chat_log(
+    session_id: str,
+    message: str,
+    response_text: str,
+):
+    with db.transaction(
+        current_app.config["DATABASE_URL"]
+    ) as conn:
+
         conn.execute(
-            "INSERT INTO chat_log (user_id, session_id, role, message, created_at) VALUES (?, ?, 'user', ?, ?)",
-            (user_id, session_id, message, db.utc_now()),
-        )
-        conn.execute(
-            "INSERT INTO chat_log (user_id, session_id, role, message, created_at) VALUES (?, ?, 'assistant', ?, ?)",
-            (user_id, session_id, full_response, db.utc_now()),
-        )
-        audit(conn, "chat.response", "chat", session_id, {"chars": len(full_response)}, user_id=user_id)
-
-
-@bp.post("/chat")
-def chat():
-    data = body()
-    reject_unknown(data, {"message", "session_id", "conversation_history"})
-    session_id = raw_text(data.get("session_id", ""), "session_id", 120, required=False, allow_empty=True)
-    message = raw_text(data.get("message"), "message", 500)
-    if len(message) > 500:
-        raise ValidationError("message must be <= 500 chars", "message", 400)
-    history = data.get("conversation_history") or []
-    if not isinstance(history, list):
-        raise ValidationError("conversation_history must be an array", "conversation_history")
-    history = history[-20:]
-    rate = enforce_limit(f"chat:{session_id or request.remote_addr}", 20, 60)
-    if rate is not None:
-        return rate
-    if not current_app.config["OPENAI_API_KEY"]:
-        return jsonify({"message": "AI service unavailable"}), 503
-    if not current_app.config.get("CHATBOT_ENABLED", False):
-        return jsonify({"message": "Chat is not currently available"}), 503
-    user = getattr(g, "current_user", None)
-    user_id = str(uuid.UUID(user["id"])) if user else None
-
-    with db.connect(current_app.config["DATABASE_URL"]) as conn:
-        system_prompt = build_system_prompt(conn)
-    normalized_history = []
-    for item in history:
-        if not isinstance(item, dict):
-            continue
-        role = item.get("role")
-        content = item.get("content")
-        if role in {"user", "assistant"} and isinstance(content, str) and content.strip():
-            normalized_history.append({"role": role, "content": content[:1200]})
-
-    def generate():
-        from openai import APIError, OpenAI, RateLimitError
-
-        client = OpenAI(api_key=current_app.config["OPENAI_API_KEY"], timeout=20.0)
-        full_response = []
-        try:
-            stream = client.chat.completions.create(
-                model="gpt-4o-mini",
-                max_tokens=500,
-                temperature=0.7,
-                stream=True,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    *normalized_history[-20:],
-                    {"role": "user", "content": message},
-                ],
+            """
+            INSERT INTO chat_log (
+                session_id,
+                role,
+                message,
+                created_at
             )
-            for chunk in stream:
-                delta = chunk.choices[0].delta.content or ""
-                if delta:
-                    full_response.append(delta)
-                    yield f"data: {json.dumps({'token': delta})}\n\n"
-            yield f"data: {json.dumps({'done': True})}\n\n"
-            threading.Thread(
-                target=save_chat_log,
-                args=(session_id, user_id, message, "".join(full_response), current_app.config["DATABASE_URL"]),
-                daemon=True,
-            ).start()
-        except RateLimitError:
-            current_app.logger.warning("OpenAI chat rate limited for session %s", session_id)
-            yield f"data: {json.dumps({'error': 'rate_limited', 'message': 'Too many AI requests right now.'})}\n\n"
-        except APIError:
-            current_app.logger.exception("OpenAI chat upstream error for session %s", session_id)
-            yield f"data: {json.dumps({'error': 'upstream_unavailable', 'message': 'AI service is temporarily unavailable.'})}\n\n"
-        except Exception:
-            current_app.logger.exception("OpenAI chat stream failed for session %s", session_id)
-            yield f"data: {json.dumps({'error': 'stream_failed', 'message': 'Chat response failed.'})}\n\n"
+            VALUES (?, 'user', ?, ?)
+            """,
+            (
+                session_id,
+                message,
+                db.utc_now(),
+            ),
+        )
 
-    return Response(
-        stream_with_context(generate()),
-        mimetype="text/event-stream",
-        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
-    )
+        conn.execute(
+            """
+            INSERT INTO chat_log (
+                session_id,
+                role,
+                message,
+                created_at
+            )
+            VALUES (?, 'assistant', ?, ?)
+            """,
+            (
+                session_id,
+                response_text,
+                db.utc_now(),
+            ),
+        )
+
+        audit(
+            conn,
+            "chat.response",
+            "chat",
+            session_id,
+            {"chars": len(response_text)},
+        )
 
 
-@bp.post('/jaya-concierge')
+# =========================================================
+# MAIN ROUTE
+# =========================================================
+@bp.post("/chat")
+@bp.post("/jaya-concierge")
 def jaya_concierge():
     data = body()
-    reject_unknown(data, {"sessionId", "message", "history", "language"})
+
+    reject_unknown(
+        data,
+        {
+            "sessionId",
+            "message",
+            "history",
+            "language",
+        }
+    )
 
     session_id = raw_text(data.get("sessionId", ""), "sessionId", 120, required=False, allow_empty=True)
-    message = raw_text(data.get("message"), "message", 2000)
-    language = raw_text(data.get("language", "en"), "language", 5, required=False, allow_empty=True) or "en"
 
+    if not isinstance(data.get("message"), str) or not data.get("message", "").strip():
+        return jsonify({"error": "message required"}), 400
+
+    message = raw_text(data.get("message"), "message", 2000)
     history = data.get("history", [])
+
     if history is None:
         history = []
+
     if not isinstance(history, list):
         raise ValidationError("history must be an array", "history")
 
     normalized_history = []
-    for item in history[-10:]:
+    for item in history[-15:]:
         if not isinstance(item, dict):
             continue
+
         role = item.get("role")
         content = item.get("text") or item.get("content")
+
         if role in {"user", "assistant"} and isinstance(content, str) and content.strip():
-            normalized_history.append({"role": role, "content": content.strip()[:1200]})
-
-    rate = enforce_limit(f"concierge:{session_id or request.remote_addr}", 20, 60)
-    if rate is not None:
-        return rate
-
-    if not current_app.config.get("GOOGLE_API_KEY"):
-        return jsonify({"success": False, "message": "AI service unavailable"}), 503
+            normalized_history.append({
+                "role": role,
+                "text": content.strip()[:1500],
+            })
 
     try:
-        import google.generativeai as genai
-
-        with db.connect(current_app.config["DATABASE_URL"]) as conn:
-            system_prompt = build_system_prompt(conn)
-
-        genai.configure(api_key=current_app.config.get("GOOGLE_API_KEY"))
-        model = genai.GenerativeModel("models/gemini-2.5-flash")
-
-        full_prompt = system_prompt + "\n\nConversation history:\n"
-        for item in normalized_history:
-            role = "User" if item["role"] == "user" else "Assistant"
-            full_prompt += f"{role}: {item['content']}\n"
-        full_prompt += f"User: {message}\nAssistant:"
-
-        response = model.generate_content(full_prompt)
-        text = getattr(response, "text", "").strip() or "Jaya could not generate a response at this time."
+        reply = get_gemini_reply(message, normalized_history)
 
         if session_id:
             threading.Thread(
                 target=save_chat_log,
-                args=(session_id, None, message, text, current_app.config["DATABASE_URL"]),
+                args=(session_id, message, reply),
                 daemon=True,
             ).start()
 
-        return jsonify({"success": True, "reply": text, "message": text})
+        return jsonify({"reply": reply, "success": True})
+
     except Exception as exc:
-        current_app.logger.error("Jaya concierge error: %s", exc)
-        return jsonify({"success": False, "message": "AI generation failed."}), 500
+        msg = str(exc or "")
+        lowered = msg.lower()
+
+        if isinstance(exc, ValueError) and msg == "missing_key":
+            return jsonify({
+                "error": "AI assistant is temporarily unavailable.",
+                "message": "AI service unavailable",
+            }), 503
+
+        if any(token in lowered for token in ("api key", "403", "invalid", "blocked", "leaked")):
+            return jsonify({
+                "error": "AI assistant is temporarily unavailable.",
+                "message": "AI service unavailable",
+            }), 503
+
+        if any(token in lowered for token in ("429", "quota")):
+            return jsonify({"error": "Too many requests. Please wait."}), 429
+
+        current_app.logger.error(
+            "Gemini concierge error: %s",
+            exc,
+            exc_info=True,
+        )
+        return jsonify({
+            "error": "AI assistant is temporarily unavailable.",
+            "message": "AI service unavailable",
+        }), 500

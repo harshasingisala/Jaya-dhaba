@@ -27,6 +27,11 @@ from security_middleware import CSRF_COOKIE, CSRF_HEADER, generate_csrf_token
 # Cookie names
 REFRESH_COOKIE = "refresh_token"
 
+
+def cookie_samesite() -> str:
+    app_env = (os.getenv("APP_ENV") or os.getenv("FLASK_ENV") or "").lower()
+    return "Strict" if app_env == "production" else "Lax"
+
 # Role hierarchy
 ROLE_RANK = {
     "guest": 0,
@@ -39,8 +44,10 @@ ROLE_RANK = {
 
 
 def request_ip() -> str:
-    forwarded = request.headers.get("X-Forwarded-For", "").split(",")[0].strip()
-    return forwarded or request.remote_addr or "0.0.0.0"
+    forwarded = request.headers.get("X-Forwarded-For", "")
+    if forwarded:
+        return forwarded.split(",")[-1].strip()
+    return request.remote_addr or "0.0.0.0"
 
 
 def get_fingerprint() -> str:
@@ -264,7 +271,7 @@ def issue_csrf_response():
         max_age=2 * 60 * 60,
         secure=secure_cookie,
         httponly=False,  # Frontend needs to read this for the header
-        samesite="Strict",
+        samesite=cookie_samesite(),
         path="/"
     )
     return response
@@ -277,7 +284,7 @@ def set_refresh_cookie(response, refresh_token: str):
         max_age=7 * 24 * 60 * 60,
         secure=current_app.config.get("COOKIE_SECURE", True),
         httponly=True,
-        samesite="Strict",
+        samesite=cookie_samesite(),
         path="/api/auth/refresh"
     )
 
@@ -289,7 +296,7 @@ def clear_refresh_cookie(response):
         max_age=0,
         secure=current_app.config.get("COOKIE_SECURE", True),
         httponly=True,
-        samesite="Strict",
+        samesite=cookie_samesite(),
         path="/api/auth/refresh"
     )
 

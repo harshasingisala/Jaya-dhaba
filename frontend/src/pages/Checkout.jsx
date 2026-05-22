@@ -1,9 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingBag, CreditCard, MapPin, Phone, ArrowLeft, Loader2, Sparkles, CheckCircle2, Info } from 'lucide-react';
+import { Phone, ArrowLeft, Loader2, Sparkles, CheckCircle2, Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import api from '../api';
-import { apiUrl } from '../api/config';
+
+const formatINR = (amount) =>
+  '₹' + Number(amount).toLocaleString('en-IN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
 
 export default function Checkout() {
   const { cart, getTotal, clearCart, isOffline } = useApp();
@@ -16,7 +21,7 @@ export default function Checkout() {
   const [details, setDetails] = useState({
     name: '',
     phone: '',
-    address: 'East Marredpally, Secunderabad',
+    address: 'East Marredpally, Secunderabad, Telangana 500026',
     type: 'Dine-in',
     occasion: 'None'
   });
@@ -28,87 +33,44 @@ export default function Checkout() {
     window.scrollTo(0, 0);
   }, []);
 
-  const token = (() => {
-    try {
-      const u = JSON.parse(localStorage.getItem('user') || 'null');
-      return u?.access_token || u?.token || '';
-    } catch { return ''; }
-  })();
   const user = (() => {
     try {
       return JSON.parse(localStorage.getItem('user') || 'null');
-    } catch {
+    } catch (err) {
+      console.error('[JAYA_DEBUG] Caught error in checkout user parse:', err);
       return null;
     }
   })();
   const setError = (message) => setCheckoutError(message);
-  const fetchWithRetry = async (url, options) => {
-    let lastError;
-    for (let attempt = 0; attempt < 2; attempt += 1) {
-      try {
-        return await fetch(apiUrl(url), { ...options, credentials: 'include' });
-      } catch (err) {
-        lastError = err;
-        await new Promise((resolve) => setTimeout(resolve, 350));
-      }
-    }
-    throw lastError;
-  };
-  const resolveCsrfToken = async () => {
-    const csrf = await fetch(apiUrl('/api/csrf-token'), {
-      method: 'GET',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
-    if (!csrf.ok) throw new Error('Unable to prepare secure checkout.');
-    const data = await csrf.json();
-    return data?.data?.csrfToken || data?.csrfToken;
-  };
-
-  async function handlePayment(actualOrderId, ourOrderId, amount, publicToken) {
+  async function handlePayment(orderData) {
     setStatus('loading')
     try {
-      const amountValue = Number(amount)
-      const csrfToken = await resolveCsrfToken()
-      const res = await fetchWithRetry('/api/payments/create-order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'X-CSRF-Token': csrfToken },
-        body: JSON.stringify({
-          order_id: actualOrderId,
-          order_number: ourOrderId,
-          amount: amountValue,
-          total: amountValue,
-          customer_name: details.name || user?.name || ''
-        })
-      })
-      if (!res.ok) {
-        const errorBody = await res.json().catch(() => ({}));
-        throw new Error(errorBody.message || errorBody.error || 'Unable to create Razorpay order.');
-      }
-      const { razorpay_order_id, amount: razorpayAmount, currency, key_id } = await res.json()
+      const { razorpay_order_id, amount: razorpayAmount, currency, key_id, pending_intent } = await api.createPaymentOrder(orderData)
       if (typeof window.Razorpay === 'undefined')
-        throw new Error('Payment system loading. Please wait 2 seconds and try again. Call 73861 85823 if this persists.')
+        throw new Error('Payment system loading. Please wait 2 seconds and try again. Call +91 73861 85821 if this persists.')
       const rzp = new window.Razorpay({
         key: key_id, amount: razorpayAmount, currency, order_id: razorpay_order_id,
         name: 'Jaya Dhaba', description: 'Heritage Kitchen · East Marredpally, Hyderabad',
         image: '/logo.png', prefill: { name: user?.name || '', contact: user?.phone || '' },
         theme: { color: '#B8860B' },
         handler: async (resp) => {
-          const verifyCsrfToken = await resolveCsrfToken()
-          const vRes = await fetchWithRetry('/api/payments/verify', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'X-CSRF-Token': verifyCsrfToken },
-            body: JSON.stringify({ ...resp, our_order_id: ourOrderId })
-          })
-          if (vRes.ok) {
+          try {
+            const verified = await api.verifyPayment({ ...resp, pending_intent })
+            const order = verified?.data || verified
             clearCart();
-            navigate(`/track?id=${actualOrderId}&token=${encodeURIComponent(publicToken || '')}`)
-          }
-          else {
-            const errorBody = await vRes.json().catch(() => ({}));
-            setError(errorBody.message || 'Payment response received, but server verification failed. Please contact the restaurant before retrying payment.')
+            navigate(`/track?id=${order.id || verified.our_order_id}&token=${encodeURIComponent(order.public_token || '')}`)
+          } catch (verifyError) {
+            const recoverable = verifyError?.status >= 500 || verifyError?.payload?.error === 'payment_recorded_pending';
+            if (recoverable) {
+              sessionStorage.setItem('jd_pending_verify', JSON.stringify({
+                razorpay_payment_id: resp.razorpay_payment_id,
+                order_id: razorpay_order_id,
+                amount: razorpayAmount,
+              }));
+              setError('Your payment may have gone through. Please check your email or contact us at +91 73861 85821. Do not pay again.');
+            } else {
+              setError(verifyError.message || 'Payment response received, but server verification failed. Please contact the restaurant before retrying payment.')
+            }
           }
           setStatus('idle')
         },
@@ -116,7 +78,7 @@ export default function Checkout() {
       })
       rzp.on('payment.failed', (r) => { setError(`Payment failed: ${r.error.description}`); setStatus('idle') })
       rzp.open()
-    } catch (e) { setError(e.message || 'Payment unavailable. Please call us.'); setStatus('idle') }
+    } catch (e) { console.error('[JAYA_DEBUG] Caught error in handlePayment:', e); setError(e.message || 'Payment unavailable. Please call us.'); setStatus('idle') }
   }
 
   useEffect(() => {
@@ -146,18 +108,16 @@ export default function Checkout() {
         notes: details.occasion !== 'None' ? details.occasion : '',
       };
 
-      const res = await api.createOrder(orderData);
       if (paymentMode === 'Online') {
-        if (!res.order_number) throw new Error('Order number missing for payment. Please retry.');
-        const orderAmount = Number(res.total ?? res.total_amount ?? orderData.total ?? 0)
-        if (!orderAmount || Number.isNaN(orderAmount)) throw new Error('Order total missing for payment. Please retry.');
-        await handlePayment(res.id, res.order_number, orderAmount, res.public_token);
+        await handlePayment({ ...orderData, payment_method: 'razorpay', idempotency_key: crypto.randomUUID?.() || `${Date.now()}-${Math.random()}` });
       } else {
+        const res = await api.createOrder({ ...orderData, payment_method: 'cash' });
         setOrderComplete(res);
         clearCart();
       }
     } catch (err) {
-      setCheckoutError(err.message || 'The culinary gates are temporarily closed. Please try calling us directly at 73861 85823.');
+      console.error('[JAYA_DEBUG] Caught error in handlePlaceOrder:', err);
+      setCheckoutError(err.message || 'The culinary gates are temporarily closed. Please try calling us directly at +91 73861 85821.');
     } finally {
       setIsProcessing(false);
     }
@@ -308,6 +268,7 @@ export default function Checkout() {
                       </div>
                     </div>
                   )}
+
                 </div>
 
                 <button
@@ -334,7 +295,7 @@ export default function Checkout() {
                   <div key={`${item.id}-${i}`} className="flex justify-between items-center border-b border-white/5 pb-6 last:border-0 last:pb-0">
                     <div className="flex items-center gap-6">
                       <div className="w-16 h-16 rounded-2xl bg-white/10 overflow-hidden border border-white/10 shrink-0">
-                        <img src={item.image || '/biryani.png'} className="w-full h-full object-cover" alt={item.name} />
+                        <img src={item.image || '/biryani.png'} className="w-full h-full object-cover" alt={item.name} loading="lazy" width="64" height="64" />
                       </div>
                       <div>
                         <p className="font-serif italic text-lg">{item.name}</p>
@@ -366,6 +327,7 @@ export default function Checkout() {
                         setAppliedCoupon(res);
                         alert(`Masterpiece Code Applied: ${res.title}`);
                       } catch (e) {
+                        console.error('[JAYA_DEBUG] Caught error in applyCoupon:', e);
                         alert(e.message || "Code not recognized by the vault.");
                       } finally {
                         setIsApplying(false);
@@ -381,36 +343,30 @@ export default function Checkout() {
                 <div className="space-y-4">
                   <div className="flex justify-between items-center text-white/40">
                     <span className="text-[10px] font-black uppercase tracking-widest">Kitchen Subtotal</span>
-                    <span className="text-sm font-bold">₹{getTotal()}</span>
+                    <span className="text-sm font-bold">{formatINR(getTotal())}</span>
                   </div>
                   {appliedCoupon && (
                     <div className="flex justify-between items-center text-heritage-gold">
                       <span className="text-[10px] font-black uppercase tracking-widest">Masterpiece Discount</span>
-                      <span className="text-sm font-bold">-₹{appliedCoupon.discount}</span>
+                      <span className="text-sm font-bold">-{formatINR(appliedCoupon.discount)}</span>
                     </div>
                   )}
                   <div className="flex justify-between items-center text-white/40">
                     <span className="text-[10px] font-black uppercase tracking-widest">Heritage Tax (GST)</span>
-                    <span className="text-sm font-bold">₹{Math.round((getTotal() - (appliedCoupon?.discount || 0)) * 0.05)}</span>
+                    <span className="text-sm font-bold">{formatINR((getTotal() - (appliedCoupon?.discount || 0)) * 0.05)}</span>
                   </div>
                   <div className="flex justify-between items-center pt-6 border-t border-white/20">
                     <span className="text-sm font-black uppercase tracking-[0.3em]">Grand Total</span>
-                    <span className="text-3xl font-serif italic text-heritage-gold">₹{Math.round((getTotal() - (appliedCoupon?.discount || 0)) * 1.05)}</span>
+                    <span className="text-3xl font-serif italic text-heritage-gold">{formatINR((getTotal() - (appliedCoupon?.discount || 0)) * 1.05)}</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="bg-heritage-stone/40 p-10 rounded-[4rem] border border-heritage-espresso/5 shadow-xl space-y-6">
-              <div className="flex items-center gap-4 text-heritage-espresso/40">
-                <MapPin size={18} />
-                <p className="text-[10px] font-black uppercase tracking-widest leading-relaxed">Secunderabad Space: East Marredpally, East Nehru Nagar</p>
-              </div>
-              <div className="flex items-center gap-4 text-heritage-espresso/40">
-                <CreditCard size={18} />
-                <p className="text-[10px] font-black uppercase tracking-widest leading-relaxed">Secure Digital Transaction • Encrypted Heritage Records</p>
-              </div>
-            </div>
+            <ul className="bg-heritage-stone/40 p-10 rounded-[4rem] border border-heritage-espresso/5 shadow-xl space-y-6 text-[10px] font-black uppercase tracking-widest leading-relaxed text-heritage-espresso/40">
+              <li>🔒 Secure payment powered by Razorpay</li>
+              <li>✓ You will receive confirmation once order is placed</li>
+            </ul>
           </div>
 
         </div>
