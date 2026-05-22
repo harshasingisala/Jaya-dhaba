@@ -259,11 +259,10 @@ def issue_csrf_response():
         "data": {"csrfToken": token}
     })
 
-    secure_flag = current_app.config.get("COOKIE_SECURE", True)
-    secure_cookie = secure_flag and request.is_secure
     host = request.host.split(":")[0]
-    if host in {"localhost", "127.0.0.1"}:
-        secure_cookie = False
+    secure_flag = current_app.config.get("COOKIE_SECURE", True)
+    is_local_host = host in {"localhost", "127.0.0.1"}
+    secure_cookie = secure_flag and not is_local_host
 
     response.set_cookie(
         CSRF_COOKIE,
