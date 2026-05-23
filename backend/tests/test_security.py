@@ -25,3 +25,37 @@ def test_security_headers(client):
     assert resp.headers["X-Frame-Options"] == "DENY"
     assert "max-age=31536000" in resp.headers["Strict-Transport-Security"]
     assert "default-src 'self'" in resp.headers["Content-Security-Policy"]
+
+
+def test_public_user_cannot_forge_manual_order(client):
+    from conftest import csrf_headers, order_payload
+
+    payload = order_payload(client)
+    payload["source"] = "manual"
+    response = client.post(
+        "/api/orders",
+        json=payload,
+        headers={**csrf_headers(client), "Idempotency-Key": "manual-forgery"},
+    )
+
+    assert response.status_code == 403
+
+
+def test_order_addons_require_order_access(client):
+    import db
+    from conftest import create_order, csrf_headers
+    from models import MenuItem
+    from sqlalchemy import select
+
+    created = create_order(client, key="addon-access-check")
+    order_id = created["id"]
+    with db.get_db() as session:
+        item = session.execute(select(MenuItem).filter_by(available=True)).scalar_one()
+
+    response = client.post(
+        f"/api/orders/{order_id}/addons",
+        json={"items": [{"menu_item_id": str(item.id), "qty": 1}]},
+        headers=csrf_headers(client),
+    )
+
+    assert response.status_code == 404

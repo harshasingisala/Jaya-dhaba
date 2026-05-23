@@ -47,6 +47,7 @@ def create_app(overrides: dict | None = None) -> Flask:
         TAX_BASIS_POINTS=int(os.getenv("TAX_BASIS_POINTS", "500")),
         DOMAIN=os.getenv("DOMAIN", "localhost"),
         UPLOAD_FOLDER=os.getenv("UPLOAD_FOLDER", str(Path(__file__).resolve().parent / "uploads")),
+        MAX_CONTENT_LENGTH=int(os.getenv("MAX_CONTENT_LENGTH_BYTES", str(20 * 1024 * 1024))),
         RAZORPAY_KEY_ID=os.getenv("RAZORPAY_KEY_ID", ""),
         RAZORPAY_KEY_SECRET=os.getenv("RAZORPAY_KEY_SECRET", ""),
         RAZORPAY_WEBHOOK_SECRET=os.getenv("RAZORPAY_WEBHOOK_SECRET", ""),

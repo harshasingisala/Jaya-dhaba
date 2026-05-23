@@ -5,6 +5,7 @@ import json
 import os
 import secrets
 import uuid
+import warnings
 from datetime import datetime, timedelta, timezone
 from io import BytesIO, StringIO
 from pathlib import Path
@@ -340,7 +341,14 @@ def upload_rating_photo(rating_id: int):
     data = f.read()
     if len(data) > 5 * 1024 * 1024:
         raise ValidationError("Max 5MB", "photo", 413)
-    img = Image.open(BytesIO(data)).convert("RGB")
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", Image.DecompressionBombWarning)
+            img = Image.open(BytesIO(data))
+            img.verify()
+            img = Image.open(BytesIO(data)).convert("RGB")
+    except Exception:
+        raise ValidationError("Invalid image content", "photo")
     img.thumbnail((800, 800), Image.LANCZOS)
     fname = f"community_{rating_id}_{uuid.uuid4().hex[:8]}.webp"
     path = Path(current_app.config["UPLOAD_FOLDER"]) / "community" / fname

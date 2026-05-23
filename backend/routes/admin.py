@@ -3,10 +3,10 @@ from __future__ import annotations
 import os
 import secrets
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from uuid import uuid4
 
-from flask import Blueprint, current_app, g, jsonify, send_from_directory, request
+from flask import Blueprint, abort, current_app, g, jsonify, send_from_directory, request
 import db
 from audit import audit
 from auth import require_role
@@ -16,6 +16,7 @@ from validators import ValidationError, body, boolean, email, integer, phone, ra
 
 
 bp = Blueprint("admin", __name__, url_prefix="/api")
+ALLOWED_UPLOAD_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".glb", ".usdz"}
 
 
 # ---------------------------------------------------------------------------
@@ -1026,5 +1027,12 @@ def generate_qr(table_id: int):
 
 @bp.get("/uploads/<path:filename>")
 def uploads(filename: str):
+    requested = PurePosixPath(filename)
+    if (
+        requested.is_absolute()
+        or requested.suffix.lower() not in ALLOWED_UPLOAD_SUFFIXES
+        or any(part in {"", ".", ".."} or part.startswith(".") for part in requested.parts)
+    ):
+        abort(404)
     root = os.path.abspath(current_app.config["UPLOAD_FOLDER"])
     return send_from_directory(root, filename)

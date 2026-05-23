@@ -88,7 +88,7 @@ def optional_user():
     return g.current_user
 
 
-def _active_user(identity: str):
+def active_user(identity: str):
     try:
         user_id = uuid.UUID(str(identity))
     except (TypeError, ValueError):
@@ -98,6 +98,9 @@ def _active_user(identity: str):
         if not user or user.deleted_at:
             return None
         return user
+
+
+_active_user = active_user
 
 
 def require_min_role(min_role: str, missing_status: int = 401, allow_query_token: bool = False):

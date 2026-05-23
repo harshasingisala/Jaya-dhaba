@@ -5,7 +5,7 @@ import os
 from flask_jwt_extended import decode_token
 from flask_socketio import SocketIO, disconnect, emit, join_room
 
-from auth import ROLE_RANK
+from auth import ROLE_RANK, active_user
 
 
 def _cors_allowed_origins() -> list[str]:
@@ -46,8 +46,10 @@ def verify_admin_token(token: str) -> bool:
     if not token:
         return False
     decoded = decode_token(token)
-    role = decoded.get("role", "guest")
-    return ROLE_RANK.get(role, 0) >= ROLE_RANK["staff"]
+    user = active_user(decoded.get("sub"))
+    if not user:
+        return False
+    return ROLE_RANK.get(user.role, 0) >= ROLE_RANK["staff"]
 
 
 def broadcast(event: str, payload: dict) -> None:

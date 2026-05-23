@@ -4,7 +4,7 @@ from flask import Blueprint, Response, current_app, g, jsonify, request, stream_
 from flask_jwt_extended import decode_token
 
 import db
-from auth import require_min_role
+from auth import active_user, require_min_role
 from events import order_topic_id, stream_topic
 from routes.orders import order_access
 from routes.orders import serialize_order
@@ -23,11 +23,14 @@ def user_from_query_token():
         decoded = decode_token(token)
     except Exception:
         return None
+    user_record = active_user(decoded.get("sub"))
+    if not user_record:
+        return None
     user = {
-        "id": decoded["sub"],
-        "role": decoded.get("role", "guest"),
-        "email": decoded.get("email"),
-        "phone": decoded.get("phone"),
+        "id": str(user_record.id),
+        "role": user_record.role,
+        "email": user_record.email,
+        "phone": user_record.phone,
     }
     g.current_user = user
     return user

@@ -4,6 +4,7 @@ import json
 import os
 import threading
 import uuid
+import warnings
 from datetime import datetime, timezone
 from io import BytesIO
 from uuid import uuid4
@@ -384,6 +385,8 @@ def enhance_image_job(job_id: str, image_bytes: bytes, output_path: str):
 @bp.post("/admin/menu/enhance-photo")
 @require_role("staff")
 def enhance_photo():
+    from PIL import Image
+
     f = request.files.get("image")
     if not f:
         raise ValidationError("No file", "image")
@@ -392,6 +395,13 @@ def enhance_photo():
     data = f.read()
     if len(data) > 10 * 1024 * 1024:
         raise ValidationError("Max 10MB", "image", 413)
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", Image.DecompressionBombWarning)
+            image = Image.open(BytesIO(data))
+            image.verify()
+    except Exception:
+        raise ValidationError("Invalid image content", "image")
     job_id = str(uuid.uuid4())
     ENHANCE_JOBS[job_id] = {"status": "processing"}
     out_path = os.path.join(current_app.config["UPLOAD_FOLDER"], "menu", f"{job_id}.webp")
@@ -419,6 +429,8 @@ def upload_model(item_id: str):
     data = f.read()
     if len(data) > 20 * 1024 * 1024:
         raise ValidationError("Max 20MB", "model", 413)
+    if data[:4] != b"glTF":
+        raise ValidationError("Invalid GLB content", "model")
     fname = f"model_{item_id}_{uuid.uuid4().hex[:8]}.glb"
     path = os.path.join(current_app.config["UPLOAD_FOLDER"], "models", fname)
     os.makedirs(os.path.dirname(path), exist_ok=True)

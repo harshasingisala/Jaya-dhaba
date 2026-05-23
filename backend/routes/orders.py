@@ -190,6 +190,10 @@ def create_order():
         current_app.logger.debug("[orders.create_order] Failed to read raw request bytes")
 
     raw = request.get_json(silent=True) or {}
+    if raw.get("source") == "manual":
+        current_user = getattr(g, "current_user", None)
+        if not current_user or current_user.get("role") not in STAFF_ROLES:
+            return jsonify({"success": False, "message": "Manual orders require staff access"}), 403
     if raw.get("source") != "manual":
         with db.connect(current_app.config["DATABASE_URL"]) as conn:
             paused_row = conn.execute("SELECT value FROM site_settings WHERE key = 'orders_paused'").fetchone()
@@ -563,7 +567,7 @@ def update_order_status(order_id: uuid.UUID):
 
 @bp.post("/orders/<uuid:order_id>/addons")
 def add_order_items(order_id: uuid.UUID):
-    data = request.json
+    data = request.get_json(silent=True) or {}
     items_req = data.get("items", [])
     if not items_req:
         return jsonify({"success": False, "message": "No items provided"}), 400
@@ -571,6 +575,9 @@ def add_order_items(order_id: uuid.UUID):
     with db.get_db() as session:
         order = session.execute(select(Order).filter_by(id=order_id)).scalar_one_or_none()
         if not order:
+            return jsonify({"success": False, "message": "Order not found"}), 404
+        public_token = request.args.get("token") or data.get("token") or data.get("public_token")
+        if not _has_order_access(order, public_token):
             return jsonify({"success": False, "message": "Order not found"}), 404
         
         if order.status in ("served", "cancelled"):
