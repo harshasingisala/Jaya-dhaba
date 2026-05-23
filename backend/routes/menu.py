@@ -354,7 +354,7 @@ def toggle_availability(item_id: str):
     broker.publish("menu_updates", "menu.updated", {"type": "availability", "item_id": item_id, "available": available})
     broker.publish("kitchen", "menu.updated", {"item_id": item_id})
     broadcast("menu_update", {"action": "updated", "item_id": item_id, "item": item_payload})
-    return jsonify({"status": "ok", "available": available})
+    return jsonify({"status": "ok", "available": available, "item": item_payload})
 
 
 @bp.get("/menu/stream")

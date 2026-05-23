@@ -69,13 +69,19 @@ export default function MenuManager() {
 
   async function toggleAvailability(id, currentAvailability) {
     if (vibrate) vibrate(20);
+    const nextAvailability = !currentAvailability;
+    const previousMenu = menu;
+    setError(null);
+    setMenu(prev => prev.map(item =>
+      item.id === id ? { ...item, available: nextAvailability, is_available: nextAvailability } : item
+    ));
     try {
-      const data = await api.updateMenuItem(id, { available: !currentAvailability });
+      const data = await api.toggleMenuAvailability(id, nextAvailability);
       setMenu(prev => prev.map(item =>
         item.id === id ? data : item
       ));
-      await fetchMenu();
     } catch (err) {
+      setMenu(previousMenu);
       setError('Failed to update item availability. Please try again.');
     }
   }

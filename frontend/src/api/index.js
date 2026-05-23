@@ -133,8 +133,15 @@ async function request(path, options = {}) {
       credentials: 'include',
       headers,
     });
+    const duration = performance.now() - startedAt;
     window.dispatchEvent(new CustomEvent('api:latency', {
-      detail: { slow: performance.now() - startedAt > 2000, url, method },
+      detail: {
+        slow: duration > 5000 && [429, 503].includes(response.status),
+        overloaded: [429, 503].includes(response.status),
+        duration,
+        url,
+        method,
+      },
     }));
     return response;
   };
@@ -351,6 +358,14 @@ const api = {
   deleteMenuItem: async (itemId) => {
     await request(`/api/admin/menu/${itemId}`, { method: 'DELETE' });
     return true;
+  },
+
+  toggleMenuAvailability: async (itemId, available) => {
+    const data = await request(`/api/admin/menu/${itemId}/availability`, {
+      method: 'PATCH',
+      body: JSON.stringify({ available: !!available }),
+    });
+    return normalizeMenuItem(data?.item || data);
   },
 
   getOrders: async () => {

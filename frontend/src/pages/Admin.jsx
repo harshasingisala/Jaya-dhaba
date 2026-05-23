@@ -91,11 +91,20 @@ export default function Admin() {
   });
 
   useEffect(() => {
+    let clearTimer;
     const onLatency = (event) => {
-      setServerSlow(!!event.detail?.slow);
+      const shouldShow = !!event.detail?.slow;
+      setServerSlow(shouldShow);
+      window.clearTimeout(clearTimer);
+      if (shouldShow) {
+        clearTimer = window.setTimeout(() => setServerSlow(false), 8000);
+      }
     };
     window.addEventListener('api:latency', onLatency);
-    return () => window.removeEventListener('api:latency', onLatency);
+    return () => {
+      window.clearTimeout(clearTimer);
+      window.removeEventListener('api:latency', onLatency);
+    };
   }, []);
 
   if (location.pathname === '/admin/kitchen') {
