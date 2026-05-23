@@ -11,7 +11,7 @@ const statusSteps = [
    { id: 'Preparing', label: 'In the Fire', icon: <ChefHat size={18} />, desc: 'Slow-cooking in our heritage tandoors' },
    { id: 'Plating', label: 'Plating Art', icon: <Sparkles size={18} />, desc: 'Final garnish and heritage aesthetics' },
    { id: 'Ready', label: 'Quality Check', icon: <CheckSquare size={18} />, desc: 'Final verification before serving' },
-   { id: 'Served', label: 'Enjoying', icon: <House size={18} />, desc: 'Served with ancestral hospitality' },
+   { id: 'Served', label: 'Enjoying', icon: <House size={18} />, desc: 'Relax and enjoy your Jaya Dhaba moment' },
 ];
 
 export default function Track() {

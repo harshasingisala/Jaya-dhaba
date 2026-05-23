@@ -42,20 +42,20 @@ const AnalyticsActions = ({ onRefresh, onResetView }) => {
 
   const handleClearServed = async () => {
     const confirmed = window.confirm(
-      'Archive served orders from the live queue? Order history will be preserved.'
+      'Archive enjoying orders from the live queue? Order history will be preserved.'
     );
     if (!confirmed) return;
 
     setIsClearing(true);
     try {
       const result = await api.clearServedOrders();
-      showToast(`${result?.cleared || 0} served orders archived.`, 'success');
+      showToast(`${result?.cleared || 0} enjoying orders archived.`, 'success');
       window.dispatchEvent(new Event('rt:orders'));
       window.dispatchEvent(new Event('rt:analytics'));
       if (onRefresh) await onRefresh();
     } catch (error) {
-      if (import.meta.env.DEV) console.error('Clear served orders failed', error);
-      showToast('Clear served orders failed. Nothing was changed.', 'error');
+      if (import.meta.env.DEV) console.error('Clear enjoying orders failed', error);
+      showToast('Clear enjoying orders failed. Nothing was changed.', 'error');
     } finally {
       setIsClearing(false);
     }
@@ -110,7 +110,7 @@ const AnalyticsActions = ({ onRefresh, onResetView }) => {
           className="flex items-center gap-3 px-8 py-4 bg-red-50 text-red-600 border border-red-100 rounded-full hover:bg-red-600 hover:text-white transition-all font-black uppercase text-[9px] tracking-widest shadow-md hover:shadow-xl disabled:opacity-60"
         >
           {isClearing ? <Loader2 size={16} className="animate-spin" /> : <Archive size={16} />}
-          Clear Served Orders
+          Clear Enjoying Orders
         </button>
       </div>
     </div>

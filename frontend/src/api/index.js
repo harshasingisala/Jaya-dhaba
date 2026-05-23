@@ -28,7 +28,7 @@ const API_TO_UI_STATUS = {
   confirmed: 'Confirmed',
   preparing: 'Preparing',
   ready: 'Ready',
-  served: 'Served',
+  served: 'Enjoying',
   cancelled: 'Cancelled',
 };
 
@@ -56,7 +56,6 @@ function getAuthToken() {
     const user = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null');
     return user?.access_token || user?.token || '';
   } catch (err) {
-    console.error('[JAYA_DEBUG] Caught error in getAuthToken:', err);
     return '';
   }
 }

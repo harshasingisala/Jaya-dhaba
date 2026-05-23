@@ -344,7 +344,7 @@ export default function OrdersManager() {
     setBulkLoading(true);
     try {
       const result = await api.clearServedOrders();
-      toast(`${result.cleared || 0} served orders archived`, 'success');
+      toast(`${result.cleared || 0} enjoying orders archived`, 'success');
       setSelectedIds(new Set());
       setClearConfirm(false);
       if (!getSocket().connected) refreshAll();
@@ -404,10 +404,10 @@ export default function OrdersManager() {
   function getAge(order) {
     const status = apiStatus(order);
     if (status === 'served' && order.served_at) {
-      return `Served at ${parseServerTime(order.served_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`;
+      return `Enjoying since ${parseServerTime(order.served_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`;
     }
     if (status === 'served') {
-      return 'Served just now';
+      return 'Enjoying just now';
     }
     const ref = status === 'preparing' && order.preparing_at ? parseServerTime(order.preparing_at) : parseServerTime(order.created_at);
     const diff = Math.max(0, now - ref);
@@ -467,7 +467,7 @@ export default function OrdersManager() {
               }}
               className={`px-5 py-3 rounded-full text-[10px] font-black uppercase tracking-widest border ${activeTab === tab ? 'bg-heritage-espresso text-white border-heritage-espresso' : 'bg-white text-heritage-espresso/45 border-heritage-espresso/10'}`}
             >
-              {tab === 'archive' ? 'Archive' : `${tab} (${tab === 'all' ? orders.length : stats[tab] || 0})`}
+              {tab === 'archive' ? 'Archive' : `${tab === 'served' ? 'enjoying' : tab} (${tab === 'all' ? orders.length : stats[tab] || 0})`}
             </button>
           ))}
         </div>
@@ -549,12 +549,12 @@ export default function OrdersManager() {
               <ActionButton disabled={bulkLoading} onClick={() => bulkArchive()} icon={<Archive size={15} />} label="Archive Selected" />
               {clearConfirm ? (
                 <div className="flex items-center gap-2 text-xs font-bold">
-                  Clear {stats.served || 0} served orders?
+                  Clear {stats.served || 0} enjoying orders?
                   <button onClick={clearAllServed} disabled={bulkLoading} className="px-3 py-2 bg-white text-heritage-espresso rounded-full">Yes, Archive</button>
                   <button onClick={() => setClearConfirm(false)} className="px-3 py-2 bg-white/10 rounded-full">Cancel</button>
                 </div>
               ) : (
-                <ActionButton disabled={bulkLoading} onClick={() => setClearConfirm(true)} icon={<Trash2 size={15} />} label="Clear All Served" />
+                <ActionButton disabled={bulkLoading} onClick={() => setClearConfirm(true)} icon={<Trash2 size={15} />} label="Clear Enjoying" />
               )}
               {bulkLoading && <Loader2 size={18} className="animate-spin" />}
             </div>
@@ -613,7 +613,7 @@ export default function OrdersManager() {
                     <p><b>Payment:</b> {order.payment_method || 'Not recorded'}</p>
                     <p><b>Source:</b> {order.source || 'customer'}</p>
                     <p><b>Order time:</b> {parseServerTime(order.created_at)?.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' }) || 'Unknown'}</p>
-                    <p><b>Status:</b> {apiStatus(order)}</p>
+                    <p><b>Status:</b> {apiStatus(order) === 'served' ? 'enjoying' : apiStatus(order)}</p>
                   </div>
                   <div className="mt-3 space-y-2">
                     {(order.items || []).map((item, index) => (
@@ -699,7 +699,7 @@ function ArchiveView({ archiveDate, setArchiveDate, groupedArchive, archiveSumma
             <div key={order.id} className="bg-white rounded-2xl border border-heritage-espresso/5 p-5 shadow-sm">
               <p className="font-serif italic text-xl text-heritage-espresso">{displayId(order)} - {order.customer_name || order.guest_name || 'Guest'} - {formatItems(order)} - {formatMoney(order.total)}</p>
               <p className="text-[10px] font-black uppercase tracking-widest text-heritage-espresso/35 mt-2">
-                Served {order.served_at ? parseServerTime(order.served_at).toLocaleTimeString('en-IN') : 'unknown'} / Archived {order.archived_at ? parseServerTime(order.archived_at).toLocaleTimeString('en-IN') : 'unknown'}
+                Enjoying {order.served_at ? parseServerTime(order.served_at).toLocaleTimeString('en-IN') : 'unknown'} / Archived {order.archived_at ? parseServerTime(order.archived_at).toLocaleTimeString('en-IN') : 'unknown'}
               </p>
             </div>
           ))}

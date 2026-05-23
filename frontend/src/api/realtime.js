@@ -32,9 +32,6 @@ export function createManagedEventSource(url, options = {}) {
     if (closed || reconnectTimer) return;
     const delay = retryDelay;
     retryDelay = Math.min(retryDelay * 2, 30000);
-    if (import.meta.env.DEV) {
-      console.log(`[SSE] Reconnecting in ${delay / 1000}s...`);
-    }
     reconnectTimer = window.setTimeout(() => {
       reconnectTimer = null;
       connect();

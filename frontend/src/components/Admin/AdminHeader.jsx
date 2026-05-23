@@ -27,18 +27,18 @@ export default function AdminHeader({ onMenuToggle, onTestSound }) {
   };
 
   const handleClearServed = async () => {
-    const confirmed = window.confirm('Archive served orders from the live queue? Order history will be preserved.');
+    const confirmed = window.confirm('Archive enjoying orders from the live queue? Order history will be preserved.');
     if (!confirmed) return;
 
     setIsClearingServed(true);
     try {
       const result = await api.clearServedOrders();
-      showToast(`${result?.cleared || 0} served orders archived.`, 'success');
+      showToast(`${result?.cleared || 0} enjoying orders archived.`, 'success');
       window.dispatchEvent(new Event('rt:orders'));
       window.dispatchEvent(new Event('rt:analytics'));
     } catch (e) {
-      if (import.meta.env.DEV) console.error('Clear served orders failed:', e);
-      showToast('Clear served orders failed. Nothing was changed.', 'error');
+      if (import.meta.env.DEV) console.error('Clear enjoying orders failed:', e);
+      showToast('Clear enjoying orders failed. Nothing was changed.', 'error');
     } finally {
       setIsClearingServed(false);
     }
@@ -124,7 +124,7 @@ export default function AdminHeader({ onMenuToggle, onTestSound }) {
           <button
             onClick={handleClearServed}
             disabled={isClearingServed}
-            title="Clear Served Orders"
+            title="Clear Enjoying Orders"
             className="p-2 md:p-3 text-heritage-espresso/40 hover:text-heritage-terracotta hover:bg-heritage-terracotta/5 rounded-2xl transition-all disabled:opacity-60"
           >
             {isClearingServed ? <Loader2 size={16} className="animate-spin" /> : <Archive size={16} />}
