@@ -54,7 +54,7 @@ export default function DailyReport() {
   const [activeTab, setActiveTab] = useState('daily');
   const [date, setDate] = useState(todayIso());
   const [report, setReport] = useState(null);
-  const [periodReport, setPeriodReport] = useState({ weekly: [], monthly: [] });
+  const [periodReport, setPeriodReport] = useState({ weekly: [], monthly: [], payment_summary: [], top_items: [] });
   const [loading, setLoading] = useState(true);
   const [periodLoading, setPeriodLoading] = useState(false);
   const [error, setError] = useState('');
@@ -95,6 +95,8 @@ export default function DailyReport() {
       setPeriodReport({
         weekly: Array.isArray(data?.weekly) ? data.weekly : [],
         monthly: Array.isArray(data?.monthly) ? data.monthly : [],
+        payment_summary: Array.isArray(data?.payment_summary) ? data.payment_summary : [],
+        top_items: Array.isArray(data?.top_items) ? data.top_items : [],
       });
     } catch (err) {
       if (import.meta.env.DEV) console.error('Period report failed', err);
@@ -155,6 +157,10 @@ export default function DailyReport() {
     const rows = periodReport[activeTab] || [];
     const totalOrders = rows.reduce((sum, row) => sum + Number(row.orders || 0), 0);
     const totalRevenue = rows.reduce((sum, row) => sum + Number(row.revenue || 0), 0);
+    const avgBill = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+    const trendRows = rows.slice().reverse();
+    const paymentRows = periodReport.payment_summary || [];
+    const topItems = periodReport.top_items || [];
     return (
       <div className="min-h-[70vh] rounded-[2rem] bg-[#111111] text-white p-8">
         <ReportTabs activeTab={activeTab} setActiveTab={setActiveTab} />
@@ -173,7 +179,7 @@ export default function DailyReport() {
           </div>
         ) : (
           <div className="mt-8 space-y-6">
-            <section className="grid md:grid-cols-3 gap-4">
+            <section className="grid md:grid-cols-4 gap-4">
               <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
                 <p className="text-[10px] font-black uppercase tracking-widest text-white/35">Report Type</p>
                 <p className="mt-3 text-2xl font-serif italic text-[#C9A84C]">{activeTab === 'weekly' ? 'Weekly' : 'Monthly'}</p>
@@ -186,7 +192,59 @@ export default function DailyReport() {
                 <p className="text-[10px] font-black uppercase tracking-widest text-white/35">Total Revenue</p>
                 <p className="mt-3 text-2xl font-serif italic text-[#C9A84C]">{amount(totalRevenue)}</p>
               </div>
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                <p className="text-[10px] font-black uppercase tracking-widest text-white/35">Avg Bill Value</p>
+                <p className="mt-3 text-2xl font-serif italic text-[#C9A84C]">{amount(avgBill)}</p>
+              </div>
             </section>
+            <section className="grid xl:grid-cols-2 gap-5">
+              <Panel title={`${activeTab === 'weekly' ? 'Weekly' : 'Monthly'} Sales Trend`}>
+                <div className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={trendRows}>
+                      <CartesianGrid stroke="#2a2a2a" strokeDasharray="3 3" />
+                      <XAxis dataKey="label" stroke="#8b8b8b" />
+                      <YAxis stroke="#8b8b8b" tickFormatter={(value) => `Rs ${value}`} />
+                      <Tooltip formatter={(value) => amount(value)} contentStyle={{ background: '#1b1b1b', border: '1px solid #C9A84C', color: '#fff' }} />
+                      <Line type="monotone" dataKey="revenue" stroke="#C9A84C" strokeWidth={3} dot={{ fill: '#C9A84C' }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </Panel>
+              <Panel title="Payment Split">
+                <InfoTable goldLast rows={[
+                  ...paymentRows.map((row) => [
+                    `${String(row.method || 'other').toUpperCase()} (${count(row.orders)} orders)`,
+                    amount(row.revenue),
+                  ]),
+                  ['TOTAL COLLECTION', amount(totalRevenue)],
+                ]} />
+              </Panel>
+            </section>
+            <Panel title="Top Selling Items">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-white/35">
+                    <th className="py-3">Item</th>
+                    <th className="py-3 text-right">Qty</th>
+                    <th className="py-3 text-right">Revenue</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {topItems.length === 0 ? (
+                    <tr className="border-t border-white/10">
+                      <td className="py-6 text-white/55" colSpan={3}>No item sales found yet.</td>
+                    </tr>
+                  ) : topItems.map((item, index) => (
+                    <tr key={`${item.name}-${index}`} className="border-t border-white/10">
+                      <td className="py-4 text-white/80">{index + 1}. {item.name}</td>
+                      <td className="py-4 text-right text-white/70">{count(item.qty)}</td>
+                      <td className="py-4 text-right text-[#C9A84C]">{amount(item.revenue)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Panel>
             <Panel title={`${activeTab === 'weekly' ? 'Weekly' : 'Monthly'} Orders`}>
               <table className="w-full text-sm">
                 <thead>

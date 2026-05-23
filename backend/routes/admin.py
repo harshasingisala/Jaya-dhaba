@@ -954,7 +954,37 @@ def revenue():
             """,
             tuple(params),
         ).fetchall()
-    return jsonify({"daily": [dict(row) for row in daily], "weekly": [dict(row) for row in weekly], "monthly": [dict(row) for row in monthly]})
+        payment_rows = conn.execute(
+            f"""
+            SELECT COALESCE(NULLIF(LOWER(payment_method), ''), 'other') AS method,
+                   COUNT(*) AS orders,
+                   COALESCE(SUM(total), 0) AS revenue
+            FROM orders
+            WHERE {where_sql}
+            GROUP BY COALESCE(NULLIF(LOWER(payment_method), ''), 'other')
+            """,
+            tuple(params),
+        ).fetchall()
+        top_rows = conn.execute(
+            f"""
+            SELECT mi.name, COALESCE(SUM(oi.qty), 0) AS qty, COALESCE(SUM(oi.qty * oi.unit_price), 0) AS revenue
+            FROM order_items oi
+            JOIN orders o ON o.id = oi.order_id
+            JOIN menu_items mi ON mi.id = oi.menu_item_id
+            WHERE {where_sql.replace('created_at', 'o.created_at').replace('status', 'o.status')}
+            GROUP BY mi.name
+            ORDER BY qty DESC, revenue DESC
+            LIMIT 10
+            """,
+            tuple(params),
+        ).fetchall()
+    return jsonify({
+        "daily": [dict(row) for row in daily],
+        "weekly": [dict(row) for row in weekly],
+        "monthly": [dict(row) for row in monthly],
+        "payment_summary": [dict(row) for row in payment_rows],
+        "top_items": [dict(row) for row in top_rows],
+    })
 
 
 @bp.get("/admin/audit-log")
