@@ -26,6 +26,12 @@ export default function MenuManager() {
   }, [restaurantId]);
 
   useEffect(() => {
+    if (!String(error || '').toLowerCase().includes('availability')) return;
+    setActionError(error);
+    setError(null);
+  }, [error]);
+
+  useEffect(() => {
     const handler = (event) => {
       const { action, item_id, item } = event.detail || {};
       if (action === 'created' && item) {
@@ -91,6 +97,8 @@ export default function MenuManager() {
   const filteredMenu = menu.filter(item =>
     activeCategory === 'All' || item.category === activeCategory
   );
+  const isAvailabilityError = String(error || '').toLowerCase().includes('availability');
+  const tableError = isAvailabilityError ? null : error;
 
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -114,12 +122,13 @@ export default function MenuManager() {
         }}
       />
 
-      {actionError && (
+      {(actionError || isAvailabilityError) && (
         <div className="mx-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-3xl border border-red-100 bg-red-50 px-6 py-4 text-red-700 shadow-sm">
-          <p className="text-sm font-bold">{actionError}</p>
+          <p className="text-sm font-bold">{actionError || error}</p>
           <button
             onClick={() => {
               setActionError(null);
+              setError(null);
               fetchMenu();
             }}
             className="px-5 py-2 rounded-full bg-red-600 text-white text-[10px] font-black uppercase tracking-widest"
@@ -176,14 +185,14 @@ export default function MenuManager() {
                   <p className="mt-4 text-heritage-espresso/20 font-serif italic text-xl">Calling the culinary vault...</p>
                 </td>
               </tr>
-            ) : error ? (
+            ) : tableError ? (
               <tr>
                 <td colSpan="5" className="py-40 text-center">
                   <div className="flex flex-col items-center gap-6 max-w-md mx-auto">
                     <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center text-red-500">
                       <Info size={32} />
                     </div>
-                    <p className="text-xl font-serif italic text-red-900/60 leading-relaxed">{error}</p>
+                    <p className="text-xl font-serif italic text-red-900/60 leading-relaxed">{tableError}</p>
                     <button
                       onClick={fetchMenu}
                       className="px-10 py-4 bg-red-600 text-white rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all shadow-xl shadow-red-200"
