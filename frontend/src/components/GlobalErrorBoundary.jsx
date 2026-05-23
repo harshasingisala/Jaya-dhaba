@@ -1,5 +1,5 @@
-import React from 'react';
-import { Info, RefreshCcw } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { Home, Info, RefreshCcw } from 'lucide-react';
 
 const volatileStorageKeys = [
   'user',
@@ -12,10 +12,26 @@ const volatileStorageKeys = [
 ];
 
 export default function GlobalErrorBoundary({ error, resetErrorBoundary }) {
+  const isAdmin = window.location.pathname.startsWith('/admin');
+  const message = String(error?.message || error || '');
+  const shouldAutoRefresh = /chunk|module|import|loading/i.test(message);
+
+  useEffect(() => {
+    if (!shouldAutoRefresh) return;
+    const refreshKey = 'jd_auto_recovered_once';
+    if (sessionStorage.getItem(refreshKey) === '1') return;
+    sessionStorage.setItem(refreshKey, '1');
+    window.setTimeout(() => window.location.reload(), 300);
+  }, [shouldAutoRefresh]);
+
   const handleReset = () => {
     volatileStorageKeys.forEach((key) => {
-      localStorage.removeItem(key);
-      sessionStorage.removeItem(key);
+      try {
+        localStorage.removeItem(key);
+        sessionStorage.removeItem(key);
+      } catch {
+        // Ignore blocked storage during recovery.
+      }
     });
     resetErrorBoundary();
   };
@@ -27,10 +43,12 @@ export default function GlobalErrorBoundary({ error, resetErrorBoundary }) {
             <Info size={48} />
          </div>
          <div className="space-y-4">
-            <p className="text-heritage-gold font-black uppercase tracking-[0.6em] text-[10px]">Momentary Heritage Disruption</p>
-            <h2 className="text-5xl font-serif italic text-heritage-espresso">Technical Refinement Needed</h2>
+            <p className="text-heritage-gold font-black uppercase tracking-[0.6em] text-[10px]">{isAdmin ? 'Admin Session Refresh' : 'Momentary Service Refresh'}</p>
+            <h2 className="text-5xl font-serif italic text-heritage-espresso">{isAdmin ? 'Admin Panel Is Refreshing' : 'Please Refresh Once'}</h2>
             <p className="text-sm font-medium text-heritage-espresso/60 leading-relaxed italic max-w-sm mx-auto">
-              The digital architecture is undergoing an automated restoration. If the issues persist, please call our Secunderabad kitchen directly.
+              {isAdmin
+                ? 'A fresh version of the control suite is loading. Refresh once or return to admin login.'
+                : 'A fresh version of Jaya Dhaba is loading. Refresh once, or call our Secunderabad kitchen directly.'}
             </p>
          </div>
          
@@ -47,13 +65,14 @@ export default function GlobalErrorBoundary({ error, resetErrorBoundary }) {
                onClick={handleReset}
                className="flex items-center gap-4 bg-heritage-espresso text-white px-10 py-5 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-heritage-gold transition-all shadow-xl"
             >
-               <RefreshCcw size={16} /> Re-establish Link
+               <RefreshCcw size={16} /> Refresh Now
             </button>
             <a 
-               href="tel:+917386185821"
+               href={isAdmin ? '/admin/login' : 'tel:+917386185821'}
                className="flex items-center gap-4 border border-heritage-espresso/20 text-heritage-espresso px-10 py-5 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-white transition-all"
             >
-               Voice Connection
+               {isAdmin ? <Home size={16} /> : null}
+               {isAdmin ? 'Admin Login' : 'Call Kitchen'}
             </a>
          </div>
       </div>
