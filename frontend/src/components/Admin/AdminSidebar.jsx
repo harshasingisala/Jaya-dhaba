@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -9,12 +9,15 @@ import {
   Settings, 
   LogOut,
   ChevronRight,
-  Menu,
+  Mail,
   X,
-  TrendingUp
+  TrendingUp,
+  BarChart3
 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import api from '../../api';
 
-const NavItem = ({ icon, label, path, active, onClick }) => (
+const NavItem = ({ icon, label, path, active, onClick, badge }) => (
   <button 
     onClick={() => onClick(path)}
     className={`w-full flex items-center justify-between p-5 rounded-[2rem] transition-all duration-500 group ${
@@ -28,6 +31,11 @@ const NavItem = ({ icon, label, path, active, onClick }) => (
         {icon}
       </div>
       <span className="text-[10px] font-black uppercase tracking-[0.3em]">{label}</span>
+      {badge > 0 && (
+        <span className={`min-w-6 h-6 px-2 rounded-full inline-flex items-center justify-center text-[9px] font-black ${active ? 'bg-white text-heritage-espresso' : 'bg-heritage-gold text-heritage-espresso'}`}>
+          {badge}
+        </span>
+      )}
     </div>
     {active && <ChevronRight size={14} className="animate-pulse" />}
   </button>
@@ -36,10 +44,34 @@ const NavItem = ({ icon, label, path, active, onClick }) => (
 export default function AdminSidebar({ mobileOpen, setMobileOpen }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { logout } = useAuth();
+  const [unreadInbox, setUnreadInbox] = useState(0);
+
+  async function loadUnreadInbox() {
+    try {
+      const payload = await api.getContactSubmissions();
+      setUnreadInbox(Number(payload?.unread || 0));
+    } catch (err) {
+      if (import.meta.env.DEV) console.warn('Inbox badge unavailable:', err);
+    }
+  }
+
+  useEffect(() => {
+    loadUnreadInbox();
+    const handler = () => loadUnreadInbox();
+    window.addEventListener('rt:contact', handler);
+    const timer = window.setInterval(loadUnreadInbox, 60000);
+    return () => {
+      window.removeEventListener('rt:contact', handler);
+      window.clearInterval(timer);
+    };
+  }, []);
 
   const menuItems = [
     { icon: <LayoutDashboard size={18} />, label: 'Overview', path: '/admin' },
     { icon: <TrendingUp size={18} />, label: 'Revenue Center', path: '/admin/revenue' },
+    { icon: <BarChart3 size={18} />, label: 'Reports', path: '/admin/reports' },
+    { icon: <Mail size={18} />, label: 'Inbox', path: '/admin/inbox', badge: unreadInbox },
     { icon: <ShoppingBag size={18} />, label: 'Live Orders', path: '/admin/orders' },
     { icon: <UtensilsCrossed size={18} />, label: 'The Menu', path: '/admin/menu' },
     { icon: <Users size={18} />, label: 'Reservations', path: '/admin/reservations' },
@@ -50,6 +82,12 @@ export default function AdminSidebar({ mobileOpen, setMobileOpen }) {
   const handleNav = (path) => {
     navigate(path);
     if (setMobileOpen) setMobileOpen(false);
+  };
+
+  const handleLogout = () => {
+    logout();
+    if (setMobileOpen) setMobileOpen(false);
+    navigate('/admin/login', { replace: true });
   };
 
   const sidebarContent = (
@@ -86,7 +124,7 @@ export default function AdminSidebar({ mobileOpen, setMobileOpen }) {
 
       {/* FOOTER ACTION */}
       <button 
-        onClick={() => handleNav('/')}
+        onClick={handleLogout}
         className="w-full flex items-center gap-4 p-6 rounded-[2rem] text-heritage-espresso/40 hover:text-heritage-terracotta hover:bg-red-50 transition-all group mt-10 border border-transparent hover:border-red-100"
       >
         <div className="w-10 h-10 rounded-2xl bg-heritage-stone flex items-center justify-center group-hover:bg-red-100 group-hover:text-red-500 transition-colors">
