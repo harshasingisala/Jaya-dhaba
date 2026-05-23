@@ -6,13 +6,17 @@ on:
   pull_request:
     branches: [ main ]
 
+permissions:
+  contents: read
+
 jobs:
   audit:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.11'
     - name: Install dependencies
@@ -22,20 +26,27 @@ jobs:
       run: bandit -r backend/ -x backend/tests --severity-level high
     - name: Dependency scan (Safety)
       run: safety check -r backend/requirements.txt
+    - name: Secret file guard
+      run: |
+        test ! -f .env
+        test ! -f backend/.env
+        test ! -f frontend/.env
 
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: audit
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.11'
     - name: Install dependencies
       run: |
         pip install -r backend/requirements.txt
         pip install pytest pytest-cov
+        pip check
     - name: Run tests with coverage
       run: |
         cd backend

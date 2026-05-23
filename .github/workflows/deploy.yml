@@ -4,9 +4,13 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-22.04
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -38,7 +42,9 @@ jobs:
         run: |
           ! grep -rn "execute(f" backend/
           ! grep -rn "sk_live_\|sk_test_\|AKIA\|hardcoded_secret" backend/
+          test ! -f .env
           test ! -f backend/.env
+          test ! -f frontend/.env
       - name: Frontend build
         run: |
           npm --prefix frontend ci
@@ -47,6 +53,7 @@ jobs:
   deploy:
     needs: test
     runs-on: ubuntu-22.04
+    timeout-minutes: 15
     if: github.ref == 'refs/heads/main' && vars.ENABLE_SSH_DEPLOY == 'true'
     steps:
       - uses: actions/checkout@v4

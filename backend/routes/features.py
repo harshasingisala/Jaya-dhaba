@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import json
 import os
+import re
 import secrets
 import uuid
 import warnings
@@ -10,7 +11,7 @@ from datetime import datetime, timedelta, timezone
 from io import BytesIO, StringIO
 from pathlib import Path
 
-from flask import Blueprint, Response, current_app, jsonify, redirect, request
+from flask import Blueprint, Response, current_app, g, jsonify, redirect, request
 
 import db
 from audit import audit
@@ -21,6 +22,19 @@ from validators import ValidationError, body, integer, raw_text
 api_bp = Blueprint("features_api", __name__, url_prefix="/api")
 seo_bp = Blueprint("seo", __name__)
 _settings_cache: dict = {"ts": 0, "data": None}
+STAFF_ROLES = {"staff", "manager", "owner", "admin"}
+
+
+def _same_id(left, right) -> bool:
+    return str(left).replace("-", "") == str(right).replace("-", "")
+
+
+def _uuid_candidates(value, field: str) -> tuple[str, str]:
+    try:
+        parsed = uuid.UUID(str(value))
+    except (TypeError, ValueError):
+        raise ValidationError(f"Invalid {field}", field)
+    return str(parsed), parsed.hex
 
 
 def ist_tz():
@@ -278,25 +292,40 @@ def _pricing_payload(data: dict) -> tuple:
 @require_role("customer")
 def submit_ratings():
     data = body()
-    order_id = integer(data.get("order_id"), "order_id", 1)
+    order_id_candidates = _uuid_candidates(data.get("order_id"), "order_id")
     ratings_data = data.get("ratings", [])
     if not isinstance(ratings_data, list) or not ratings_data:
         raise ValidationError("ratings are required", "ratings")
-    user = getattr(__import__("flask").g, "current_user", None)
+    user = getattr(g, "current_user", None)
 
     def write(conn):
-        order = conn.execute("SELECT * FROM orders WHERE id = ? AND (user_id = ? OR ? IN ('staff','admin'))", (order_id, user["id"], user["role"])).fetchone()
+        user_candidates = _uuid_candidates(user["id"], "user_id")
+        order = conn.execute(
+            """
+            SELECT * FROM orders
+            WHERE id IN (?, ?)
+              AND (user_id IN (?, ?) OR ? IN ('staff','manager','owner','admin'))
+            """,
+            (*order_id_candidates, *user_candidates, user["role"]),
+        ).fetchone()
         if not order:
             raise ValidationError("Order not found", "order_id", 404)
         for item in ratings_data[:20]:
             if not isinstance(item, dict):
                 continue
-            mid = integer(item.get("menu_item_id"), "menu_item_id", 1, required=False)
+            if not item.get("menu_item_id"):
+                continue
+            mid_candidates = _uuid_candidates(item.get("menu_item_id"), "menu_item_id")
             rat = integer(item.get("rating"), "rating", 1, 5, required=False)
-            if mid and rat:
+            menu_item = conn.execute("SELECT id FROM menu_items WHERE id IN (?, ?)", mid_candidates).fetchone()
+            if menu_item and rat:
                 conn.execute(
-                    "INSERT INTO dish_ratings (order_id, menu_item_id, user_id, rating, created_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT (order_id, menu_item_id) DO NOTHING",
-            (order_id, mid, user["id"], rat, db.utc_now()),
+                    """
+                    INSERT INTO dish_ratings (order_id, menu_item_id, user_id, rating, created_at)
+                    VALUES (?, ?, ?, ?, ?)
+                    ON CONFLICT (order_id, menu_item_id) DO NOTHING
+                    """,
+                    (order["id"], menu_item["id"], user["id"], rat, db.utc_now()),
                 )
     db.atomic_write(write, current_app.config["DATABASE_URL"])
     return jsonify({"status": "ok"})
@@ -308,6 +337,8 @@ def generate_branded_qr():
     from io import BytesIO
 
     data = request.args.get("data", "https://jayadhaba.com")
+    if len(data) > 2048:
+        raise ValidationError("QR data is too long", "data", 413)
     
     # Branded QR logic
     qr = qrcode.QRCode(
@@ -328,10 +359,19 @@ def generate_branded_qr():
     return Response(buf.read(), mimetype="image/png")
 
 
-@api_bp.post("/ratings/<int:rating_id>/photo")
+@api_bp.post("/ratings/<rating_id>/photo")
 @require_role("customer")
-def upload_rating_photo(rating_id: int):
+def upload_rating_photo(rating_id: str):
     from PIL import Image
+
+    rating_candidates = _uuid_candidates(rating_id, "rating_id")
+    user = getattr(g, "current_user", None)
+    with db.connect(current_app.config["DATABASE_URL"]) as conn:
+        rating = conn.execute("SELECT id, user_id FROM dish_ratings WHERE id IN (?, ?)", rating_candidates).fetchone()
+    if not rating:
+        raise ValidationError("Rating not found", "rating_id", 404)
+    if user.get("role") not in STAFF_ROLES and not _same_id(rating["user_id"], user["id"]):
+        raise ValidationError("Rating not found", "rating_id", 404)
 
     f = request.files.get("photo")
     if not f:
@@ -350,14 +390,15 @@ def upload_rating_photo(rating_id: int):
     except Exception:
         raise ValidationError("Invalid image content", "photo")
     img.thumbnail((800, 800), Image.LANCZOS)
-    fname = f"community_{rating_id}_{uuid.uuid4().hex[:8]}.webp"
+    safe_rating_id = str(rating["id"]).replace("-", "")
+    fname = f"community_{safe_rating_id}_{uuid.uuid4().hex[:8]}.webp"
     path = Path(current_app.config["UPLOAD_FOLDER"]) / "community" / fname
     path.parent.mkdir(parents=True, exist_ok=True)
     img.save(path, format="WEBP", quality=80)
     photo_url = f"/uploads/community/{fname}"
 
     def write(conn):
-        conn.execute("UPDATE dish_ratings SET photo_url = ? WHERE id = ?", (photo_url, rating_id))
+        conn.execute("UPDATE dish_ratings SET photo_url = ? WHERE id = ?", (photo_url, rating["id"]))
 
     db.atomic_write(write, current_app.config["DATABASE_URL"])
     return jsonify({"photo_url": photo_url})
@@ -378,14 +419,18 @@ def pending_ratings():
     return jsonify([dict(r) for r in rows])
 
 
-@api_bp.patch("/admin/ratings/<int:rating_id>")
+@api_bp.patch("/admin/ratings/<rating_id>")
 @require_role("staff")
-def moderate_rating(rating_id: int):
+def moderate_rating(rating_id: str):
+    rating_candidates = _uuid_candidates(rating_id, "rating_id")
     approved = bool(body().get("approved"))
 
     def write(conn):
-        conn.execute("UPDATE dish_ratings SET photo_approved = ? WHERE id = ?", (1 if approved else 0, rating_id))
-        audit(conn, "rating.moderate", "dish_rating", rating_id, {"approved": approved})
+        rating = conn.execute("SELECT id FROM dish_ratings WHERE id IN (?, ?)", rating_candidates).fetchone()
+        if not rating:
+            raise ValidationError("Rating not found", "rating_id", 404)
+        conn.execute("UPDATE dish_ratings SET photo_approved = ? WHERE id = ?", (1 if approved else 0, rating["id"]))
+        audit(conn, "rating.moderate", "dish_rating", rating["id"], {"approved": approved})
 
     db.atomic_write(write, current_app.config["DATABASE_URL"])
     return jsonify({"status": "ok"})
@@ -446,6 +491,8 @@ def my_referral_code():
 
 @seo_bp.get("/r/<code>")
 def referral_redirect(code):
+    if not re.fullmatch(r"[A-Z0-9_-]{4,32}", code or "", re.IGNORECASE):
+        raise ValidationError("Referral link not found", "code", 404)
     resp = redirect(f"/?ref={code}")
     resp.set_cookie("ref_code", code, max_age=86400, httponly=True, samesite="Lax")
     return resp
