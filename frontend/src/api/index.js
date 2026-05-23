@@ -133,16 +133,6 @@ async function request(path, options = {}) {
       credentials: 'include',
       headers,
     });
-    const duration = performance.now() - startedAt;
-    window.dispatchEvent(new CustomEvent('api:latency', {
-      detail: {
-        slow: duration > 5000 && [429, 503].includes(response.status),
-        overloaded: [429, 503].includes(response.status),
-        duration,
-        url,
-        method,
-      },
-    }));
     return response;
   };
   let res = await makeFetch();

@@ -446,7 +446,7 @@ export default function OrdersManager() {
           ['Active', stats.total_active || 0],
           ['Pending', stats.pending || 0],
           ['Preparing', stats.preparing || 0],
-          ['Served', stats.served || 0],
+          ['Enjoying', stats.served || 0],
           ['Today', `${formatMoney(stats.today_revenue)} / ${stats.today_orders || 0}`],
         ].map(([label, value]) => (
           <div key={label} className="bg-white border border-heritage-espresso/5 rounded-2xl p-5 shadow-sm">
@@ -544,9 +544,8 @@ export default function OrdersManager() {
           {selectedIds.size > 0 && (
             <div className="bg-heritage-espresso text-white rounded-2xl p-4 flex flex-wrap items-center gap-3 shadow-xl">
               <span className="text-sm font-black">{selectedIds.size} selected</span>
-              <ActionButton disabled={bulkLoading} onClick={() => bulkSetStatus('preparing')} icon={<ChefHat size={15} />} label="Start Preparation" />
-              <ActionButton disabled={bulkLoading} onClick={() => bulkSetStatus('preparing')} icon={<ChefHat size={15} />} label="Mark Preparing" />
-              <ActionButton disabled={bulkLoading} onClick={() => bulkSetStatus('served')} icon={<Check size={15} />} label="Mark Served" />
+              <ActionButton disabled={bulkLoading} onClick={() => bulkSetStatus('preparing')} icon={<ChefHat size={15} />} label="Start Prep" />
+              <ActionButton disabled={bulkLoading} onClick={() => bulkSetStatus('served')} icon={<Check size={15} />} label="Enjoying" />
               <ActionButton disabled={bulkLoading} onClick={() => bulkArchive()} icon={<Archive size={15} />} label="Archive Selected" />
               {clearConfirm ? (
                 <div className="flex items-center gap-2 text-xs font-bold">
@@ -580,7 +579,7 @@ export default function OrdersManager() {
               <div className="py-24 text-center text-heritage-espresso/35">
                 <ClipboardList className="mx-auto mb-4" size={42} />
                 <p className="font-serif italic text-2xl">
-                  {activeTab === 'all' ? 'No orders yet' : activeTab === 'pending' ? 'No pending orders' : activeTab === 'preparing' ? 'Nothing in the kitchen' : 'No served orders'}
+                  {activeTab === 'all' ? 'No orders yet' : activeTab === 'pending' ? 'No pending orders' : activeTab === 'preparing' ? 'Nothing in the kitchen' : 'No enjoying orders'}
                 </p>
               </div>
             ) : visibleOrders.map((order) => (
@@ -601,10 +600,10 @@ export default function OrdersManager() {
                 <StatusBadge status={apiStatus(order)} />
                 <div className="flex flex-wrap items-center justify-end gap-2">
                   <span className="text-[11px] font-bold" style={{ color: getAgeColor(order) }}>{getAge(order)}</span>
-                  {apiStatus(order) === 'pending' && <MiniButton onClick={() => singleSetStatus(order.id, 'preparing')} icon={<ChefHat size={13} />} label="Start Prep" />}
-                  {apiStatus(order) !== 'served' && <MiniButton onClick={() => singleSetStatus(order.id, 'served')} icon={<Check size={13} />} label="Enjoying" />}
-                  <MiniButton onClick={() => shareWhatsAppReceipt(order)} icon={<MessageCircle size={13} />} label="WhatsApp" />
-                  {apiStatus(order) === 'served' && <MiniButton onClick={() => bulkArchive([order.id])} icon={<Archive size={13} />} label="Archive" />}
+                  {apiStatus(order) === 'pending' && <MiniButton onClick={() => singleSetStatus(order.id, 'preparing')} icon={<ChefHat size={17} />} label="Prep" />}
+                  {apiStatus(order) !== 'served' && <MiniButton onClick={() => singleSetStatus(order.id, 'served')} icon={<Check size={17} />} label="Enjoying" />}
+                  <MiniButton onClick={() => shareWhatsAppReceipt(order)} icon={<MessageCircle size={17} />} label="WhatsApp" />
+                  {apiStatus(order) === 'served' && <MiniButton onClick={() => bulkArchive([order.id])} icon={<Archive size={17} />} label="Archive" />}
                 </div>
               </div>
               {expandedIds.has(order.id) && (
@@ -651,9 +650,9 @@ function ActionButton({ disabled, onClick, icon, label }) {
 
 function MiniButton({ onClick, icon, label }) {
   return (
-    <button onClick={onClick} className="min-h-[44px] px-3 py-2 rounded-full bg-heritage-stone text-[10px] font-black uppercase tracking-widest text-heritage-espresso/70 hover:bg-heritage-gold hover:text-white flex items-center gap-1.5">
-      {icon}
-      {label}
+    <button onClick={onClick} className="min-h-[54px] min-w-[78px] px-3 py-2 rounded-2xl bg-heritage-stone text-[9px] font-black uppercase tracking-widest text-heritage-espresso/70 hover:bg-heritage-gold hover:text-white flex flex-col items-center justify-center gap-1 shadow-sm">
+      <span className="leading-none">{icon}</span>
+      <span>{label}</span>
     </button>
   );
 }
@@ -666,7 +665,7 @@ function StatusBadge({ status }) {
   };
   return (
     <span className={`px-4 py-2 rounded-full border text-[10px] font-black uppercase tracking-widest ${styles[status] || styles.pending}`}>
-      {status}
+      {status === 'served' ? 'enjoying' : status}
     </span>
   );
 }

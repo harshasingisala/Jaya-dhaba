@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  BarChart, Bar, Cell
 } from 'recharts';
 import {
   TrendingUp, TrendingDown, DollarSign, ShoppingBag,
-  Users, Activity, ShieldCheck, AlertCircle, Sparkles,
-  ArrowUpRight, ArrowDownRight, Zap
+  Activity, Sparkles, ChefHat, ReceiptText,
+  ArrowUpRight, ArrowDownRight
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useApp } from '../../../context/AppContext';
@@ -20,7 +19,7 @@ const DEFAULT_TREND = Array.from({ length: 8 }, (_, index) => {
 
 export default function RevenueCommandCenter() {
   const { restaurantId } = useApp();
-  const [stats, setStats] = useState({ revenue: 0, orders: 0, growth: 0 });
+  const [stats, setStats] = useState({ revenue: 0, orders: 0, avgOrderValue: 0, activeOrders: 0 });
   const [trendData, setTrendData] = useState(DEFAULT_TREND);
   const [health, setHealth] = useState({ db: 'checking', api: 'checking', storage: 'unknown', security: 'unknown', lastCheck: null });
   const [fromDate, setFromDate] = useState('');
@@ -39,6 +38,8 @@ export default function RevenueCommandCenter() {
         ...prev,
         revenue: snapshot.completedRevenue,
         orders: snapshot.totalOrders,
+        avgOrderValue: snapshot.avgOrderValue,
+        activeOrders: snapshot.pendingOrders + snapshot.preparingOrders,
       }));
       setTrendData(snapshot.trendData || DEFAULT_TREND);
     } catch (err) {
@@ -116,17 +117,17 @@ export default function RevenueCommandCenter() {
           up={true}
         />
         <MetricCard
-          icon={<Users className="text-orange-500" />}
-          label="Unique Guests"
-          value="N/A"
-          trend="No feed"
-          up={false}
+          icon={<ReceiptText className="text-orange-500" />}
+          label="Average Bill"
+          value={`Rs ${stats.avgOrderValue || 0}`}
+          trend="Live"
+          up={true}
         />
         <MetricCard
-          icon={<TrendingUp className="text-green-500" />}
-          label="Retention Rate"
-          value="N/A"
-          trend="No feed"
+          icon={<ChefHat className="text-green-500" />}
+          label="Active Kitchen"
+          value={stats.activeOrders || 0}
+          trend="Live"
           up={true}
         />
       </div>
@@ -137,11 +138,12 @@ export default function RevenueCommandCenter() {
         {/* REVENUE TREND */}
         <div className="lg:col-span-2 bg-white rounded-[4rem] p-12 shadow-2xl border border-heritage-espresso/5 space-y-10">
           <div className="flex justify-between items-center">
-            <h3 className="text-3xl font-serif italic text-heritage-espresso">Sales Velocity</h3>
-            <select className="bg-heritage-stone/50 border-none rounded-xl text-[9px] font-black uppercase tracking-widest px-4 py-2 outline-none">
-              <option>Live Hourly</option>
-              <option>Last 24h</option>
-            </select>
+            <div>
+              <h3 className="text-3xl font-serif italic text-heritage-espresso">Sales Velocity</h3>
+              <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-heritage-espresso/25">
+                {fromDate || toDate ? 'Selected range' : 'Today'} revenue and order flow
+              </p>
+            </div>
           </div>
 
           <div className="h-[400px] w-full">
@@ -161,7 +163,8 @@ export default function RevenueCommandCenter() {
                   itemStyle={{ color: '#D4A017', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase' }}
                   labelStyle={{ color: '#EAE5DD', fontSize: '12px', fontFamily: 'serif', marginBottom: '5px' }}
                 />
-                <Area type="monotone" dataKey="sales" stroke="#D4A017" strokeWidth={4} fillOpacity={1} fill="url(#colorSales)" />
+                <Area type="monotone" dataKey="sales" name="Revenue" stroke="#D4A017" strokeWidth={4} fillOpacity={1} fill="url(#colorSales)" />
+                <Area type="monotone" dataKey="orders" name="Orders" stroke="#16A34A" strokeWidth={2} fillOpacity={0} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -237,10 +240,14 @@ function HealthRow({ label, status }) {
 
 // ─── Fetch real today's data from Supabase ────────────────────────────────────
 async function fetchTodaySnapshot(restaurantId, dateRange = {}) {
+  const today = new Date(Date.now() + (5.5 * 60 * 60 * 1000)).toISOString().split('T')[0];
+  const range = dateRange.from_date || dateRange.to_date
+    ? dateRange
+    : { from_date: today, to_date: today };
   const [stats, orders, revenue] = await Promise.all([
     api.getAdminStats(),
     api.getOrders(),
-    api.getRevenue(dateRange),
+    api.getRevenue(range),
   ]);
   const daily = Array.isArray(revenue?.daily) ? revenue.daily : [];
   const completedRevenue = daily.length > 0
@@ -259,7 +266,7 @@ async function fetchTodaySnapshot(restaurantId, dateRange = {}) {
     preparingOrders: orders.filter((o) => o.status === 'Preparing').length,
     avgOrderValue: totalOrders > 0 ? Math.round(completedRevenue / totalOrders) : 0,
     trendData: daily.length > 0
-      ? daily.slice().reverse().map((row) => ({ time: row.label, sales: Number(row.revenue || 0), orders: 0 }))
+      ? daily.slice().reverse().map((row) => ({ time: row.label, sales: Number(row.revenue || 0), orders: Number(row.orders || 0) }))
       : DEFAULT_TREND,
   };
 }

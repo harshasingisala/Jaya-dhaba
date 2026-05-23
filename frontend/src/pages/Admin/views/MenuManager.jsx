@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Image as ImageIcon, ToggleLeft, ToggleRight, DollarSign, Info, Loader2, Zap, Sparkles, X, Save } from 'lucide-react';
+import { Plus, Edit, Trash2, Image as ImageIcon, ToggleLeft, ToggleRight, DollarSign, Info, Loader2, Sparkles, X, Save } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
 import api from '../../../api';
 import { usePollingFallback } from '../../../hooks/usePollingFallback';
@@ -119,10 +119,6 @@ export default function MenuManager() {
           <p className="text-[10px] font-black uppercase tracking-[0.4em] text-heritage-espresso/20">Curating the Jaya Dhaba Culinary Vault</p>
         </div>
         <div className="flex gap-4">
-          <button className="bg-heritage-espresso/5 text-heritage-espresso/40 px-8 py-4 rounded-full text-[10px] font-black uppercase tracking-[0.4em] hover:bg-red-50 hover:text-red-500 transition-all flex items-center gap-4">
-            <Zap size={16} />
-            86 Mode
-          </button>
           <button onClick={() => { setEditingItem(null); setIsModalOpen(true); }} className="bg-heritage-gold text-white px-10 py-4 rounded-full text-[10px] font-black uppercase tracking-[0.4em] shadow-xl hover:bg-heritage-espresso transition-all flex items-center gap-4 group">
             <Plus size={16} className="group-hover:rotate-90 transition-transform" />
             Add New Item

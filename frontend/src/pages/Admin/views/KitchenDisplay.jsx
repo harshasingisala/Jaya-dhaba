@@ -96,7 +96,7 @@ export default function KitchenDisplay() {
                 </div>
                 <p className="mt-5 text-2xl font-serif italic text-heritage-espresso">{itemsText(order)}</p>
                 <button onClick={() => markServed(order.id)} className="mt-8 min-h-[44px] w-full py-4 rounded-2xl bg-heritage-espresso text-white text-xl font-black uppercase">
-                  Mark Served
+                  Mark Enjoying
                 </button>
               </article>
             );
