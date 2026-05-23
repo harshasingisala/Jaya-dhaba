@@ -26,6 +26,7 @@ from security_middleware import CSRF_COOKIE, CSRF_HEADER, generate_csrf_token
 
 # Cookie names
 REFRESH_COOKIE = "refresh_token"
+BLACKLISTED_JTIS: set[str] = set()
 
 
 def cookie_samesite() -> str:
@@ -75,6 +76,9 @@ def optional_user():
         return None
     
     claims = get_jwt()
+    if claims.get("jti") in BLACKLISTED_JTIS:
+        g.current_user = None
+        return None
     user = _active_user(identity)
     if not user:
         g.current_user = None
@@ -118,6 +122,8 @@ def require_min_role(min_role: str, missing_status: int = 401, allow_query_token
                     verify_jwt_in_request()
                     identity = get_jwt_identity()
                     claims = get_jwt()
+                if claims.get("jti") in BLACKLISTED_JTIS:
+                    return jsonify({"success": False, "message": "Unauthorized"}), missing_status
             except Exception:
                 return jsonify({"success": False, "message": "Unauthorized"}), missing_status
             

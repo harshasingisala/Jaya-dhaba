@@ -18,11 +18,22 @@ from cache import menu_cache
 from events import broker, stream_topic
 from realtime import broadcast
 from validators import ValidationError, body, boolean, integer, raw_text, reject_unknown, tags, url
+from utils.validation import validate_image_url
 
 
 bp = Blueprint("menu", __name__, url_prefix="/api")
 
 ENHANCE_JOBS: dict[str, dict] = {}
+
+
+def _image_url(value) -> str:
+    cleaned = url(value, "image_url", required=False)
+    if not validate_image_url(
+        cleaned,
+        strict_allowlist=current_app.config.get("STRICT_IMAGE_URL_ALLOWLIST", False),
+    ):
+        raise ValidationError("Image URL must be from allowed hosts", "image_url")
+    return cleaned
 
 
 def serialize_item(row) -> dict:
@@ -240,7 +251,7 @@ def create_menu_item():
                 raw_text(data.get("name"), "name", 120),
                 raw_text(data.get("description", ""), "description", 1000, required=False, allow_empty=True),
                 integer(data.get("price"), "price", 0, 100000),
-                url(data.get("image_url", ""), "image_url", required=False),
+                _image_url(data.get("image_url", "")),
                 db.encode_json(tags(data.get("dietary_tags"))),
                 1 if boolean(data.get("available", True), "available") else 0,
                 raw_text(data.get("chef_note", ""), "chef_note", 1000, required=False, allow_empty=True),
@@ -302,7 +313,7 @@ def update_menu_item(item_id: str):
                 raw_text(data["name"], "name", 120) if "name" in data else existing["name"],
                 raw_text(data.get("description"), "description", 1000, required=False, allow_empty=True) if "description" in data else existing["description"],
                 integer(data.get("price"), "price", 0, 100000) if "price" in data else existing["price"],
-                url(data.get("image_url"), "image_url", required=False) if "image_url" in data else existing["image_url"],
+                _image_url(data.get("image_url")) if "image_url" in data else existing["image_url"],
                 db.encode_json(tags(data.get("dietary_tags"))) if "dietary_tags" in data else existing["dietary_tags"],
                 (1 if boolean(data.get("available"), "available") else 0) if "available" in data else existing["available"],
                 raw_text(data.get("chef_note"), "chef_note", 1000, required=False, allow_empty=True) if "chef_note" in data else existing["chef_note"],

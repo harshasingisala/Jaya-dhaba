@@ -1,4 +1,6 @@
 import os
+from collections import defaultdict
+from datetime import datetime, timedelta
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -14,13 +16,17 @@ if os.getenv("FLASK_ENV") != "testing":
     load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
 
 import db
-from auth import optional_user
+from auth import BLACKLISTED_JTIS, optional_user
 from realtime import init_realtime
 from security_middleware import init_security_middleware
 from routes import register_blueprints
 from security_log import log_security_event
-from utils.validation import validate_lengths
+from utils.validation import contains_forbidden_nosql_operator, validate_lengths
 from validators import ValidationError
+
+
+_ip_request_count = defaultdict(list)
+_ip_blocked_until = {}
 
 # Sentry setup
 SENTRY_DSN = os.getenv("SENTRY_DSN")
@@ -52,6 +58,7 @@ def create_app(overrides: dict | None = None) -> Flask:
         UPLOAD_FOLDER=os.getenv("UPLOAD_FOLDER", str(Path(__file__).resolve().parent / "uploads")),
         MAX_CONTENT_LENGTH=int(os.getenv("MAX_CONTENT_LENGTH_BYTES", str(20 * 1024 * 1024))),
         JSON_MAX_CONTENT_LENGTH=int(os.getenv("JSON_MAX_CONTENT_LENGTH_BYTES", str(2 * 1024 * 1024))),
+        STRICT_IMAGE_URL_ALLOWLIST=os.getenv("STRICT_IMAGE_URL_ALLOWLIST", "false").lower() == "true",
         RAZORPAY_KEY_ID=os.getenv("RAZORPAY_KEY_ID", ""),
         RAZORPAY_KEY_SECRET=os.getenv("RAZORPAY_KEY_SECRET", ""),
         RAZORPAY_WEBHOOK_SECRET=os.getenv("RAZORPAY_WEBHOOK_SECRET", ""),
@@ -114,7 +121,12 @@ def create_app(overrides: dict | None = None) -> Flask:
     )
 
     # Auth & Database
-    JWTManager(app)
+    jwt = JWTManager(app)
+
+    @jwt.token_in_blocklist_loader
+    def token_in_blocklist(_jwt_header, jwt_payload):
+        return jwt_payload.get("jti") in BLACKLISTED_JTIS
+
     init_realtime(app)
     db.configure(app.config["DATABASE_URL"])
     db.init_db(seed=not app.config.get("TESTING"))
@@ -126,8 +138,14 @@ def create_app(overrides: dict | None = None) -> Flask:
     def load_user():
         if request.method == "OPTIONS":
             return None
+        abuse_error = _detect_abuse(app)
+        if abuse_error is not None:
+            return abuse_error
         if _json_request_too_large(app):
             return jsonify({"error": "Request too large. Max 2MB."}), 413
+        injection_error = _reject_forbidden_json_operators()
+        if injection_error is not None:
+            return injection_error
         length_error = _validate_public_input_lengths()
         if length_error is not None:
             return length_error
@@ -302,6 +320,45 @@ def _json_request_too_large(app: Flask) -> bool:
     return content_length > int(app.config.get("JSON_MAX_CONTENT_LENGTH", 2 * 1024 * 1024))
 
 
+def _detect_abuse(app: Flask):
+    if app.config.get("TESTING"):
+        return None
+    if request.method == "OPTIONS" or request.path.startswith("/socket.io"):
+        return None
+    if request.path in {"/api/health", "/health"}:
+        return None
+
+    ip = request.headers.get("X-Forwarded-For", request.remote_addr or "unknown").split(",")[-1].strip()
+    now = datetime.utcnow()
+    blocked_until = _ip_blocked_until.get(ip)
+    if blocked_until and blocked_until > now:
+        return jsonify({"error": "Slow down."}), 429
+
+    recent = [
+        timestamp for timestamp in _ip_request_count[ip]
+        if now - timestamp < timedelta(minutes=1)
+    ]
+    recent.append(now)
+    _ip_request_count[ip] = recent
+    if len(recent) > 100:
+        _ip_blocked_until[ip] = now + timedelta(minutes=5)
+        log_security_event("flood_detected", ip, f"{len(recent)} req/min")
+        return jsonify({"error": "Slow down."}), 429
+    return None
+
+
+def _reject_forbidden_json_operators():
+    if request.method in ("GET", "HEAD", "OPTIONS", "TRACE"):
+        return None
+    if request.mimetype not in {"application/json", "text/json"}:
+        return None
+    payload = request.get_json(silent=True)
+    if contains_forbidden_nosql_operator(payload):
+        log_security_event("injection_attempt", request.remote_addr, request.path)
+        return jsonify({"error": "Invalid request payload"}), 400
+    return None
+
+
 def _validate_public_input_lengths():
     if request.method in ("GET", "HEAD", "OPTIONS", "TRACE"):
         return None
@@ -329,6 +386,8 @@ def _validate_runtime_config(app: Flask, cors_origins: list[str], is_production:
     database_url = app.config.get("DATABASE_URL", "")
     secret_key = app.config.get("SECRET_KEY", "")
     jwt_secret = app.config.get("JWT_SECRET_KEY", "")
+    if app.debug:
+        errors.append("Debug mode must be disabled in production")
     if not secret_key or secret_key == "development-secret" or len(secret_key) < 32:
         errors.append("SECRET_KEY must be a non-default environment secret of at least 32 characters")
     if not jwt_secret or jwt_secret == "development-jwt-secret" or len(jwt_secret) < 32:

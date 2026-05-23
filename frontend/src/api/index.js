@@ -1,6 +1,7 @@
 
 import { API_BASE_URL } from './config.js';
 import { supabase } from '../supabaseClient.js';
+import { pickFields } from '../utils/sanitize.js';
 
 const BASE_URL = API_BASE_URL;
 const SESSION_KEY = 'user';
@@ -280,7 +281,26 @@ const api = {
   },
 
   updateMenuItem: async (itemId, updates) => {
-    const payload = { ...updates };
+    const payload = pickFields(updates, [
+      'category',
+      'category_id',
+      'name',
+      'description',
+      'price',
+      'price_full',
+      'image_url',
+      'dietary_tags',
+      'available',
+      'is_available',
+      'chef_note',
+      'ingredients',
+      'spice_level',
+      'calories',
+      'protein_g',
+      'carbs_g',
+      'fat_g',
+      'model_url',
+    ]);
     if (payload.category && payload.category_id === undefined) {
       payload.category_id = await resolveCategoryId(payload.category);
       delete payload.category;
@@ -463,9 +483,21 @@ const api = {
 
   updateSettings: async (...args) => {
     const updates = args.length > 1 ? args[1] : args[0];
+    const payload = pickFields(updates, [
+      'name',
+      'tagline',
+      'hours',
+      'contact',
+      'status',
+      'address',
+      'taxRate',
+      'currency',
+      'upi_id',
+      'upi',
+    ]);
     return request('/api/admin/settings', {
       method: 'PUT',
-      body: JSON.stringify(updates),
+      body: JSON.stringify(payload),
     });
   },
 

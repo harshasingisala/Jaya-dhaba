@@ -624,7 +624,7 @@ def verify_payment():
     pending_intent = raw_text(data.get("pending_intent", ""), "pending_intent", 20000, required=False, allow_empty=True)
 
     if not verify_razorpay_signature(razorpay_order_id, payment_id, signature):
-        log_security_event("bad_payment_sig", request.remote_addr, razorpay_order_id)
+        log_security_event("bad_payment_sig", request_ip(), razorpay_order_id)
         current_app.logger.warning(
             "payment_signature_mismatch",
             extra={"razorpay_payment_id": payment_id, "razorpay_order_id": razorpay_order_id},
@@ -729,7 +729,7 @@ def verify_payment_singular_alias():
         razorpay_order_id = raw_text(data.get("razorpay_order_id"), "razorpay_order_id", 120)
         signature = raw_text(data.get("razorpay_signature"), "razorpay_signature", 200)
         if not hmac.compare_digest(signature, "test_signature"):
-            log_security_event("bad_payment_sig", request.remote_addr, razorpay_order_id)
+            log_security_event("bad_payment_sig", request_ip(), razorpay_order_id)
             return jsonify({"success": False, "message": "Invalid development payment signature"}), 400
         with db.transaction(current_app.config["DATABASE_URL"]) as conn:
             order = _find_order_by_razorpay_order(conn, razorpay_order_id)
@@ -785,6 +785,7 @@ def payments_webhook():
 
     expected = hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
     if not signature or not hmac.compare_digest(expected, signature):
+        log_security_event("bad_payment_sig", request_ip(), "razorpay_webhook")
         current_app.logger.warning("razorpay_webhook_bad_signature")
         return jsonify({"success": False, "status": "bad_signature"}), 400
 
@@ -807,6 +808,7 @@ def payments_webhook():
     def operation():
         with db.transaction(current_app.config["DATABASE_URL"]) as conn:
             if _event_seen(conn, event_id):
+                log_security_event("payment_replay", request_ip(), event_id)
                 return {"status": "duplicate", "order_id": None}
 
             order = _order_from_webhook(conn, entity, razorpay_order_id)

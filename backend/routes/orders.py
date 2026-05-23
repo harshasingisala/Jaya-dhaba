@@ -23,6 +23,8 @@ from services.billing import calculate_order_totals
 from services.inventory import deduct_stock_for_order
 from events import broker, order_topic_id
 from realtime import broadcast
+from security_log import log_security_event
+from utils.validation import extract_fields
 
 bp = Blueprint("orders", __name__, url_prefix="/api")
 audit = log_audit
@@ -66,6 +68,7 @@ def serialize_order(order: Order, *, include_public_token: bool = False) -> dict
         })
     payload = {
         "id": str(order.id),
+        "order_ref": f"JD-{str(order.id).replace('-', '')[:8].upper()}",
         "order_number": order.order_number,
         "status": order.status,
         "is_archived": bool(getattr(order, "is_archived", False)),
@@ -181,25 +184,41 @@ def create_order():
     if rate is not None:
         return rate
 
-    # Read raw JSON and defensively normalize menu_item_id values that may include UI suffixes
-    # -- LOG RAW INPUT BEFORE ANY VALIDATION OR NORMALIZATION --
-    try:
-        raw_bytes = request.get_data(cache=True)
-        current_app.logger.debug("[orders.create_order] RAW request bytes: %s", raw_bytes[:1000])
-    except Exception:
-        current_app.logger.debug("[orders.create_order] Failed to read raw request bytes")
-
+    # Defensively normalize menu_item_id values that may include UI suffixes.
     raw = request.get_json(silent=True) or {}
+    raw = extract_fields(raw, {
+        "table_id",
+        "table_token",
+        "guest_name",
+        "guest_phone",
+        "customer_name",
+        "customer_phone",
+        "items",
+        "payment_method",
+        "special_instructions",
+        "notes",
+        "order_type",
+        "source",
+        "pickup_time",
+        "loyalty_points_to_redeem",
+        "idempotency_key",
+    })
+    if "customer_name" in raw and "guest_name" not in raw:
+        raw["guest_name"] = raw.pop("customer_name")
+    if "customer_phone" in raw and "guest_phone" not in raw:
+        raw["guest_phone"] = raw.pop("customer_phone")
+    current_user = getattr(g, "current_user", None)
     if raw.get("source") == "manual":
-        current_user = getattr(g, "current_user", None)
         if not current_user or current_user.get("role") not in STAFF_ROLES:
             return jsonify({"success": False, "message": "Manual orders require staff access"}), 403
+    elif not current_user or current_user.get("role") not in STAFF_ROLES:
+        raw["source"] = "customer"
     if raw.get("source") != "manual":
         with db.connect(current_app.config["DATABASE_URL"]) as conn:
             paused_row = conn.execute("SELECT value FROM site_settings WHERE key = 'orders_paused'").fetchone()
         if paused_row and paused_row["value"] == "true":
             return jsonify({"success": False, "message": "Orders are paused right now"}), 409
-    current_app.logger.debug("[orders.create_order] Parsed JSON before normalization: %s", raw)
+    current_app.logger.debug("[orders.create_order] accepted fields before normalization: %s", sorted(raw.keys()))
     items_raw = raw.get("items", [])
     for it in items_raw:
         mid = it.get("menu_item_id")
@@ -211,7 +230,7 @@ def create_order():
             except Exception:
                 pass
     # LOG after normalization and before Pydantic validation
-    current_app.logger.debug("[orders.create_order] Parsed JSON after normalization: %s", raw)
+    current_app.logger.debug("[orders.create_order] accepted fields after normalization: %s", sorted(raw.keys()))
     if raw.get("table_token") and not raw.get("table_id"):
         with db.get_db() as session:
             table = session.execute(
@@ -352,6 +371,7 @@ def get_order(order_id: uuid.UUID):
         if not order:
             return jsonify({"success": False, "message": "Order not found"}), 404
         if not _has_order_access(order, request.args.get("token")):
+            log_security_event("idor_attempt", request_ip(), str(order_id))
             return jsonify({"success": False, "message": "Order not found"}), 404
         serialized = serialize_order(order)
         return jsonify({"success": True, "data": serialized, **serialized})
@@ -364,6 +384,7 @@ def get_order_by_number(order_number: int):
         if not order:
             return jsonify({"success": False, "message": "Order not found"}), 404
         if not _has_order_access(order, request.args.get("token")):
+            log_security_event("idor_attempt", request_ip(), str(order_number))
             return jsonify({"success": False, "message": "Order not found"}), 404
         serialized = serialize_order(order)
         return jsonify({"success": True, "data": serialized, **serialized})
@@ -578,6 +599,7 @@ def add_order_items(order_id: uuid.UUID):
             return jsonify({"success": False, "message": "Order not found"}), 404
         public_token = request.args.get("token") or data.get("token") or data.get("public_token")
         if not _has_order_access(order, public_token):
+            log_security_event("idor_attempt", request_ip(), str(order_id))
             return jsonify({"success": False, "message": "Order not found"}), 404
         
         if order.status in ("served", "cancelled"):

@@ -12,6 +12,7 @@ from audit import audit
 from auth import require_role
 from cache import stats_cache
 from realtime import broadcast
+from utils.validation import looks_like_sql_injection
 from validators import ValidationError, body, boolean, email, integer, phone, raw_text, reject_unknown
 
 
@@ -795,6 +796,8 @@ def _ensure_contact_submissions_table(conn):
 def contact_message():
     data = body()
     reject_unknown(data, {"name", "email", "phone", "subject", "message"})
+    if looks_like_sql_injection(data.get("name")):
+        return jsonify({"error": "Invalid characters in name"}), 400
     raw_phone = str(data.get("phone", "") or "").strip()
     payload = {
         "name": raw_text(data.get("name"), "name", 100),

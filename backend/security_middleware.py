@@ -57,6 +57,7 @@ def init_security_middleware(app: Flask):
             "img-src 'self' data: blob: https:; "
             "connect-src 'self' https://api.razorpay.com; "
             "frame-src 'self' https://api.razorpay.com; "
+            "frame-ancestors 'none'; "
             "object-src 'none'; "
             "base-uri 'self';"
         )
