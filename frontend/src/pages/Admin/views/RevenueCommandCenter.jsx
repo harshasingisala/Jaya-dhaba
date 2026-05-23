@@ -291,7 +291,7 @@ Provide: (1) Performance summary, (2) What's working well, (3) One thing to act 
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${localStorage.getItem('admin_token') || ''}`,
+      Authorization: `Bearer ${getStoredAdminToken()}`,
     },
     credentials: 'include',
     body: JSON.stringify({ message: prompt }),
@@ -309,6 +309,15 @@ Provide: (1) Performance summary, (2) What's working well, (3) One thing to act 
     (Array.isArray(data.content) ? data.content.map(b => b.text || '').join('') : '') ||
     'Insight unavailable.'
   );
+}
+
+function getStoredAdminToken() {
+  try {
+    const user = JSON.parse(sessionStorage.getItem('user') || 'null');
+    return user?.access_token || user?.token || '';
+  } catch {
+    return '';
+  }
 }
 
 

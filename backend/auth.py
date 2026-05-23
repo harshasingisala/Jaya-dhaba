@@ -75,13 +75,29 @@ def optional_user():
         return None
     
     claims = get_jwt()
+    user = _active_user(identity)
+    if not user:
+        g.current_user = None
+        return None
     g.current_user = {
         "id": identity,
-        "role": claims.get("role", "customer"),
-        "email": claims.get("email"),
-        "phone": claims.get("phone")
+        "role": user.role,
+        "email": user.email,
+        "phone": user.phone
     }
     return g.current_user
+
+
+def _active_user(identity: str):
+    try:
+        user_id = uuid.UUID(str(identity))
+    except (TypeError, ValueError):
+        return None
+    with db.get_db() as session:
+        user = session.execute(select(User).filter_by(id=user_id)).scalar_one_or_none()
+        if not user or user.deleted_at:
+            return None
+        return user
 
 
 def require_min_role(min_role: str, missing_status: int = 401, allow_query_token: bool = False):
@@ -102,7 +118,10 @@ def require_min_role(min_role: str, missing_status: int = 401, allow_query_token
             except Exception:
                 return jsonify({"success": False, "message": "Unauthorized"}), missing_status
             
-            user_role = claims.get("role", "customer")
+            user = _active_user(identity)
+            if not user:
+                return jsonify({"success": False, "message": "Unauthorized"}), missing_status
+            user_role = user.role
             
             if ROLE_RANK.get(user_role, 0) < required_rank:
                 return jsonify({"success": False, "message": "Forbidden: Insufficient permissions"}), 403
@@ -110,8 +129,8 @@ def require_min_role(min_role: str, missing_status: int = 401, allow_query_token
             g.current_user = {
                 "id": identity,
                 "role": user_role,
-                "email": claims.get("email"),
-                "phone": claims.get("phone")
+                "email": user.email,
+                "phone": user.phone
             }
             return func(*args, **kwargs)
 

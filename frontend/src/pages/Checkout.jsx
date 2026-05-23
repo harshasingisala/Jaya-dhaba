@@ -53,7 +53,7 @@ export default function Checkout() {
 
   const user = (() => {
     try {
-      return JSON.parse(localStorage.getItem('user') || 'null');
+      return JSON.parse(sessionStorage.getItem('user') || 'null');
     } catch (err) {
       console.error('[JAYA_DEBUG] Caught error in checkout user parse:', err);
       return null;

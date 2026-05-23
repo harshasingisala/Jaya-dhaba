@@ -26,7 +26,6 @@ export default function Login() {
         body: JSON.stringify(formData)
       });
       
-      localStorage.setItem('admin_token', res.access_token);
       login({ ...res.user, access_token: res.access_token });
       showToast('🔑 Access granted. Welcome back.', 'success');
       navigate('/admin');

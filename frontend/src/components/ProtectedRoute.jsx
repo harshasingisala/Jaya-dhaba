@@ -3,7 +3,7 @@ import { isTokenExpired } from "../api";
 
 export default function ProtectedRoute({ children, allowedRoles = [] }) {
   const location = useLocation();
-  const userStr = localStorage.getItem("user") || sessionStorage.getItem("user");
+  const userStr = sessionStorage.getItem("user");
 
   let user = null;
   try {
@@ -18,6 +18,7 @@ export default function ProtectedRoute({ children, allowedRoles = [] }) {
   if (!token || isExpired) {
     if (isExpired) {
       localStorage.removeItem("user");
+      localStorage.removeItem("admin_token");
       sessionStorage.removeItem("user");
     }
     return <Navigate to="/admin/login" state={{ from: location }} replace={true} />;

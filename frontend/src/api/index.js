@@ -36,7 +36,7 @@ function getCsrfToken() {
 
 function getAuthToken() {
   try {
-    const user = JSON.parse(localStorage.getItem(SESSION_KEY) || sessionStorage.getItem(SESSION_KEY) || 'null');
+    const user = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null');
     return user?.access_token || user?.token || '';
   } catch (err) {
     console.error('[JAYA_DEBUG] Caught error in getAuthToken:', err);
@@ -59,10 +59,12 @@ class ApiRequestError extends Error {
 function handleExpiredSession() {
   if (redirectingToLogin) return;
   if (window.location.pathname.startsWith('/admin/login')) return;
-  if (!localStorage.getItem(SESSION_KEY)) return;
+  if (!sessionStorage.getItem(SESSION_KEY)) return;
 
   redirectingToLogin = true;
   localStorage.removeItem(SESSION_KEY);
+  localStorage.removeItem('admin_token');
+  sessionStorage.removeItem(SESSION_KEY);
   window.location.href = '/admin/login';
 }
 

@@ -82,7 +82,7 @@ function stringifyEvidence(value) {
 }
 
 export default function SmokeTest() {
-  const adminToken = localStorage.getItem("admin_token");
+  const adminToken = getStoredAdminToken();
   const [rows, setRows] = useState(initialRows);
   const [running, setRunning] = useState(false);
 
@@ -330,4 +330,13 @@ export default function SmokeTest() {
       </footer>
     </main>
   );
+}
+
+function getStoredAdminToken() {
+  try {
+    const user = JSON.parse(sessionStorage.getItem("user") || "null");
+    return user?.access_token || user?.token || "";
+  } catch {
+    return "";
+  }
 }

@@ -4,7 +4,9 @@ const AuthContext = createContext();
 
 function loadStoredUser() {
   try {
-    const saved = localStorage.getItem('user');
+    const saved = sessionStorage.getItem('user');
+    localStorage.removeItem('user');
+    localStorage.removeItem('admin_token');
     return saved ? JSON.parse(saved) : null;
   } catch (err) {
     console.error('[JAYA_DEBUG] Caught error in AuthContext user restore:', err);
@@ -23,12 +25,16 @@ export const AuthProvider = ({ children }) => {
       expiresAt: Date.now() + (8 * 60 * 60 * 1000),
     };
     setUser(userWithExpiry);
-    localStorage.setItem('user', JSON.stringify(userWithExpiry));
+    sessionStorage.setItem('user', JSON.stringify(userWithExpiry));
+    localStorage.removeItem('user');
+    localStorage.removeItem('admin_token');
   };
 
   const logout = () => {
     setUser(null);
     localStorage.removeItem('user');
+    localStorage.removeItem('admin_token');
+    sessionStorage.removeItem('user');
   };
 
   const isAdmin = user?.role === 'admin' || user?.role === 'owner';
