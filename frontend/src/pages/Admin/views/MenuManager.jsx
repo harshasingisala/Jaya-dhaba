@@ -14,6 +14,7 @@ export default function MenuManager() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [actionError, setActionError] = useState(null);
 
   useEffect(() => {
     document.title = 'Menu — Jaya Dhaba Admin';
@@ -44,6 +45,7 @@ export default function MenuManager() {
   async function fetchMenu() {
     setIsLoading(true);
     setError(null);
+    setActionError(null);
     try {
       const data = await api.getAdminMenu();
       const items = Array.isArray(data) ? data : data?.items || [];
@@ -71,18 +73,18 @@ export default function MenuManager() {
     if (vibrate) vibrate(20);
     const nextAvailability = !currentAvailability;
     const previousMenu = menu;
-    setError(null);
+    setActionError(null);
     setMenu(prev => prev.map(item =>
       item.id === id ? { ...item, available: nextAvailability, is_available: nextAvailability } : item
     ));
     try {
       const data = await api.toggleMenuAvailability(id, nextAvailability);
       setMenu(prev => prev.map(item =>
-        item.id === id ? data : item
+        item.id === id ? { ...item, ...data, available: data.available ?? nextAvailability, is_available: data.is_available ?? nextAvailability } : item
       ));
     } catch (err) {
       setMenu(previousMenu);
-      setError('Failed to update item availability. Please try again.');
+      setActionError(err?.message || 'Failed to update item availability. Please try again.');
     }
   }
 
@@ -111,6 +113,21 @@ export default function MenuManager() {
           fetchMenu();
         }}
       />
+
+      {actionError && (
+        <div className="mx-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-3xl border border-red-100 bg-red-50 px-6 py-4 text-red-700 shadow-sm">
+          <p className="text-sm font-bold">{actionError}</p>
+          <button
+            onClick={() => {
+              setActionError(null);
+              fetchMenu();
+            }}
+            className="px-5 py-2 rounded-full bg-red-600 text-white text-[10px] font-black uppercase tracking-widest"
+          >
+            Refresh Menu
+          </button>
+        </div>
+      )}
 
       {/* HEADER & NEW ITEM */}
       <div className="flex flex-col md:flex-row justify-between items-end gap-6 px-2">

@@ -354,7 +354,8 @@ const api = {
       method: 'PATCH',
       body: JSON.stringify({ available: !!available }),
     });
-    return normalizeMenuItem(data?.item || data);
+    if (data?.item) return normalizeMenuItem(data.item);
+    return { id: itemId, available: !!available, is_available: !!available };
   },
 
   getOrders: async () => {
