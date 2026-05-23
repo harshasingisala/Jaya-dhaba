@@ -9,7 +9,7 @@ export function getSocket() {
     throw new Error('VITE_SOCKET_URL or VITE_API_URL is required for admin realtime.');
   }
   if (!socketInstance) {
-    socketInstance = io(SOCKET_URL, {
+    socketInstance = io(`${SOCKET_URL}/admin`, {
       autoConnect: false,
       reconnection: true,
       reconnectionAttempts: Infinity,

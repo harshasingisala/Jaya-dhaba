@@ -12,6 +12,16 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     build: {
       outDir: 'dist',
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            vendor: ['react', 'react-dom'],
+            router: ['react-router-dom'],
+            charts: ['recharts'],
+            realtime: ['socket.io-client'],
+          },
+        },
+      },
     },
     esbuild: {
       drop: ['console', 'debugger'],

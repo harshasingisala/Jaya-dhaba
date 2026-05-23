@@ -10,7 +10,8 @@ from flask import Blueprint, abort, current_app, g, jsonify, send_from_directory
 import db
 from audit import audit
 from auth import require_role
-from cache import stats_cache
+from cache import stats_cache, status_cache
+from circuit_breaker import gemini_breaker, query_with_timeout
 from realtime import broadcast
 from utils.validation import looks_like_sql_injection
 from validators import ValidationError, body, boolean, email, integer, phone, raw_text, reject_unknown
@@ -231,7 +232,7 @@ owner-friendly. Write in English."""
         genai = t.cast(t.Any, importlib.import_module("google.generativeai"))
         genai.configure(api_key=current_app.config["GOOGLE_API_KEY"])
         model = genai.GenerativeModel("models/gemini-2.5-flash")
-        response = model.generate_content(prompt)
+        response = gemini_breaker.call(model.generate_content, prompt)
         text = getattr(response, "text", "") or ""
         return text.strip() or fallback
     except Exception as exc:
@@ -242,6 +243,13 @@ owner-friendly. Write in English."""
 @bp.get("/admin/daily-report")
 @require_role("staff")
 def daily_report():
+    try:
+        return query_with_timeout(_daily_report_payload, 15)
+    except TimeoutError:
+        return jsonify({"error": "Report taking too long. Try again."}), 504
+
+
+def _daily_report_payload():
     requested_date = request.args.get("date") or datetime.now(IST).date().isoformat()
     try:
         report_date = datetime.strptime(requested_date, "%Y-%m-%d").date()
@@ -627,14 +635,19 @@ def pause_orders():
             ("true" if paused else "false", db.utc_now()),
         )
     broadcast("settings_update", {"action": "orders_paused", "paused": paused})
+    status_cache.invalidate("orders:")
     return jsonify({"success": True, "paused": paused})
 
 
 @bp.get("/orders/status")
 def public_order_status():
-    with db.connect(current_app.config["DATABASE_URL"]) as conn:
-        row = conn.execute("SELECT value FROM site_settings WHERE key = 'orders_paused'").fetchone()
-    return jsonify({"success": True, "paused": (row and row["value"] == "true")})
+    cached = status_cache.get("orders:paused")
+    if cached is None:
+        with db.connect(current_app.config["DATABASE_URL"]) as conn:
+            row = conn.execute("SELECT value FROM site_settings WHERE key = 'orders_paused'").fetchone()
+        cached = bool(row and row["value"] == "true")
+        status_cache.set("orders:paused", cached)
+    return jsonify({"success": True, "paused": cached})
 
 
 @bp.post("/admin/flush")
@@ -837,17 +850,32 @@ def contact_message():
 @bp.route("/admin/contact-submissions", methods=["GET"])
 @require_role("staff")
 def list_contact_submissions():
+    page = max(1, int(request.args.get("page", 1)))
+    per_page = min(max(1, int(request.args.get("per_page", 50))), 100)
+    offset = (page - 1) * per_page
     try:
         with db.connect(current_app.config["DATABASE_URL"]) as conn:
             _ensure_contact_submissions_table(conn)
-            rows = conn.execute("SELECT * FROM contact_submissions ORDER BY created_at DESC").fetchall()
+            rows = conn.execute(
+                "SELECT * FROM contact_submissions ORDER BY created_at DESC LIMIT ? OFFSET ?",
+                (per_page, offset),
+            ).fetchall()
+            total = conn.execute("SELECT COUNT(*) AS c FROM contact_submissions").fetchone()["c"]
             unread_condition = "is_read = FALSE" if db.engine.dialect.name == "postgresql" else "is_read = 0"
             unread = conn.execute(f"SELECT COUNT(*) AS c FROM contact_submissions WHERE {unread_condition}").fetchone()["c"]
     except Exception as exc:
         current_app.logger.warning("contact_submissions query failed: %s", exc)
         return jsonify({"success": True, "data": [], "total": 0, "unread": 0})
     submissions = [dict(row) for row in rows]
-    return jsonify({"success": True, "data": submissions, "total": len(submissions), "unread": int(unread or 0)})
+    return jsonify({
+        "success": True,
+        "data": submissions,
+        "total": int(total or 0),
+        "unread": int(unread or 0),
+        "page": page,
+        "per_page": per_page,
+        "pages": ((int(total or 0) + per_page - 1) // per_page),
+    })
 
 
 @bp.patch("/admin/contact-submissions/<int:submission_id>/read")

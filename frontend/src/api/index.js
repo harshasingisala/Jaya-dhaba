@@ -2,10 +2,26 @@
 import { API_BASE_URL } from './config.js';
 import { supabase } from '../supabaseClient.js';
 import { pickFields } from '../utils/sanitize.js';
+import { fetchWithRetry } from '../utils/retry.js';
 
 const BASE_URL = API_BASE_URL;
 const SESSION_KEY = 'user';
 let redirectingToLogin = false;
+const pendingRequests = new Map();
+
+const dedupedFetch = async (url, options = {}) => {
+  const method = (options.method || 'GET').toUpperCase();
+  if (method !== 'GET') return fetchWithRetry(url, options);
+
+  const key = `${method}:${url}`;
+  if (pendingRequests.has(key)) {
+    return (await pendingRequests.get(key)).clone();
+  }
+
+  const promise = fetchWithRetry(url, options).finally(() => pendingRequests.delete(key));
+  pendingRequests.set(key, promise);
+  return (await promise).clone();
+};
 
 const API_TO_UI_STATUS = {
   pending: 'Placed',
@@ -82,7 +98,7 @@ export function isTokenExpired(token) {
 async function ensureCsrfToken(forceRefresh = false) {
   const existing = getCsrfToken();
   if (existing && !forceRefresh) return existing;
-  const res = await fetch(`${BASE_URL}/api/csrf-token`, {
+  const res = await dedupedFetch(`${BASE_URL}/api/csrf-token`, {
     method: 'GET',
     credentials: 'include',
   });
@@ -109,12 +125,19 @@ async function request(path, options = {}) {
   }
 
   const url = `${BASE_URL}${path}`;
-  const makeFetch = () => fetch(url, {
-    ...fetchOptions,
-    method,
-    credentials: 'include',
-    headers,
-  });
+  const makeFetch = async () => {
+    const startedAt = performance.now();
+    const response = await dedupedFetch(url, {
+      ...fetchOptions,
+      method,
+      credentials: 'include',
+      headers,
+    });
+    window.dispatchEvent(new CustomEvent('api:latency', {
+      detail: { slow: performance.now() - startedAt > 2000, url, method },
+    }));
+    return response;
+  };
   let res = await makeFetch();
   const payload = await res.json().catch((err) => {
     console.error('[JAYA_DEBUG] Caught error in request json parse:', err);
@@ -508,7 +531,7 @@ const api = {
   getContactSubmissions: async () => {
     const token = getToken();
     const url = `${BASE_URL}/api/admin/contact-submissions`;
-    const res = await fetch(url, {
+    const res = await dedupedFetch(url, {
       credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
@@ -529,7 +552,7 @@ const api = {
   markSubmissionRead: async (id) => {
     const token = getToken();
     const url = `${BASE_URL}/api/admin/contact-submissions/${id}/read`;
-    const res = await fetch(url, {
+    const res = await fetchWithRetry(url, {
       method: 'PATCH',
       credentials: 'include',
       headers: {
@@ -551,7 +574,7 @@ const api = {
   deleteSubmission: async (id) => {
     const token = getToken();
     const url = `${BASE_URL}/api/admin/contact-submissions/${id}`;
-    const res = await fetch(url, {
+    const res = await fetchWithRetry(url, {
       method: 'DELETE',
       credentials: 'include',
       headers: {
@@ -621,7 +644,7 @@ const api = {
   submitContact: async (payload) => {
     const csrfToken = await ensureCsrfToken();
     const idempotencyKey = payload.idempotency_key || crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`;
-    const res = await fetch(`${BASE_URL}/api/contact`, {
+    const res = await fetchWithRetry(`${BASE_URL}/api/contact`, {
       method: 'POST',
       credentials: 'include',
       headers: {

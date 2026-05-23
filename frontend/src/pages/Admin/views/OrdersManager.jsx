@@ -237,13 +237,26 @@ export default function OrdersManager() {
       toast('Select at least one order', 'warning');
       return;
     }
+    const ids = [...selectedIds];
+    const previousOrders = orders;
+    const timestamp = new Date().toISOString();
+    setOrders((prev) => prev.map((order) =>
+      ids.includes(order.id) ? {
+        ...order,
+        status,
+        updated_at: timestamp,
+        preparing_at: status === 'preparing' ? timestamp : order.preparing_at,
+        served_at: status === 'served' ? timestamp : order.served_at,
+      } : order
+    ));
     setBulkLoading(true);
     try {
-      await api.bulkUpdateOrderStatus([...selectedIds], status);
-      toast(`${selectedIds.size} orders marked ${status}`, 'success');
+      await api.bulkUpdateOrderStatus(ids, status);
+      toast(`${ids.length} orders marked ${status}`, 'success');
       setSelectedIds(new Set());
       if (!getSocket().connected) refreshAll();
     } catch {
+      setOrders(previousOrders);
       toast('Action failed. Try again.', 'error');
     } finally {
       setBulkLoading(false);
@@ -251,11 +264,23 @@ export default function OrdersManager() {
   };
 
   const singleSetStatus = async (orderId, status) => {
+    const previousOrders = orders;
+    const timestamp = new Date().toISOString();
+    setOrders((prev) => prev.map((order) =>
+      order.id === orderId ? {
+        ...order,
+        status,
+        updated_at: timestamp,
+        preparing_at: status === 'preparing' ? timestamp : order.preparing_at,
+        served_at: status === 'served' ? timestamp : order.served_at,
+      } : order
+    ));
     setBulkLoading(true);
     try {
       await api.bulkUpdateOrderStatus([orderId], status);
       if (!getSocket().connected) refreshAll();
     } catch {
+      setOrders(previousOrders);
       toast('Status update failed', 'error');
     } finally {
       setBulkLoading(false);

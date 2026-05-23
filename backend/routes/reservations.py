@@ -171,9 +171,24 @@ def create_reservation():
 @bp.get("/admin/reservations")
 @require_role("staff")
 def list_reservations():
+    page = max(1, int(request.args.get("page", 1)))
+    per_page = min(max(1, int(request.args.get("per_page", 50))), 100)
+    offset = (page - 1) * per_page
     with db.connect(current_app.config["DATABASE_URL"]) as conn:
-        rows = conn.execute("SELECT * FROM reservations ORDER BY reserved_at ASC LIMIT 250").fetchall()
-    return jsonify({"reservations": [serialize(row) for row in rows]})
+        rows = conn.execute(
+            "SELECT * FROM reservations ORDER BY reserved_at ASC LIMIT ? OFFSET ?",
+            (per_page, offset),
+        ).fetchall()
+        total = conn.execute("SELECT COUNT(*) AS c FROM reservations").fetchone()["c"]
+    data = [serialize(row) for row in rows]
+    return jsonify({
+        "reservations": data,
+        "data": data,
+        "page": page,
+        "per_page": per_page,
+        "total": int(total or 0),
+        "pages": ((int(total or 0) + per_page - 1) // per_page),
+    })
 
 
 @bp.patch("/admin/reservations/<int:reservation_id>")

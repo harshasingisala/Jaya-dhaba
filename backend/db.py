@@ -41,14 +41,15 @@ def configure(database_url: str):
     if app_env not in {"development", "dev", "local", "test", "testing"} and DATABASE_URL.startswith("sqlite"):
         raise RuntimeError("SQLite is forbidden outside tests; set DATABASE_URL to Supabase Postgres")
     if DATABASE_URL.startswith("postgresql"):
-        postgres_pool_size = 10 if app_env == "production" else 20
-        postgres_max_overflow = 5 if app_env == "production" else 40
+        postgres_pool_size = int(os.getenv("DB_POOL_SIZE", "10" if app_env == "production" else "20"))
+        postgres_max_overflow = int(os.getenv("DB_MAX_OVERFLOW", "10" if app_env == "production" else "40"))
         engine = create_engine(
             DATABASE_URL,
             pool_pre_ping=True,
             pool_size=postgres_pool_size,
             max_overflow=postgres_max_overflow,
             pool_timeout=30,
+            pool_recycle=1800,
         )
     else:
         engine = create_engine(
@@ -646,6 +647,12 @@ def run_write(operation_func):
         return operation_func()
     except Exception as e:
         raise e
+
+
+def check_health() -> bool:
+    with engine.connect() as conn:
+        conn.execute(text("SELECT 1"))
+    return True
 
 def select(val):
     # Compatibility with SQLAlchemy select

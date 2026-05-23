@@ -43,5 +43,6 @@ class TTLCache:
                     self._items.pop(key, None)
 
 
-menu_cache = TTLCache(max_items=64, ttl_seconds=60)
-stats_cache = TTLCache(max_items=16, ttl_seconds=30)
+menu_cache = TTLCache(max_items=64, ttl_seconds=30)
+status_cache = TTLCache(max_items=8, ttl_seconds=3)
+stats_cache = TTLCache(max_items=16, ttl_seconds=5)

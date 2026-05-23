@@ -9,8 +9,8 @@ import uuid
 from datetime import datetime, time, timedelta, timezone
 from typing import List
 
-from flask import Blueprint, current_app, g, jsonify, request
-from sqlalchemy import select, text
+from flask import Blueprint, after_this_request, current_app, g, jsonify, request
+from sqlalchemy import func, select, text
 
 import db
 from models import Order, OrderItem, MenuItem, MenuCategory, RestaurantTable, User
@@ -25,6 +25,7 @@ from events import broker, order_topic_id
 from realtime import broadcast
 from security_log import log_security_event
 from utils.validation import extract_fields
+from order_queue import enqueue_order, finish_order
 
 bp = Blueprint("orders", __name__, url_prefix="/api")
 audit = log_audit
@@ -160,9 +161,16 @@ def _apply_lifecycle_status(order: Order, status: str, now: datetime) -> None:
 
 
 def _orders_paused() -> bool:
+    from cache import status_cache
+
+    cached = status_cache.get("orders:paused")
+    if cached is not None:
+        return cached
     with db.connect(current_app.config["DATABASE_URL"]) as conn:
         row = conn.execute("SELECT value FROM site_settings WHERE key = 'orders_paused'").fetchone()
-    return bool(row and row["value"] == "true")
+    paused = bool(row and row["value"] == "true")
+    status_cache.set("orders:paused", paused)
+    return paused
 
 
 @bp.get("/orders/status")
@@ -248,6 +256,16 @@ def create_order():
     idempotency_key = request.headers.get("Idempotency-Key") or raw.get("idempotency_key")
     if not idempotency_key:
         return jsonify({"success": False, "message": "Idempotency-Key header is required"}), 400
+    gate = enqueue_order(raw, idempotency_key)
+    if gate.get("duplicate"):
+        return jsonify({"success": True, "queued": True, "message": "Order is already processing"}), 202
+    if gate.get("error"):
+        return jsonify({"success": False, **gate}), 503
+
+    @after_this_request
+    def _release_order_gate(response):
+        finish_order(idempotency_key)
+        return response
 
     with db.get_db() as session:
         if schema.payment_method == "razorpay":
@@ -394,6 +412,9 @@ def get_order_by_number(order_number: int):
 @require_role("staff")
 def list_admin_orders():
     status = request.args.get("status", "all")
+    page = max(1, int(request.args.get("page", 1)))
+    per_page = min(max(1, int(request.args.get("per_page", 50))), 100)
+    offset = (page - 1) * per_page
     allowed_statuses = {"pending", "preparing", "served", "all"}
     if status not in allowed_statuses:
         return jsonify({"success": False, "message": "Invalid status"}), 400
@@ -401,8 +422,16 @@ def list_admin_orders():
         query = select(Order).where(Order.is_archived.is_(False))
         if status != "all":
             query = query.where(Order.status == status)
-        rows = session.execute(query.order_by(Order.created_at.desc()).limit(250)).scalars().all()
-        return jsonify({"success": True, "data": [serialize_order(order) for order in rows]})
+        total = session.execute(select(func.count()).select_from(query.subquery())).scalar_one()
+        rows = session.execute(query.order_by(Order.created_at.desc()).limit(per_page).offset(offset)).scalars().all()
+        return jsonify({
+            "success": True,
+            "data": [serialize_order(order) for order in rows],
+            "page": page,
+            "per_page": per_page,
+            "total": int(total or 0),
+            "pages": ((int(total or 0) + per_page - 1) // per_page),
+        })
 
 
 @bp.patch("/admin/orders/bulk-status")

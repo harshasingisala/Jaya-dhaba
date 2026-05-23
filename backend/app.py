@@ -1,4 +1,9 @@
 import os
+
+if (os.getenv("APP_ENV") or os.getenv("FLASK_ENV") or "").lower() == "production" or os.getenv("SOCKETIO_ASYNC_MODE") == "eventlet":
+    import eventlet
+    eventlet.monkey_patch()
+
 from collections import defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -17,6 +22,7 @@ if os.getenv("FLASK_ENV") != "testing":
 
 import db
 from auth import BLACKLISTED_JTIS, optional_user
+from circuit_breaker import db_breaker
 from realtime import init_realtime
 from security_middleware import init_security_middleware
 from routes import register_blueprints
@@ -183,7 +189,19 @@ def create_app(overrides: dict | None = None) -> Flask:
 
     @app.get("/api/health")
     def health():
-        return jsonify({"status": "ok", "version": "1.0.0"}), 200
+        checks = {
+            "status": "ok",
+            "version": "1.0.0",
+            "timestamp": datetime.utcnow().isoformat(),
+            "ai": "ok" if app.config.get("GOOGLE_API_KEY") else "unavailable",
+        }
+        try:
+            db_breaker.call(db.check_health)
+            checks["database"] = "ok"
+        except Exception:
+            checks["database"] = "degraded"
+            checks["status"] = "degraded"
+        return jsonify(checks), 200 if checks["status"] == "ok" else 503
 
     @app.get("/health")
     def health_check():

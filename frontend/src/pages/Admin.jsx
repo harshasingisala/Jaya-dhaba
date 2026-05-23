@@ -52,6 +52,7 @@ export const playNewOrderSound = () => {
  */
 export default function Admin() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [serverSlow, setServerSlow] = useState(false);
   const location = useLocation();
   const { toasts, show: toast } = useToast();
 
@@ -89,6 +90,14 @@ export default function Admin() {
     }, []),
   });
 
+  useEffect(() => {
+    const onLatency = (event) => {
+      setServerSlow(!!event.detail?.slow);
+    };
+    window.addEventListener('api:latency', onLatency);
+    return () => window.removeEventListener('api:latency', onLatency);
+  }, []);
+
   if (location.pathname === '/admin/kitchen') {
     return (
       <div className="bg-[#FAF9F6] min-h-screen text-heritage-espresso font-sans">
@@ -110,6 +119,11 @@ export default function Admin() {
         robots="noindex, nofollow"
       />
       <ToastContainer toasts={toasts} />
+      {serverSlow && (
+        <div className="fixed top-0 left-0 right-0 z-[60] bg-amber-600 text-white text-center py-1 text-[11px] font-black uppercase tracking-widest">
+          High traffic - responses may be slower
+        </div>
+      )}
       
       {/* Saffron Glow Background Layer */}
       <div className="absolute inset-0 bg-gradient-to-tr from-heritage-terracotta/5 via-transparent to-heritage-gold/5 pointer-events-none" />

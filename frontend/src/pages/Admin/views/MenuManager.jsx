@@ -190,6 +190,8 @@ export default function MenuManager() {
                         src={item.image || item.img || '/biryani.png'}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                         alt={item.name}
+                        loading="lazy"
+                        decoding="async"
                         onError={(e) => { e.target.src = '/biryani.png'; }}
                       />
                     </div>
@@ -403,6 +405,8 @@ export function MenuItemModal({ isModalOpen, setIsModalOpen, editingItem, restau
                 src={form.image_url.trim()}
                 alt="Preview"
                 className="mt-3 h-20 w-20 rounded-2xl object-cover border border-heritage-espresso/10"
+                loading="lazy"
+                decoding="async"
                 onError={(event) => { event.currentTarget.style.display = 'none'; }}
               />
             )}
