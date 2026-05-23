@@ -35,11 +35,7 @@ export default function Gallery() {
         {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
           <div key={i} className="aspect-[4/5] relative group overflow-hidden rounded-[2.5rem] shadow-xl border border-heritage-espresso/5 bg-heritage-stone">
             <div className="w-full h-full overflow-hidden">
-               <img 
-                  src={i % 2 === 0 ? '/paneer.png' : '/chicken.png'} 
-                  className="parallax-img absolute top-[-10%] left-0 w-full h-[120%] object-cover group-hover:scale-110 transition-transform duration-1000 grayscale-[0.2] group-hover:grayscale-0" 
-                  alt="Culinary Creation"
-               />
+               <img src={i % 2 === 0 ? '/paneer.png' : '/chicken.png'} className="parallax-img absolute top-[-10%] left-0 w-full h-[120%] object-cover group-hover:scale-110 transition-transform duration-1000 grayscale-[0.2] group-hover:grayscale-0" alt="Culinary Creation" loading="lazy" width="480" height="600" />
             </div>
             <div className="absolute inset-x-0 bottom-0 p-8 translate-y-full group-hover:translate-y-0 transition-transform duration-500 bg-gradient-to-t from-heritage-espresso/80 to-transparent z-10">
                <p className="text-[9px] font-black uppercase tracking-[0.4em] text-heritage-gold mb-1">Heritage Plate</p>

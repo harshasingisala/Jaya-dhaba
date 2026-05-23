@@ -3,6 +3,9 @@ import { ShoppingBag, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useApp } from '../context/AppContext';
 import api from '../api';
+import { apiUrl } from '../api/config';
+import { createManagedEventSource } from '../api/realtime';
+import { MenuSchema } from './SEO/PageSchemas';
 
 /**
  * PRODUCTION MENU ENGINE - v4.0
@@ -34,7 +37,16 @@ export default function MenuDisplay() {
       }
     };
     fetchMenu();
-    return () => { isMounted = false; };
+    const stream = createManagedEventSource(apiUrl('/api/menu/stream'), {
+      events: ['menu.updated'],
+      onRefresh: fetchMenu,
+    });
+    const pollingFallback = window.setInterval(fetchMenu, 30000);
+    return () => {
+      isMounted = false;
+      stream.close();
+      window.clearInterval(pollingFallback);
+    };
   }, [restaurantId]);
 
   const categories = ['All', ...new Set(menu.map(item => item.category))];
@@ -54,6 +66,7 @@ export default function MenuDisplay() {
 
   return (
     <div id="menu" className="py-32 px-6 md:px-20 bg-transparent scroll-mt-24">
+      <MenuSchema items={menu} />
       <div className="max-w-7xl mx-auto space-y-20">
 
         {/* HEADER */}
@@ -136,6 +149,9 @@ function MenuItemCard({ item, onAdd }) {
           src={item.img || '/biryani.png'}
           className={`w-full h-full object-cover transition-transform duration-1000 contrast-[1.05] ${isExpanded ? 'scale-105' : 'group-hover:scale-110'}`}
           alt={item.name}
+          loading="lazy"
+          width="420"
+          height="420"
           onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1563379091339-03b17af4a4f9?q=80&w=800'; }}
         />
         {item.available === false && (

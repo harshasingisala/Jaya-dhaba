@@ -13,6 +13,8 @@ export function createManagedEventSource(url, options = {}) {
   let closed = false;
   let lastRefreshAt = 0;
   let refreshTimer = null;
+  let reconnectTimer = null;
+  let retryDelay = 2000;
 
   const requestRefresh = (reason) => {
     if (!onRefresh || closed) return;
@@ -26,18 +28,43 @@ export function createManagedEventSource(url, options = {}) {
     }, delay);
   };
 
+  const scheduleReconnect = () => {
+    if (closed || reconnectTimer) return;
+    const delay = retryDelay;
+    retryDelay = Math.min(retryDelay * 2, 30000);
+    if (import.meta.env.DEV) {
+      console.log(`[SSE] Reconnecting in ${delay / 1000}s...`);
+    }
+    reconnectTimer = window.setTimeout(() => {
+      reconnectTimer = null;
+      connect();
+    }, delay);
+  };
+
   const connect = () => {
     if (closed || source) return;
     source = new EventSource(url, { withCredentials });
-    source.addEventListener('open', () => onStatus?.('connected'));
-    source.addEventListener('ping', () => onStatus?.('connected'));
-    source.addEventListener('connected', () => onStatus?.('connected'));
+    source.addEventListener('open', () => {
+      retryDelay = 2000;
+      onStatus?.('connected');
+    });
+    source.addEventListener('ping', () => {
+      retryDelay = 2000;
+      onStatus?.('connected');
+    });
+    source.addEventListener('connected', () => {
+      retryDelay = 2000;
+      onStatus?.('connected');
+    });
     events.forEach((eventName) => {
       source.addEventListener(eventName, () => requestRefresh(eventName));
     });
     source.onerror = () => {
       onStatus?.('reconnecting');
       requestRefresh('stream-error');
+      source?.close();
+      source = null;
+      scheduleReconnect();
     };
   };
 
@@ -64,6 +91,7 @@ export function createManagedEventSource(url, options = {}) {
     close() {
       closed = true;
       window.clearTimeout(refreshTimer);
+      window.clearTimeout(reconnectTimer);
       window.removeEventListener('online', handleOnline);
       document.removeEventListener('visibilitychange', handleVisibility);
       source?.close();

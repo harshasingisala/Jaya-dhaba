@@ -73,11 +73,7 @@ export default function Hero() {
       {/* BACKGROUND LAYERS */}
       <div ref={bgRef} className="absolute inset-0 z-0">
         <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'var(--pattern-nav)', backgroundSize: '100px 100px' }} />
-        <img 
-          src="https://images.unsplash.com/photo-1544148103-0773bf10d330?q=80&w=2070&auto=format&fit=crop" 
-          className="w-full h-full object-cover opacity-10 filter sepia-[0.5] contrast-[1.2]" 
-          alt="Atmospheric Background"
-        />
+        <img src="https://images.unsplash.com/photo-1544148103-0773bf10d330?q=80&w=2070&auto=format&fit=crop" className="w-full h-full object-cover opacity-10 filter sepia-[0.5] contrast-[1.2]" alt="Atmospheric Background" loading="eager" width="2070" height="1380" />
       </div>
 
       {/* SIDE PAGINATION (DECORATIVE) */}

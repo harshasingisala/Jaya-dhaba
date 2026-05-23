@@ -74,3 +74,13 @@ def kitchen_orders():
             .limit(250)
         ).scalars().all()
         return jsonify({"success": True, "data": [serialize_order(order) for order in rows]})
+
+
+@bp.get("/reservations/stream")
+@require_min_role("staff", allow_query_token=True, missing_status=403)
+def reservations_stream():
+    return Response(
+        stream_with_context(stream_topic("reservations")),
+        mimetype="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no", "Connection": "keep-alive"},
+    )

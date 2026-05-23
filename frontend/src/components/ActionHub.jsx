@@ -60,7 +60,7 @@ const ActionHub = () => {
             >
               {card.image && !card.icon && (
                 <div className="card-bg">
-                  <img src={card.image} alt={card.title} />
+                  <img src={card.image} alt={card.title} loading="lazy" width="640" height="420" />
                   <div className="overlay"></div>
                 </div>
               )}

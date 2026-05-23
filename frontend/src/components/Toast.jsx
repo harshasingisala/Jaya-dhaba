@@ -1,5 +1,56 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AlertCircle, CheckCircle2, X } from "lucide-react";
+
+const COLORS = {
+  success: '#16a34a',
+  error: '#dc2626',
+  info: '#2563eb',
+  warning: '#d97706',
+};
+
+export function useToast() {
+  const [toasts, setToasts] = useState([]);
+
+  const show = useCallback((message, type = 'success', duration = 3000) => {
+    const id = Date.now() + Math.random();
+    setToasts((prev) => [...prev, { id, message, type }]);
+    window.setTimeout(() => {
+      setToasts((prev) => prev.filter((toast) => toast.id !== id));
+    }, duration);
+  }, []);
+
+  return { toasts, show };
+}
+
+export function ToastContainer({ toasts }) {
+  return (
+    <div style={{
+      position: 'fixed',
+      bottom: '1.5rem',
+      right: '1.5rem',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '0.5rem',
+      zIndex: 99999,
+      pointerEvents: 'none',
+    }}>
+      {toasts.map((toast) => (
+        <div key={toast.id} style={{
+          padding: '0.75rem 1.25rem',
+          borderRadius: '8px',
+          background: COLORS[toast.type] || COLORS.success,
+          color: '#fff',
+          fontWeight: 700,
+          fontSize: '0.875rem',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+          whiteSpace: 'nowrap',
+        }}>
+          {toast.message}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 /**
  * Premium Toast Component for Jaya Dhaba

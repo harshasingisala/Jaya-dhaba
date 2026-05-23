@@ -54,6 +54,7 @@ export default function Track() {
          const res = await api.getOrder(id, token);
          setOrder(res);
       } catch (err) {
+         console.error('[JAYA_DEBUG] Caught error in fetchOrder:', err);
          setError('This secure tracking link is invalid or expired. Please use the link from your order confirmation.');
       } finally {
          setIsLoading(false);
@@ -210,7 +211,7 @@ export default function Track() {
                   </div>
 
                   <p className="text-center text-[10px] font-black uppercase tracking-widest text-heritage-espresso/20 italic">
-                     Questions about your journey? Sunil Behera is ready at 73861 85823.
+                     Questions about your journey? Sunil Behera is ready at +91 73861 85821.
                   </p>
                </div>
             ) : error ? (

@@ -10,5 +10,6 @@ export const createReservation = api.createReservation;
 export const fetchStats       = api.getAdminStats;     // ✅ now real
 export const trackEvent       = api.trackEvent;        // ✅ now real (fire-and-forget)
 export const submitContact    = api.submitContact;
+export const fetchContact     = api.getContact;
 
 export default api;

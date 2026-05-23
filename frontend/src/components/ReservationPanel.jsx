@@ -60,7 +60,7 @@ export default function ReservationPanel() {
                </div>
                <div>
                   <p className="text-[10px] font-black uppercase tracking-widest text-heritage-espresso/30 mb-1">Our Location</p>
-                  <p className="font-serif italic text-xl">East Nehru Nagar, Marredpally</p>
+                  <p className="font-serif italic text-xl">East Marredpally, Secunderabad, Telangana 500026</p>
                </div>
             </div>
             <div className="flex gap-6 items-center group">
@@ -69,7 +69,7 @@ export default function ReservationPanel() {
                </div>
                <div>
                   <p className="text-[10px] font-black uppercase tracking-widest text-heritage-espresso/30 mb-1">Direct Hotline</p>
-                  <p className="font-serif italic text-xl">073861 85823</p>
+                  <p className="font-serif italic text-xl">+91 73861 85821</p>
                </div>
             </div>
           </div>

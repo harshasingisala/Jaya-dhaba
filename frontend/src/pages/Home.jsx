@@ -1,11 +1,14 @@
 import React, { Suspense, lazy } from "react";
 import { Loader2 } from "lucide-react";
+import { useLocation } from "react-router-dom";
 import HeroContainer from "../components/HeroContainer";
 import Info from "../components/Info";
 import Platforms from "../components/Platforms";
 import Contact from "../components/Contact";
 import Footer from "../components/Footer";
 import StickyCartBar from "../components/StickyCartBar";
+import PageMeta from "../components/SEO/PageMeta";
+import { ContactSchema, WebSiteSchema } from "../components/SEO/PageSchemas";
 
 const AboutOwner = lazy(() => import("../components/AboutOwner"));
 const SpecialOffers = lazy(() => import("../components/SpecialOffers"));
@@ -26,8 +29,29 @@ const PageSkeleton = () => (
  * Unified under the 'Saffron & Stone' Premium Heritage System.
  */
 export default function Home() {
+  const { pathname } = useLocation();
+  const page = pathname === "/menu"
+    ? {
+        title: "Menu",
+        description: "Explore the full menu at Jaya Dhaba, Secunderabad. Fresh Indian cuisine, traditional recipes, available for dine-in and takeaway.",
+        url: "/menu",
+      }
+    : pathname === "/contact"
+      ? {
+          title: "Contact & Location",
+          description: "Find Jaya Dhaba at East Marredpally, Secunderabad. Call 07386185821. Open daily 11 AM - 11 PM.",
+          url: "/contact",
+        }
+      : {
+          title: "Authentic Indian Restaurant in Secunderabad",
+          description: "Jaya Dhaba - Heritage Restored. Flavor Perfected. Authentic Indian dining in East Marredpally, Secunderabad. Open 11 AM - 11 PM daily.",
+          url: "/",
+        };
+
   return (
     <div className="home-root min-h-screen">
+      <PageMeta {...page} />
+      {pathname === "/contact" ? <ContactSchema /> : <WebSiteSchema />}
       <main>
         <section id="hero">
           <HeroContainer />

@@ -3,115 +3,67 @@ import { motion } from 'framer-motion';
 
 import { useApp } from '../context/AppContext';
 
-const offers = [
-  {
-    id: 1,
-    img: "/assets/offer1.webp",
-    subtitle: "Buy 4 Single Chicken Biryani Get Half Veg Manchurian Dry Free..",
-    combo: [
-      { id: 1, qty: 4 },  // Chicken Biryani
-      { id: 11, qty: 0.5, price: 0 }  // Veg Manchurian Dry
-    ]
-  },
-  {
-    id: 2,
-    img: "/assets/offer2.webp",
-    subtitle: "Order Family Pack Chicken Biryani Get Half Chicken 65 Free",
-    combo: [
-      { id: 1, qty: 4 }, // Family pack = 4 servings Chicken Biryani
-      { id: 12, qty: 0.5, price: 0 }  // Chicken 65
-    ]
-  },
-  {
-    id: 3,
-    img: "/assets/offer3.webp",
-    subtitle: "Serves 6, dominates",
-    combo: [
-      { id: 1, qty: 6 },  // Chicken Biryani
-      { id: 5, qty: 1, price: 0 }  // Tandoori Chicken
-    ]
-  }
-];
+function buildOffers(menuItems) {
+  const byCategory = (name) => menuItems.filter((item) => String(item.category || '').toLowerCase() === name.toLowerCase());
+  const biryani = byCategory('Biryani');
+  const starters = byCategory('Starters');
+  const breads = byCategory('Breads');
 
-/**
- * JAYA DHABA — SPECIAL OFFERS (LEGENDARY SPECIALS)
- * Replicated exactly from the design specification.
- */
+  return [
+    { id: 'family', img: '/assets/offer1.webp', title: 'Family Table Combo', items: [biryani[0], starters[0]].filter(Boolean) },
+    { id: 'kitchen', img: '/assets/offer2.webp', title: 'Kitchen Favorite Combo', items: [biryani[1] || biryani[0], breads[0]].filter(Boolean) },
+    { id: 'dhaba', img: '/assets/offer3.webp', title: 'Dhaba Sharing Combo', items: [starters[1] || starters[0], breads[1] || breads[0]].filter(Boolean) },
+  ].filter((offer) => offer.items.length);
+}
+
 export default function SpecialOffers() {
   const { addItemsToCart, menuItems } = useApp();
+  const offers = buildOffers(menuItems);
 
-  const handleOrder = (combo) => {
-    const itemsToAdd = combo.map(c => {
-      const baseItem = menuItems.find(m => m.id === c.id);
-      return {
-        item: { ...baseItem, price: c.price !== undefined ? c.price : baseItem.price },
-        qty: c.qty
-      };
-    });
-    addItemsToCart(itemsToAdd);
+  if (!offers.length) return null;
+
+  const handleOrder = (items) => {
+    addItemsToCart(items.map((item) => ({ item, qty: 1 })));
   };
 
   return (
     <section id="offers" className="py-24 px-6 md:px-20 bg-[var(--bg-primary)]">
       <div className="max-w-[1300px] mx-auto space-y-16">
-
-        {/* HEADING */}
         <div className="text-center">
-          <h2
-            className="text-4xl md:text-5xl font-bold"
-            style={{ fontFamily: "'Playfair Display', serif", color: 'var(--brown-brand)' }}
-          >
+          <h2 className="text-4xl md:text-5xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: 'var(--brown-brand)' }}>
             Legendary East Marredpally Specials
           </h2>
         </div>
 
-        {/* CARDS GRID */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {offers.map((offer, i) => (
+          {offers.map((offer, index) => (
             <motion.div
               key={offer.id}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
+              transition={{ delay: index * 0.1 }}
               viewport={{ once: true }}
               className="bg-white p-3 border-[3px] shadow-xl flex flex-col"
               style={{ borderColor: 'var(--gold-brand)' }}
             >
-              {/* INNER WRAPPER FOR DOUBLE BORDER EFFECT IF NEEDED, OR JUST PADDING */}
               <div className="border border-gray-100 flex flex-col h-full">
-
-                {/* IMAGE */}
-                <div className="w-full">
-                  <img
-                    src={offer.img}
-                    alt="Special Offer"
-                    className="w-full h-auto block"
-                  />
-                </div>
-
-                {/* CONTENT */}
+                <img src={offer.img} alt={offer.title} className="w-full h-auto block" />
                 <div className="flex flex-col items-center justify-center pt-8 pb-6 space-y-6 flex-grow">
-                  <p
-                    className="text-lg md:text-xl font-medium text-center"
-                    style={{ fontFamily: "'Playfair Display', serif", color: 'var(--brown-brand)' }}
-                  >
-                    {offer.subtitle}
+                  <p className="text-lg md:text-xl font-medium text-center" style={{ fontFamily: "'Playfair Display', serif", color: 'var(--brown-brand)' }}>
+                    {offer.title}: {offer.items.map((item) => item.name).join(' + ')}
                   </p>
-
                   <button
-                    onClick={() => handleOrder(offer.combo)}
+                    onClick={() => handleOrder(offer.items)}
                     className="px-10 py-3 text-white text-sm font-bold tracking-wider uppercase transition-transform hover:scale-105"
                     style={{ backgroundColor: 'var(--gold-brand)' }}
                   >
                     Order Now
                   </button>
                 </div>
-
               </div>
             </motion.div>
           ))}
         </div>
-
       </div>
     </section>
   );

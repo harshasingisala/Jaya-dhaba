@@ -21,11 +21,7 @@ export default function AboutOwner() {
           
           {/* IMAGE SIDE */}
           <div className="relative h-[400px] md:h-auto border-b md:border-b-0 md:border-r border-[var(--gold-brand)]">
-            <img 
-              src="/assets/owner-portrait.webp" 
-              alt="Owner at desk" 
-              className="w-full h-full object-cover"
-            />
+            <img src="/assets/owner-portrait.webp" alt="Owner at desk" loading="lazy" width="640" height="520" className="w-full h-full object-cover" />
           </div>
 
           {/* TEXT SIDE */}

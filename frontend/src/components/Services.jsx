@@ -48,12 +48,7 @@ export default function Services() {
           <div key={i} className="group relative rounded-[3.5rem] overflow-hidden bg-white border border-heritage-espresso/5 card-hover text-center space-y-8 pb-12">
             
             <div className="h-64 relative overflow-hidden rounded-t-[3.5rem]">
-               <img 
-                 ref={el => imagesRef.current[i] = el}
-                 src={s.img} 
-                 alt={s.title}
-                 className="absolute top-[-10%] left-0 w-full h-[120%] object-cover scale-110"
-               />
+               <img ref={el => imagesRef.current[i] = el} src={s.img} alt={s.title} loading="lazy" width="640" height="360" className="absolute top-[-10%] left-0 w-full h-[120%] object-cover scale-110" />
                <div className="absolute inset-0 bg-gradient-to-b from-transparent to-white" />
             </div>
 

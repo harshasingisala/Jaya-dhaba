@@ -68,7 +68,7 @@ export default function CartDrawer() {
                    className="bg-white/50 p-6 rounded-[2.5rem] border border-heritage-espresso/5 flex gap-6 group hover:shadow-lg transition-all"
                 >
                   <div className="w-20 h-20 rounded-2xl overflow-hidden border border-heritage-espresso/5 bg-heritage-stone shrink-0">
-                    <img src={item.img || item.image || '/biryani.png'} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" />
+                    <img src={item.img || item.image || '/biryani.png'} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt={item.name} loading="lazy" width="80" height="80" />
                   </div>
                   <div className="flex-1 space-y-3">
                     <div className="flex justify-between items-start">

@@ -38,7 +38,7 @@ export default function HeroCinematic() {
         </div>
         <div style={{ position: "relative", display: "flex", justifyContent: "center", alignItems: "center" }}>
           <div style={{ position: "absolute", width: 520, height: 520, borderRadius: "50%", background: "radial-gradient(circle, rgba(255,140,0,0.18) 0%, transparent 70%)", filter: "blur(30px)" }} />
-          <img src="/biryani.png" alt="Biryani" className="hero-img" style={{ width: 470, filter: "drop-shadow(0 0 90px rgba(255,140,0,0.55))" }} />
+          <img src="/biryani.png" alt="Biryani" className="hero-img" loading="eager" width="470" height="470" style={{ width: 470, filter: "drop-shadow(0 0 90px rgba(255,140,0,0.55))" }} />
         </div>
       </div>
     </section>

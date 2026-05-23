@@ -4,13 +4,14 @@ import { Save, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
 
 const DEFAULT_SETTINGS = {
-  name: '',
-  tagline: '',
-  contact: '',
-  address: '',
-  hours: '',
+  name: 'Jaya Dhaba',
+  tagline: 'Heritage Restored. Flavor Perfected.',
+  contact: '+917386185821',
+  address: 'East Marredpally, Secunderabad, Telangana 500026',
+  hours: '11:00 AM - 11:00 PM',
   upi_id: '',
-  tax_rate: 5,
+  taxRate: 5,
+  status: 'open',
   currency: 'INR',
 };
 
@@ -26,7 +27,10 @@ export function useSettings(restaurantId) {
     setLoading(true);
     api.getSettings(restaurantId)
       .then((data) => setSettings((prev) => ({ ...prev, ...data })))
-      .catch(() => { /* defaults already set */ })
+      .catch((err) => {
+        console.error('[JAYA_DEBUG] Caught error in useSettings getSettings:', err);
+        /* defaults already set */
+      })
       .finally(() => setLoading(false));
   }, [restaurantId]);
 
@@ -35,10 +39,22 @@ export function useSettings(restaurantId) {
     setSaving(true);
     setMsg(null);
     try {
-      await api.updateSettings(restaurantId, settings);
+      const taxRate = Number(settings.taxRate ?? settings.tax_rate ?? DEFAULT_SETTINGS.taxRate);
+      await api.updateSettings(restaurantId, {
+        name: String(settings.name || DEFAULT_SETTINGS.name).trim(),
+        tagline: String(settings.tagline ?? DEFAULT_SETTINGS.tagline).trim(),
+        hours: String(settings.hours || DEFAULT_SETTINGS.hours).trim(),
+        contact: String(settings.contact || DEFAULT_SETTINGS.contact).trim(),
+        status: settings.status || 'open',
+        address: String(settings.address || DEFAULT_SETTINGS.address).trim(),
+        taxRate: Number.isFinite(taxRate) ? taxRate : DEFAULT_SETTINGS.taxRate,
+        currency: settings.currency || 'INR',
+        upi_id: String(settings.upi_id || settings.upi || '').trim(),
+      });
       setMsg({ type: 'success', text: 'Heritage settings updated successfully.' });
     } catch (err) {
-      setMsg({ type: 'error', text: 'Failed to update settings. Please check connections.' });
+      console.error('[JAYA_DEBUG] Caught error in handleSave:', err);
+      setMsg({ type: 'error', text: err.message || 'Failed to update settings.' });
     } finally {
       setSaving(false);
       // Auto-clear success after 4s
@@ -71,7 +87,7 @@ const FIELD_GROUPS = [
     title: 'Payments & Tax',
     fields: [
       { key: 'upi_id',   label: 'UPI ID',    placeholder: 'yourname@upi',   type: 'text' },
-      { key: 'tax_rate', label: 'Tax Rate %', placeholder: '5',              type: 'number' },
+      { key: 'taxRate', label: 'Tax Rate %', placeholder: '5',              type: 'number' },
     ],
   },
 ];

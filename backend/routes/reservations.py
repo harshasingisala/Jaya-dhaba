@@ -7,6 +7,8 @@ from flask import Blueprint, current_app, g, jsonify, request
 import db
 from audit import audit
 from auth import require_role
+from events import broker
+from realtime import broadcast
 from validators import ValidationError, body, idempotency_key, integer, iso_datetime, raw_text, reject_unknown, request_hash
 
 
@@ -119,7 +121,7 @@ def create_reservation():
     duration = integer(data.get("duration_minutes", 90), "duration_minutes", 15, 480)
     preferred_table_id = raw_text(data.get("table_id"), "table_id", 80, required=False, allow_empty=True) or None
     user = getattr(g, "current_user", None)
-    celebration_type = detect_celebration(data.get("notes", ""))
+    celebration_type = detect_celebration(data.get("notes", "")) or ""
 
     def operation():
         with db.transaction(current_app.config["DATABASE_URL"]) as conn:
@@ -160,6 +162,9 @@ def create_reservation():
             return serialize(row), 201
 
     payload, status = db.run_write(operation)
+    if status == 201:
+        broker.publish("reservations", "reservation.created", payload)
+        broadcast("reservations_update", {"action": "new_reservation", "reservation": payload})
     return jsonify(payload), status
 
 
@@ -191,4 +196,25 @@ def update_reservation(reservation_id: int):
         conn.execute("UPDATE reservations SET status = ?, celebration_type = ? WHERE id = ?", (next_status, next_celebration, reservation_id))
         updated = conn.execute("SELECT * FROM reservations WHERE id = ?", (reservation_id,)).fetchone()
         audit(conn, "reservation.status", "reservation", reservation_id, {"from": row["status"], "to": next_status})
-    return jsonify(serialize(updated))
+    payload = serialize(updated)
+    broker.publish("reservations", "reservation.updated", payload)
+    broadcast("reservations_update", {
+        "action": "status_changed",
+        "reservation_id": reservation_id,
+        "status": payload["status"],
+    })
+    return jsonify(payload)
+
+
+@bp.delete("/admin/reservations/<int:reservation_id>")
+@require_role("staff")
+def delete_reservation(reservation_id: int):
+    with db.transaction(current_app.config["DATABASE_URL"]) as conn:
+        row = conn.execute("SELECT * FROM reservations WHERE id = ?", (reservation_id,)).fetchone()
+        if not row:
+            raise ValidationError("Reservation not found", "reservation_id", 404)
+        conn.execute("DELETE FROM reservations WHERE id = ?", (reservation_id,))
+        audit(conn, "reservation.delete", "reservation", reservation_id)
+    broker.publish("reservations", "reservation.deleted", {"id": reservation_id})
+    broadcast("reservations_update", {"action": "deleted", "reservation_id": reservation_id})
+    return jsonify({"success": True, "deleted": reservation_id})

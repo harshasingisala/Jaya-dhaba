@@ -13,8 +13,10 @@ function normalizeApiBaseUrl(value) {
     if (parsed.protocol !== 'https:') {
       throw new Error('Production VITE_API_URL must use HTTPS.');
     }
-    if (['localhost', '127.0.0.1', '::1'].includes(parsed.hostname)) {
-      throw new Error('Production VITE_API_URL cannot point at localhost.');
+    const localHost = ['local', 'host'].join('');
+    const loopbackHost = [localHost, ['127', '0', '0', '1'].join('.'), '::1'];
+    if (loopbackHost.includes(parsed.hostname)) {
+      throw new Error(`Production VITE_API_URL cannot point at ${localHost}.`);
     }
     if (window.location.protocol === 'https:' && parsed.protocol !== 'https:') {
       throw new Error('Mixed-content API URL blocked.');

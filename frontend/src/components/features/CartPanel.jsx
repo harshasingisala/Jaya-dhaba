@@ -41,7 +41,7 @@ export default function CartPanel() {
                 className="flex items-center gap-4 group"
               >
                 <div className="w-16 h-16 rounded-2xl overflow-hidden flex-shrink-0">
-                  <img src={item.image_url || '/food1.jpg'} className="w-full h-full object-cover" alt={item.name} />
+                  <img src={item.image_url || '/food1.jpg'} className="w-full h-full object-cover" alt={item.name} loading="lazy" width="64" height="64" />
                 </div>
                 
                 <div className="flex-grow space-y-1">

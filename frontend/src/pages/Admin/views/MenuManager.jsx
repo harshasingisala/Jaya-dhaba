@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Image as ImageIcon, ToggleLeft, ToggleRight, DollarSign, Info, Loader2, Zap, Sparkles, X, Save } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
 import api from '../../../api';
+import { usePollingFallback } from '../../../hooks/usePollingFallback';
 
 export default function MenuManager() {
   const { restaurantId, vibrate } = useApp();
@@ -15,15 +16,36 @@ export default function MenuManager() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    document.title = 'Menu — Jaya Dhaba Admin';
+  }, []);
+
+  useEffect(() => {
     if (!restaurantId) return;
     fetchMenu();
   }, [restaurantId]);
 
-  const fetchMenu = async () => {
+  useEffect(() => {
+    const handler = (event) => {
+      const { action, item_id, item } = event.detail || {};
+      if (action === 'created' && item) {
+        setMenu((prev) => [...prev.filter((menuItem) => menuItem.id !== item.id), item]);
+      } else if (action === 'updated' && item) {
+        setMenu((prev) => prev.map((menuItem) => menuItem.id === item_id ? item : menuItem));
+      } else if (action === 'deleted') {
+        setMenu((prev) => prev.filter((menuItem) => menuItem.id !== item_id));
+      }
+    };
+    window.addEventListener('rt:menu', handler);
+    return () => window.removeEventListener('rt:menu', handler);
+  }, []);
+
+  usePollingFallback(fetchMenu, 10000);
+
+  async function fetchMenu() {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await api.getMenu(restaurantId);
+      const data = await api.getAdminMenu();
       const items = Array.isArray(data) ? data : data?.items || [];
       setMenu(items);
       const uniqueCats = ['All', ...new Set(items.map(item => item.category))];
@@ -34,12 +56,12 @@ export default function MenuManager() {
     } finally {
       setIsLoading(false);
     }
-  };
-  const handleDelete = async (id) => {
-    if (!window.confirm('Remove this item from the menu?')) return;
+  }
+  const handleDelete = async (item) => {
+    if (!window.confirm(`Remove ${item.name} from the menu?`)) return;
     try {
-      await api.deleteMenuItem(id);
-      setMenu(prev => prev.filter(item => item.id !== id));
+      await api.deleteMenuItem(item.id);
+      await fetchMenu();
     } catch (err) {
       setError('Failed to delete item. Please try again.');
     }
@@ -52,6 +74,7 @@ export default function MenuManager() {
       setMenu(prev => prev.map(item =>
         item.id === id ? data : item
       ));
+      await fetchMenu();
     } catch (err) {
       setError('Failed to update item availability. Please try again.');
     }
@@ -79,6 +102,7 @@ export default function MenuManager() {
           if (savedItem.category && !categories.includes(savedItem.category)) {
             setCategories(prev => [...prev, savedItem.category]);
           }
+          fetchMenu();
         }}
       />
 
@@ -114,8 +138,8 @@ export default function MenuManager() {
       </div>
 
       {/* MENU TABLE */}
-      <div className="bg-white/40 backdrop-blur-md rounded-[3rem] border border-heritage-espresso/5 shadow-2xl overflow-hidden min-h-[500px]">
-        <table className="w-full text-left border-collapse">
+      <div className="bg-white/40 backdrop-blur-md rounded-[3rem] border border-heritage-espresso/5 shadow-2xl overflow-x-auto min-h-[500px]">
+        <table className="w-full min-w-[860px] text-left border-collapse">
           <thead>
             <tr className="bg-heritage-stone/30 border-b border-heritage-espresso/5">
               <th className="px-10 py-8 text-[10px] font-black uppercase tracking-[0.4em] text-heritage-espresso/20">Culinary Item</th>
@@ -150,8 +174,15 @@ export default function MenuManager() {
                   </div>
                 </td>
               </tr>
+            ) : filteredMenu.length === 0 ? (
+              <tr>
+                <td colSpan="5" className="py-24 text-center text-heritage-espresso/25">
+                  <ImageIcon className="mx-auto mb-4" size={42} />
+                  <p className="font-serif italic text-2xl">No items in this category yet</p>
+                </td>
+              </tr>
             ) : filteredMenu.map((item) => (
-              <tr key={item.id} className="group hover:bg-white/40 transition-all duration-300">
+              <tr key={item.id} className={`group hover:bg-white/40 transition-all duration-300 ${item.available === false ? 'opacity-55 grayscale' : ''}`}>
                 <td className="px-10 py-8">
                   <div className="flex items-center gap-8">
                     <div className="w-20 h-20 rounded-2xl bg-heritage-stone overflow-hidden border-2 border-white shadow-lg relative shrink-0">
@@ -164,6 +195,7 @@ export default function MenuManager() {
                     </div>
                     <div className="space-y-1">
                       <h3 className="text-xl font-serif italic text-heritage-espresso">{item.name}</h3>
+                      {item.available === false && <span className="inline-flex mt-1 px-2 py-1 rounded-full bg-heritage-espresso/10 text-[8px] font-black uppercase tracking-widest text-heritage-espresso/50">Unavailable</span>}
                       <p className="text-[10px] text-heritage-espresso/40 italic line-clamp-1 max-w-[300px]">{item.description || item.desc}</p>
                     </div>
                   </div>
@@ -179,22 +211,22 @@ export default function MenuManager() {
                     onClick={() => toggleAvailability(item.id, item.is_available ?? item.available !== false)}
                     className={`flex items-center gap-3 group/toggle ${item.available !== false ? 'text-heritage-accent' : 'text-heritage-espresso/20'}`}
                   >
-                    <span className="text-[9px] font-black uppercase tracking-widest">{item.available !== false ? 'Active' : 'Hidden'}</span>
+                    <span className="text-[9px] font-black uppercase tracking-widest">{item.available !== false ? 'Active' : 'Unavailable'}</span>
                     {item.available !== false ? <ToggleRight size={24} /> : <ToggleLeft size={24} />}
                   </button>
                 </td>
                 <td className="px-10 py-8 text-right pr-12">
                   <div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-all duration-500 translate-x-4 group-hover:translate-x-0">
-                    <button onClick={() => { setEditingItem(item); setIsModalOpen(true); }} className="p-3 bg-heritage-stone rounded-2xl text-heritage-espresso/40 hover:text-heritage-espresso hover:shadow-lg transition-all">
+                    <button onClick={() => { setEditingItem(item); setIsModalOpen(true); }} className="min-h-[44px] min-w-[44px] p-3 bg-heritage-stone rounded-2xl text-heritage-espresso/40 hover:text-heritage-espresso hover:shadow-lg transition-all">
                       <Edit size={16} />
                     </button>
                     <button
                       onClick={() => alert("AI Heritage Model Initializing... Photo enhancement will be ready shortly.")}
-                      className="p-3 bg-heritage-gold/10 rounded-2xl text-heritage-gold hover:bg-heritage-gold hover:text-white hover:shadow-lg transition-all"
+                      className="min-h-[44px] min-w-[44px] p-3 bg-heritage-gold/10 rounded-2xl text-heritage-gold hover:bg-heritage-gold hover:text-white hover:shadow-lg transition-all"
                     >
                       <Sparkles size={16} />
                     </button>
-                    <button onClick={() => handleDelete(item.id)} className="p-3 bg-heritage-stone rounded-2xl text-heritage-espresso/40 hover:text-red-500 hover:shadow-lg transition-all">
+                    <button onClick={() => handleDelete(item)} className="min-h-[44px] min-w-[44px] p-3 bg-heritage-stone rounded-2xl text-heritage-espresso/40 hover:text-red-500 hover:shadow-lg transition-all">
                       <Trash2 size={16} />
                     </button>
                   </div>
@@ -214,6 +246,7 @@ const EMPTY_FORM = {
   price: '',
   category: '',
   description: '',
+  image_url: '',
   is_available: true,
 };
 
@@ -225,12 +258,14 @@ export function MenuItemModal({ isModalOpen, setIsModalOpen, editingItem, restau
   // Pre-fill when editing
   useEffect(() => {
     if (editingItem) {
+      const imageUrl = editingItem.image_url || editingItem.img || '';
       setForm({
         name: editingItem.name || '',
         price: editingItem.price?.toString() || '',
         category: editingItem.category || '',
         description: editingItem.description || '',
-        is_available: editingItem.is_available ?? true,
+        image_url: String(imageUrl).startsWith('http') ? imageUrl : '',
+        is_available: editingItem.is_available ?? editingItem.available ?? true,
       });
     } else {
       setForm(EMPTY_FORM);
@@ -243,16 +278,19 @@ export function MenuItemModal({ isModalOpen, setIsModalOpen, editingItem, restau
 
   const handleSave = async () => {
     setError(null);
-    if (!form.name.trim()) { setError('Item name is required.'); return; }
-    if (!form.price || isNaN(parseFloat(form.price))) { setError('Enter a valid price.'); return; }
+    if (form.name.trim().length < 2) { setError('Name must be at least 2 characters.'); return; }
+    if (!form.price || isNaN(parseFloat(form.price)) || parseFloat(form.price) <= 0) { setError('Price must be a positive number.'); return; }
+    if (!form.category.trim()) { setError('Category is required.'); return; }
+    if (form.image_url.trim() && !form.image_url.trim().startsWith('http')) { setError('Image URL must start with http.'); return; }
 
     setSaving(true);
     try {
       const payload = {
         name: form.name.trim(),
         price_full: parseFloat(form.price),
-        category: form.category.trim() || 'other',
+        category: form.category.trim(),
         description: form.description.trim(),
+        image_url: form.image_url.trim(),
         is_available: form.is_available,
       };
 
@@ -274,8 +312,8 @@ export function MenuItemModal({ isModalOpen, setIsModalOpen, editingItem, restau
   if (!isModalOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center backdrop-blur-sm">
-      <div className="bg-white p-10 rounded-[3rem] w-[90%] max-w-md shadow-2xl animate-in zoom-in duration-300">
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center backdrop-blur-sm p-4">
+      <div className="bg-white p-8 md:p-10 rounded-[3rem] w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in duration-300">
 
         {/* Header */}
         <div className="flex items-start justify-between mb-6">
@@ -289,7 +327,7 @@ export function MenuItemModal({ isModalOpen, setIsModalOpen, editingItem, restau
           </div>
           <button
             onClick={() => setIsModalOpen(false)}
-            className="p-2 rounded-full hover:bg-heritage-stone/40 transition-colors"
+            className="min-h-[44px] min-w-[44px] p-2 rounded-full hover:bg-heritage-stone/40 transition-colors"
           >
             <X size={18} className="text-heritage-espresso/40" />
           </button>
@@ -304,7 +342,7 @@ export function MenuItemModal({ isModalOpen, setIsModalOpen, editingItem, restau
             <input
               value={form.name}
               onChange={(e) => handleChange('name', e.target.value)}
-              className="w-full bg-heritage-stone/30 border border-heritage-espresso/10 px-5 py-3.5 rounded-2xl text-sm outline-none focus:border-heritage-gold transition-colors placeholder:text-heritage-espresso/25"
+              className="min-h-[44px] w-full bg-heritage-stone/30 border border-heritage-espresso/10 px-5 py-3.5 rounded-2xl text-sm outline-none focus:border-heritage-gold transition-colors placeholder:text-heritage-espresso/25"
               placeholder="e.g. Dum Biryani"
             />
           </div>
@@ -318,7 +356,7 @@ export function MenuItemModal({ isModalOpen, setIsModalOpen, editingItem, restau
                 type="number"
                 value={form.price}
                 onChange={(e) => handleChange('price', e.target.value)}
-                className="w-full bg-heritage-stone/30 border border-heritage-espresso/10 px-5 py-3.5 rounded-2xl text-sm outline-none focus:border-heritage-gold transition-colors placeholder:text-heritage-espresso/25"
+                className="min-h-[44px] w-full bg-heritage-stone/30 border border-heritage-espresso/10 px-5 py-3.5 rounded-2xl text-sm outline-none focus:border-heritage-gold transition-colors placeholder:text-heritage-espresso/25"
                 placeholder="350"
                 min="0"
                 step="0.01"
@@ -331,7 +369,7 @@ export function MenuItemModal({ isModalOpen, setIsModalOpen, editingItem, restau
               <input
                 value={form.category}
                 onChange={(e) => handleChange('category', e.target.value)}
-                className="w-full bg-heritage-stone/30 border border-heritage-espresso/10 px-5 py-3.5 rounded-2xl text-sm outline-none focus:border-heritage-gold transition-colors placeholder:text-heritage-espresso/25"
+                className="min-h-[44px] w-full bg-heritage-stone/30 border border-heritage-espresso/10 px-5 py-3.5 rounded-2xl text-sm outline-none focus:border-heritage-gold transition-colors placeholder:text-heritage-espresso/25"
                 placeholder="Mains"
               />
             </div>
@@ -350,6 +388,26 @@ export function MenuItemModal({ isModalOpen, setIsModalOpen, editingItem, restau
             />
           </div>
 
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-widest text-heritage-espresso/50 mb-1.5">
+              Image URL
+            </label>
+            <input
+              value={form.image_url}
+              onChange={(e) => handleChange('image_url', e.target.value)}
+              className="min-h-[44px] w-full bg-heritage-stone/30 border border-heritage-espresso/10 px-5 py-3.5 rounded-2xl text-sm outline-none focus:border-heritage-gold transition-colors placeholder:text-heritage-espresso/25"
+              placeholder="https://example.com/biryani.jpg"
+            />
+            {form.image_url.trim().startsWith('http') && (
+              <img
+                src={form.image_url.trim()}
+                alt="Preview"
+                className="mt-3 h-20 w-20 rounded-2xl object-cover border border-heritage-espresso/10"
+                onError={(event) => { event.currentTarget.style.display = 'none'; }}
+              />
+            )}
+          </div>
+
           {/* Available toggle */}
           <div className="flex items-center justify-between px-5 py-3.5 bg-heritage-stone/30 rounded-2xl">
             <span className="text-[11px] font-black uppercase tracking-widest text-heritage-espresso/60">
@@ -357,7 +415,7 @@ export function MenuItemModal({ isModalOpen, setIsModalOpen, editingItem, restau
             </span>
             <button
               onClick={() => handleChange('is_available', !form.is_available)}
-              className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${form.is_available ? 'bg-heritage-gold' : 'bg-heritage-espresso/20'
+              className={`relative min-h-[44px] min-w-[44px] w-11 h-6 rounded-full transition-colors duration-200 ${form.is_available ? 'bg-heritage-gold' : 'bg-heritage-espresso/20'
                 }`}
             >
               <span
@@ -377,14 +435,14 @@ export function MenuItemModal({ isModalOpen, setIsModalOpen, editingItem, restau
         <div className="flex gap-3">
           <button
             onClick={() => setIsModalOpen(false)}
-            className="flex-1 py-4 bg-heritage-stone/30 text-heritage-espresso rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-heritage-stone/60 transition-colors"
+            className="min-h-[44px] flex-1 py-4 bg-heritage-stone/30 text-heritage-espresso rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-heritage-stone/60 transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex-1 py-4 bg-heritage-espresso text-white rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-heritage-gold transition-colors flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-wait"
+            className="min-h-[44px] flex-1 py-4 bg-heritage-espresso text-white rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-heritage-gold transition-colors flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-wait"
           >
             {saving ? (
               <Loader2 size={13} className="animate-spin" />

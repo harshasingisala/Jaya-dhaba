@@ -123,9 +123,9 @@ CREATE INDEX IF NOT EXISTS idx_tables_qr_token ON tables (qr_token);
 -- =============================================================================
 CREATE TABLE IF NOT EXISTS orders (
     id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    order_number        BIGSERIAL UNIQUE NOT NULL,
+    order_number        INTEGER UNIQUE NOT NULL,
     user_id             UUID REFERENCES users(id),
-    table_id            UUID NOT NULL REFERENCES tables(id),
+    table_id            UUID REFERENCES tables(id),
     status              VARCHAR(20) NOT NULL DEFAULT 'pending',
         -- pending, confirmed, preparing, ready, served, cancelled
     prep_stage          VARCHAR(20) NOT NULL DEFAULT 'placed',
@@ -161,6 +161,20 @@ CREATE TABLE IF NOT EXISTS orders (
 CREATE INDEX IF NOT EXISTS idx_orders_status     ON orders (status);
 CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders (created_at);
 CREATE INDEX IF NOT EXISTS idx_orders_user_id    ON orders (user_id);
+
+-- =============================================================================
+-- ORDER NUMBER COUNTER
+-- Atomic order-number allocation used by backend/routes/orders.py.
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS order_number_counter (
+    name        VARCHAR(40) PRIMARY KEY,
+    next_value  INTEGER NOT NULL
+);
+
+INSERT INTO order_number_counter (name, next_value)
+VALUES ('orders', COALESCE((SELECT MAX(order_number) + 1 FROM orders), 1))
+ON CONFLICT (name) DO UPDATE
+SET next_value = GREATEST(order_number_counter.next_value, EXCLUDED.next_value);
 
 -- =============================================================================
 -- ORDER ITEMS
@@ -437,6 +451,7 @@ CREATE TABLE IF NOT EXISTS settings (
     address     VARCHAR(240) NOT NULL DEFAULT '',
     tax_rate    INTEGER NOT NULL DEFAULT 5,
     currency    VARCHAR(10) NOT NULL DEFAULT 'INR',
+    upi_id      VARCHAR(120) NOT NULL DEFAULT '',
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT settings_singleton CHECK (id = 1)
 );

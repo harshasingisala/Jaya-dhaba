@@ -18,25 +18,22 @@ function uuid() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-function parseMarkdown(input: string) {
-  let text = input.replace(/[&<>"']/g, (char) => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    "\"": "&quot;",
-    "'": "&#39;",
-  }[char] || char));
-  text = text.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-  const lines = text.split("\n");
-  const rendered = lines.map((line) => {
-    if (/^\s*-\s+/.test(line)) {
-      return `<li>${line.replace(/^\s*-\s+/, "")}</li>`;
-    }
-    return line;
+function renderMarkdown(input: string) {
+  return input.split("\n").map((line, lineIndex) => {
+    const content = line.replace(/^\s*-\s+/, "");
+    const parts = content.split(/(\*\*.+?\*\*)/g).map((part, partIndex) => {
+      if (part.startsWith("**") && part.endsWith("**")) {
+        return <strong key={partIndex}>{part.slice(2, -2)}</strong>;
+      }
+      return <React.Fragment key={partIndex}>{part}</React.Fragment>;
+    });
+    return (
+      <React.Fragment key={`${line}-${lineIndex}`}>
+        {lineIndex > 0 && <br />}
+        {/^\s*-\s+/.test(line) ? <span>&bull; {parts}</span> : parts}
+      </React.Fragment>
+    );
   });
-  text = rendered.join("<br/>");
-  text = text.replace(/(<li>.*?<\/li>)(<br\/>)+/g, "$1");
-  return text;
 }
 
 export default function ChatBot() {
@@ -47,7 +44,8 @@ export default function ChatBot() {
     try {
       const raw = sessionStorage.getItem(SESSION_KEY);
       return raw ? JSON.parse(raw) : [];
-    } catch {
+    } catch (err) {
+      console.error('[JAYA_DEBUG] Caught error in ChatBot session restore:', err);
       return [];
     }
   });
@@ -129,7 +127,8 @@ export default function ChatBot() {
               if (parsed.error) {
                 updateAssistant(assistantId, `\n${parsed.message || "Chat failed."}`, true);
               }
-            } catch {
+            } catch (err) {
+              console.error('[JAYA_DEBUG] Caught error in ChatBot stream chunk parse:', err);
               // ignore malformed stream chunks
             }
           }
@@ -137,7 +136,8 @@ export default function ChatBot() {
         }
       }
       updateAssistant(assistantId, "", true);
-    } catch {
+    } catch (err) {
+      console.error('[JAYA_DEBUG] Caught error in ChatBot sendMessage:', err);
       updateAssistant(assistantId, "Sorry, I couldn’t respond right now. Please try again in a moment.", true);
     } finally {
       if (abortRef.current === controller) abortRef.current = null;
@@ -188,10 +188,7 @@ export default function ChatBot() {
               {messages.map((msg) => (
                 <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                   <div className={`${msg.role === "user" ? "bg-heritage-gold text-white" : "bg-white text-heritage-espresso border border-heritage-espresso/10"} max-w-[85%] rounded-2xl px-3 py-2`}>
-                    <div
-                      className="text-sm leading-relaxed"
-                      dangerouslySetInnerHTML={{ __html: parseMarkdown(msg.content) }}
-                    />
+                    <div className="text-sm leading-relaxed">{renderMarkdown(msg.content)}</div>
                     <div className="mt-1 flex items-center justify-between gap-2 text-[10px] opacity-70">
                       <span>{msg.ts}</span>
                       {msg.role === "assistant" && (

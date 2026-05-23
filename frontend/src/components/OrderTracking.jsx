@@ -28,6 +28,7 @@ export function useOrderTracking(orderId, token = '') {
         setError(null);
       })
       .catch((err) => {
+        console.error('[JAYA_DEBUG] Caught error in useOrderTracking initial load:', err);
         setError(err.message || 'Order not found.');
       })
       .finally(() => setLoading(false));
@@ -36,7 +37,10 @@ export function useOrderTracking(orderId, token = '') {
     const refreshOrder = () => {
       api.getOrder(orderId, token)
         .then((data) => setOrder(data))
-        .catch((err) => setError(err.message || 'Order not found.'));
+        .catch((err) => {
+          console.error('[JAYA_DEBUG] Caught error in useOrderTracking refreshOrder:', err);
+          setError(err.message || 'Order not found.');
+        });
     };
     const streamUrl = apiUrl(`/api/orders/${orderId}/stream${token ? `?token=${encodeURIComponent(token)}` : ''}`);
     const stream = createManagedEventSource(streamUrl, {
@@ -103,7 +107,10 @@ export function OrderTrackingPage({ orderId, token = '' }) {
   const items = (() => {
     try {
       return Array.isArray(order.items) ? order.items : JSON.parse(order.items || '[]');
-    } catch { return []; }
+    } catch (err) {
+      console.error('[JAYA_DEBUG] Caught error in OrderTrackingPage items parse:', err);
+      return [];
+    }
   })();
 
   return (
@@ -239,7 +246,7 @@ export default function OrderTracking() {
 
       <div className="mt-12 text-center">
         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-heritage-espresso/20">
-          Need assistance? Connect with Sunil Behera at 73861 85823
+          Need assistance? Connect with Sunil Behera at +91 73861 85821
         </p>
       </div>
     </div>

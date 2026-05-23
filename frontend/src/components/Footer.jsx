@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 
 export default function Footer() {
   const [lang, setLang] = useState('EN');
@@ -25,16 +26,16 @@ export default function Footer() {
               </div>
               <div className="space-y-2">
                  <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--text-main)]">Contact</h4>
-                 <a href="tel:+914012345678" className="block text-sm text-[var(--text-main)]/60 hover:text-[var(--text-accent)] transition-colors">+91 40 1234 5678</a>
+                 <a href="tel:+917386185821" className="block text-sm text-[var(--text-main)]/60 hover:text-[var(--text-accent)] transition-colors">+91 73861 85821</a>
               </div>
            </div>
 
            <div className="space-y-6">
               <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--text-main)]">Location</h4>
               <p className="text-sm text-[var(--text-main)]/60 leading-relaxed font-medium max-w-xs">
-                 #10-3-152, Teachers Colony, Next to Deccan Club, Beside Health & Glow, East Marredpally, Secunderabad-26
+                 East Marredpally, Secunderabad, Telangana 500026
               </p>
-              <a href="https://maps.google.com/?q=Jaya+Dhaba+Secunderabad" target="_blank" rel="noopener noreferrer" className="inline-block text-[9px] font-black uppercase tracking-widest text-[var(--text-accent)] border-b border-[var(--text-accent)]/20 pb-1">Get Directions</a>
+              <a href="https://share.google/6efBsQaOasTY9Tnvt" target="_blank" rel="noopener noreferrer" className="inline-block text-[9px] font-black uppercase tracking-widest text-[var(--text-accent)] border-b border-[var(--text-accent)]/20 pb-1">Heritage Exclusive Since 2020</a>
            </div>
         </div>
 
@@ -57,8 +58,8 @@ export default function Footer() {
           </div>
 
           <div className="flex gap-6 text-[9px] font-black uppercase tracking-widest text-[var(--text-main)]/20">
-             <span className="hover:text-[var(--text-main)] cursor-pointer">Terms</span>
-             <span className="hover:text-[var(--text-main)] cursor-pointer">Privacy</span>
+             <Link to="/terms" className="hover:text-[var(--text-main)] transition-colors">Terms</Link>
+             <Link to="/privacy" className="hover:text-[var(--text-main)] transition-colors">Privacy</Link>
           </div>
         </div>
       </div>

@@ -17,7 +17,7 @@ export default function Info() {
                  </div>
                  <div className="group">
                    <h4 className="text-heritage-espresso/30 text-[10px] font-black uppercase tracking-[0.4em] mb-4">Direct Communication</h4>
-                   <p className="text-lg font-bold text-heritage-espresso">073861 85823</p>
+                   <p className="text-lg font-bold text-heritage-espresso">+91 73861 85821</p>
                    <p className="text-sm font-medium text-heritage-espresso/40 italic mt-1">owner@jayadhaba.com</p>
                  </div>
                  <div className="group">
@@ -29,13 +29,15 @@ export default function Info() {
            </div>
            
            <div className="lg:col-span-7 bg-white/40 backdrop-blur-xl p-4 rounded-[4.5rem] border border-heritage-espresso/5 shadow-2xl overflow-hidden group">
-              <iframe
-                src="https://maps.google.com/maps?q=17.4401,78.4983&z=15&output=embed"
-                className="w-full h-[500px] rounded-[3.5rem] grayscale-[0.4] contrast-[1.1] opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-1000"
-                allowFullScreen=""
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-              />
+              <a
+                href="https://share.google/6efBsQaOasTY9Tnvt"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full h-[500px] rounded-[3.5rem] bg-heritage-espresso text-white flex flex-col items-center justify-center gap-6 text-center px-8 hover:bg-heritage-gold transition-all duration-500"
+              >
+                <span className="text-[10px] font-black uppercase tracking-[0.5em] text-white/60">Open Google Maps</span>
+                <span className="text-4xl md:text-5xl font-serif italic">Heritage Exclusive Since 2020</span>
+              </a>
            </div>
         </div>
       </div>

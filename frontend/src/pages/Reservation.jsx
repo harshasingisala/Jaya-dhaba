@@ -5,6 +5,8 @@ import api from '../api';
 import { useStore } from '../store/useStore';
 import MagneticButton from '../components/MagneticButton';
 import { useNavigate } from 'react-router-dom';
+import PageMeta from '../components/SEO/PageMeta';
+import { ReservationSchema } from '../components/SEO/PageSchemas';
 
 export default function Reservation() {
   const navigate = useNavigate();
@@ -30,9 +32,15 @@ export default function Reservation() {
     setFormError(null);
     
     try {
+      const reservedAt = `${form.date}T${form.time}:00+05:30`;
       await api.createReservation({
-        ...form,
-        restaurantId: 'jaya-dhaba'
+        table_id: null,
+        party_size: parseInt(form.guests, 10),
+        reserved_at: reservedAt,
+        duration_minutes: 90,
+        guest_name: form.name,
+        guest_phone: '',
+        notes: form.note || ''
       });
       
       // Trigger stamp animation
@@ -55,6 +63,12 @@ export default function Reservation() {
   if (isSuccess) {
     return (
       <div className="min-h-screen flex items-center justify-center p-10 bg-[var(--bg-primary)] relative overflow-hidden transition-colors duration-700">
+        <PageMeta
+          title="Reserve a Table"
+          description="Book a table at Jaya Dhaba, East Marredpally, Secunderabad. Easy online reservations, open 11 AM - 11 PM."
+          url="/reservations"
+        />
+        <ReservationSchema />
         <div className="absolute inset-0 bg-gradient-to-tr from-[var(--cta-color)]/5 via-transparent to-[var(--text-main)]/5 pointer-events-none" />
         <motion.div 
           initial={{ opacity: 0, scale: 0.9 }}
@@ -84,6 +98,12 @@ export default function Reservation() {
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] relative overflow-hidden py-20 px-6 transition-colors duration-700">
+      <PageMeta
+        title="Reserve a Table"
+        description="Book a table at Jaya Dhaba, East Marredpally, Secunderabad. Easy online reservations, open 11 AM - 11 PM."
+        url="/reservations"
+      />
+      <ReservationSchema />
       
       {/* HEADER & BACK BUTTON */}
       <div className="max-w-6xl mx-auto flex justify-between items-center mb-20 relative z-50">
@@ -120,7 +140,7 @@ export default function Reservation() {
                   </div>
                   <div>
                      <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-main)]/40 mb-1 font-sans">Our Location</p>
-                     <p className="text-sm font-bold text-[var(--text-main)]/80 font-sans">Secunderabad Space • East Marredpally</p>
+                     <p className="text-sm font-bold text-[var(--text-main)]/80 font-sans">East Marredpally, Secunderabad, Telangana 500026</p>
                   </div>
                </div>
                
@@ -130,7 +150,7 @@ export default function Reservation() {
                   </div>
                   <div>
                      <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-main)]/40 mb-1 font-sans">Direct Line</p>
-                     <p className="text-sm font-bold text-[var(--text-main)]/80 font-sans">073861 85823</p>
+                     <p className="text-sm font-bold text-[var(--text-main)]/80 font-sans">+91 73861 85821</p>
                   </div>
                </div>
             </div>

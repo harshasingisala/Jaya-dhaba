@@ -1,12 +1,41 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Send, MessageSquare, Phone, MapPin, Sparkles, Loader2, CheckCircle2 } from 'lucide-react';
-import { submitContact } from '../api/client';
+import { fetchContact, submitContact } from '../api/client';
+
+const DEFAULT_CONTACT = {
+  phone: '+91 73861 85821',
+  address: 'East Marredpally, Secunderabad, Telangana 500026',
+};
 
 export default function Contact() {
-  const [form, setForm] = useState({ name: '', email: '', message: '' });
+  const [form, setForm] = useState({ name: '', email: '', phone: '', subject: '', message: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [contact, setContact] = useState(null);
+  const [isContactLoading, setIsContactLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    fetchContact()
+      .then((details) => {
+        if (!isMounted) return;
+        setContact({
+          phone: details.phone || DEFAULT_CONTACT.phone,
+          address: details.address || DEFAULT_CONTACT.address,
+        });
+      })
+      .catch((err) => {
+        if (import.meta.env.DEV) console.warn('Contact details unavailable:', err);
+        if (isMounted) setContact(DEFAULT_CONTACT);
+      })
+      .finally(() => {
+        if (isMounted) setIsContactLoading(false);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -17,7 +46,7 @@ export default function Contact() {
       setIsSuccess(true);
     } catch (error) {
       if (import.meta.env.DEV) console.error("Failed to submit contact", error);
-      setError(error.message || 'Message delivery failed. Please call 073861 85823.');
+      setError(error.message || `Message delivery failed. Please call ${contact?.phone || DEFAULT_CONTACT.phone}.`);
     } finally {
       setIsSubmitting(false);
     }
@@ -71,7 +100,9 @@ export default function Contact() {
                   </div>
                   <div>
                      <p className="text-[10px] font-black uppercase tracking-widest text-heritage-espresso/30 mb-1">Establishment Owner</p>
-                     <p className="text-sm font-bold text-heritage-espresso">073861 85823</p>
+                     <p className="text-sm font-bold text-heritage-espresso">
+                        {isContactLoading ? 'Loading contact details...' : contact?.phone}
+                     </p>
                   </div>
                </div>
                
@@ -81,7 +112,14 @@ export default function Contact() {
                   </div>
                   <div>
                      <p className="text-[10px] font-black uppercase tracking-widest text-heritage-espresso/30 mb-1">Heritage Space</p>
-                     <p className="text-sm font-bold text-heritage-espresso">Secunderabad • East Marredpally</p>
+                     <a
+                        href="https://share.google/6efBsQaOasTY9Tnvt"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm font-bold text-heritage-espresso hover:text-heritage-gold transition-colors"
+                     >
+                        Heritage Exclusive Since 2020
+                     </a>
                   </div>
                </div>
             </div>
@@ -126,6 +164,28 @@ export default function Contact() {
                         value={form.email}
                         onChange={e => setForm({...form, email: e.target.value})}
                      />
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-4">
+                     <div className="relative group">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-heritage-espresso/40 pl-6 mb-2 block">Phone</label>
+                        <input
+                           placeholder="+91 98765 43210"
+                           className="w-full bg-white/50 border border-heritage-espresso/5 px-8 py-5 rounded-3xl outline-none focus:bg-white focus:border-heritage-gold transition-all font-bold text-heritage-espresso text-sm shadow-sm"
+                           value={form.phone}
+                           onChange={e => setForm({...form, phone: e.target.value})}
+                        />
+                     </div>
+
+                     <div className="relative group">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-heritage-espresso/40 pl-6 mb-2 block">Subject</label>
+                        <input
+                           placeholder="Event, catering, feedback..."
+                           className="w-full bg-white/50 border border-heritage-espresso/5 px-8 py-5 rounded-3xl outline-none focus:bg-white focus:border-heritage-gold transition-all font-bold text-heritage-espresso text-sm shadow-sm"
+                           value={form.subject}
+                           onChange={e => setForm({...form, subject: e.target.value})}
+                        />
+                     </div>
                   </div>
 
                   <div className="relative group">

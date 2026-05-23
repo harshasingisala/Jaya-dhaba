@@ -13,7 +13,7 @@ export default function FoodCard({ item }) {
   };
   return (
     <div ref={ref} className="glass" onMouseMove={onMove} onMouseLeave={() => ref.current.style.transform = "none"} style={{ padding: 14, transition: "transform .18s ease" }}>
-      <img src={item.img} style={{ width: "100%", height: 160, borderRadius: 14, objectFit: "cover" }} />
+      <img src={item.img} alt={item.name} loading="lazy" width="320" height="160" style={{ width: "100%", height: 160, borderRadius: 14, objectFit: "cover" }} />
       <div style={{ marginTop: 10 }}>
         <h3 style={{ margin: 0, fontSize: 15 }}>{item.name}</h3>
         <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10 }}>

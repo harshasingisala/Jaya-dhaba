@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Filter, MoreVertical, CheckCircle2, XCircle, Clock, Loader2, Info } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import api from '../../../api';
+import { usePollingFallback } from '../../../hooks/usePollingFallback';
 
 const statusStyles = {
   'New': 'bg-heritage-gold/10 text-heritage-gold border-heritage-gold/20',
@@ -18,11 +19,42 @@ export default function ReservationsManager() {
   const [error, setError] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || '');
+  const [expandedIds, setExpandedIds] = useState(new Set());
   const statusTabs = ['All', 'New', 'Confirmed', 'Completed', 'Cancelled'];
 
   useEffect(() => {
+    document.title = 'Reservations — Jaya Dhaba Admin';
     fetchReservations();
   }, []);
+
+  useEffect(() => {
+    const handler = (event) => {
+      const data = event.detail || {};
+      if (data.action === 'new_reservation' && data.reservation) {
+        const normalized = {
+          ...data.reservation,
+          name: data.reservation.guest_name || data.reservation.name || 'Guest',
+          tableNo: data.reservation.table_id || 'TBD',
+          time: data.reservation.reserved_at ? new Date(data.reservation.reserved_at).toLocaleString('en-IN') : '',
+          guests: data.reservation.party_size,
+          partySize: data.reservation.party_size,
+          status: 'Confirmed',
+        };
+        setReservations((prev) => [normalized, ...prev.filter((res) => res.id !== normalized.id)]);
+      } else if (data.action === 'status_changed') {
+        const statusMap = { pending: 'New', confirmed: 'Confirmed', cancelled: 'Cancelled', completed: 'Completed' };
+        setReservations((prev) => prev.map((res) =>
+          res.id === data.reservation_id ? { ...res, status: statusMap[data.status] || data.status } : res
+        ));
+      } else if (data.action === 'deleted') {
+        setReservations((prev) => prev.filter((res) => res.id !== data.reservation_id));
+      }
+    };
+    window.addEventListener('rt:reservations', handler);
+    return () => window.removeEventListener('rt:reservations', handler);
+  }, []);
+
+  usePollingFallback(fetchReservations, 5000);
 
   const filteredReservations = (reservations || []).filter(r => {
     const matchesFilter = activeTab === 'All' || (r.status || 'New') === activeTab;
@@ -30,7 +62,7 @@ export default function ReservationsManager() {
     return matchesFilter && matchesSearch;
   });
 
-  const fetchReservations = async () => {
+  async function fetchReservations() {
     setIsLoading(true);
     setError(null);
     try {
@@ -38,22 +70,44 @@ export default function ReservationsManager() {
       setReservations(data);
     } catch (err) {
       if (import.meta.env.DEV) console.error(err);
-      setError('The guest ledger is momentarily inaccessible. Please refresh or check connection.');
+      setError('Failed to load reservations. Retry.');
     } finally {
       setIsLoading(false);
     }
-  };
+  }
 
   const updateReservation = async (id, status) => {
     setIsUpdating(id);
     try {
-      await api.updateReservation(id, status);
-      setReservations(prev => prev.map(r => r.id === id ? { ...r, status } : r));
+      const updated = await api.updateReservation(id, status);
+      setReservations(prev => prev.map(r => r.id === id ? updated : r));
     } catch (err) {
       if (import.meta.env.DEV) console.error(err);
     } finally {
       setIsUpdating(null);
     }
+  };
+
+  const deleteReservation = async (reservation) => {
+    if (!window.confirm(`Delete reservation for ${reservation.name || 'Guest'} on ${reservation.time || 'this date'}?`)) return;
+    const id = reservation.id;
+    setIsUpdating(id);
+    try {
+      await api.deleteReservation(id);
+      setReservations(prev => prev.filter(r => r.id !== id));
+    } catch (err) {
+      if (import.meta.env.DEV) console.error(err);
+    } finally {
+      setIsUpdating(null);
+    }
+  };
+
+  const toggleExpand = (id) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
   };
 
   return (
@@ -105,8 +159,8 @@ export default function ReservationsManager() {
         </div>
 
         {/* TABLE */}
-        <div className="bg-white rounded-[3rem] border border-heritage-espresso/5 shadow-xl overflow-hidden min-h-[500px]">
-           <table className="w-full text-left">
+        <div className="bg-white rounded-[3rem] border border-heritage-espresso/5 shadow-xl overflow-x-auto min-h-[500px]">
+           <table className="w-full min-w-[760px] text-left">
               <thead>
                 <tr className="border-b border-heritage-espresso/5 bg-heritage-stone/30">
                   <th className="px-8 py-6 text-[9px] font-black uppercase tracking-widest text-heritage-espresso/40">ID / Guest</th>
@@ -119,9 +173,10 @@ export default function ReservationsManager() {
               </thead>
               <tbody className="divide-y divide-heritage-espresso/5">
                 {filteredReservations.map((res, i) => (
-                  <tr key={res.id} className="group hover:bg-heritage-stone/20 transition-all">
+                  <React.Fragment key={res.id}>
+                  <tr className="group hover:bg-heritage-stone/20 transition-all">
                     <td className="px-8 py-8">
-                       <p className="text-xl font-serif italic text-heritage-espresso leading-none">{res.name}</p>
+                       <button onClick={() => toggleExpand(res.id)} className="text-xl font-serif italic text-heritage-espresso leading-none text-left">{res.name}</button>
                        <p className="text-[8px] font-black uppercase tracking-widest text-heritage-espresso/30 mt-2">#{res.id}</p>
                     </td>
                     <td className="px-8 py-8">
@@ -146,20 +201,41 @@ export default function ReservationsManager() {
                           <button 
                             disabled={isUpdating === res.id}
                             onClick={() => updateReservation(res.id, 'Confirmed')}
-                            className="p-2.5 bg-heritage-stone rounded-xl text-heritage-espresso/40 hover:text-heritage-accent transition-colors disabled:opacity-50"
+                            className="min-h-[44px] min-w-[44px] p-2.5 bg-heritage-stone rounded-xl text-heritage-espresso/40 hover:text-heritage-accent transition-colors disabled:opacity-50"
                           >
                              <CheckCircle2 size={16} />
                           </button>
                           <button 
                             disabled={isUpdating === res.id}
                             onClick={() => updateReservation(res.id, 'Cancelled')}
-                            className="p-2.5 bg-heritage-stone rounded-xl text-heritage-espresso/40 hover:text-red-500 transition-colors disabled:opacity-50"
+                            className="min-h-[44px] min-w-[44px] p-2.5 bg-heritage-stone rounded-xl text-heritage-espresso/40 hover:text-red-500 transition-colors disabled:opacity-50"
                           >
                              <XCircle size={16} />
+                          </button>
+                          <button
+                            disabled={isUpdating === res.id}
+                            onClick={() => deleteReservation(res)}
+                            className="min-h-[44px] min-w-[44px] p-2.5 bg-heritage-stone rounded-xl text-heritage-espresso/40 hover:text-red-700 transition-colors disabled:opacity-50"
+                          >
+                             <MoreVertical size={16} />
                           </button>
                        </div>
                     </td>
                   </tr>
+                  {expandedIds.has(res.id) && (
+                    <tr>
+                      <td colSpan="6" className="px-8 pb-8">
+                        <div className="rounded-2xl bg-heritage-stone/30 p-5 text-sm text-heritage-espresso/70 grid md:grid-cols-2 gap-3">
+                          <p><b>Name:</b> {res.name || res.guest_name || 'Guest'}</p>
+                          <p><b>Phone:</b> {res.guest_phone || res.phone || 'No phone'}</p>
+                          <p><b>Date/Time:</b> {res.time}</p>
+                          <p><b>Party size:</b> {res.guests || res.partySize}</p>
+                          <p className="md:col-span-2"><b>Special requests:</b> {res.celebration_type || res.notes || 'None'}</p>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  </React.Fragment>
                 ))}
                 {isLoading ? (
                    <tr>
@@ -178,7 +254,7 @@ export default function ReservationsManager() {
                             <p className="text-xl font-serif italic text-red-900/60 leading-relaxed">{error}</p>
                             <button 
                               onClick={fetchReservations}
-                              className="px-10 py-4 bg-red-600 text-white rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all shadow-xl shadow-red-200"
+                              className="min-h-[44px] px-10 py-4 bg-red-600 text-white rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all shadow-xl shadow-red-200"
                             >
                               Retry Connection
                             </button>
@@ -187,7 +263,10 @@ export default function ReservationsManager() {
                     </tr>
                  ) : filteredReservations.length === 0 ? (
                    <tr>
-                     <td colSpan="6" className="py-20 text-center text-heritage-espresso/20 font-serif italic text-2xl">No reservations found.</td>
+                     <td colSpan="6" className="py-20 text-center text-heritage-espresso/25">
+                       <Clock className="mx-auto mb-4" size={40} />
+                       <p className="font-serif italic text-2xl">No reservations yet</p>
+                     </td>
                    </tr>
                  ) : null}
               </tbody>

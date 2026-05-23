@@ -12,6 +12,7 @@ APScheduler==3.10.4
 pytz==2024.1
 Flask-JWT-Extended==4.7.1
 Flask-SocketIO==5.3.6
+flask-limiter==3.8.0
 eventlet==0.40.3
 gunicorn==23.0.0
 gevent==25.4.2
@@ -27,3 +28,5 @@ sentry-sdk[flask]==2.14.0
 bcrypt==4.2.0
 email-validator==2.2.0
 setuptools==80.9.0
+google-genai==1.51.0
+supabase==2.10.0
