@@ -67,6 +67,9 @@ def init_security_middleware(app: Flask):
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        if request.path.startswith("/api/auth/") or request.path.startswith("/api/admin/"):
+            response.headers["Cache-Control"] = "no-store, max-age=0"
+            response.headers["Pragma"] = "no-cache"
         response.headers.pop("X-Powered-By", None)
         response.headers.pop("Server", None)
         

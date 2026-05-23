@@ -579,7 +579,7 @@ def customer_profile(user_id: int):
 
 
 @api_bp.get("/admin/export")
-@require_role("admin", allow_query_token=True, missing_status=403)
+@require_role("admin", missing_status=403)
 def export_report():
     report_type = request.args.get("type", "orders")
     fmt = request.args.get("format", "csv")
