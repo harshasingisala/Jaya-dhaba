@@ -51,7 +51,7 @@ def init_security_middleware(app: Flask):
         # 2. CSP (Strict)
         csp = (
             "default-src 'self'; "
-            "script-src 'self' https://checkout.razorpay.com; "
+            "script-src 'self' https://checkout.razorpay.com https://cdnjs.cloudflare.com; "
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
             "font-src 'self' https://fonts.gstatic.com; "
             "img-src 'self' data: blob: https:; "
