@@ -923,7 +923,7 @@ def revenue():
     with db.connect(current_app.config["DATABASE_URL"]) as conn:
         daily = conn.execute(
             f"""
-            SELECT date(created_at) AS label, COALESCE(SUM(total), 0) AS revenue
+            SELECT date(created_at) AS label, COUNT(*) AS orders, COALESCE(SUM(total), 0) AS revenue
             FROM orders
             WHERE {where_sql}
             GROUP BY date(created_at)
@@ -934,7 +934,7 @@ def revenue():
         ).fetchall()
         weekly = conn.execute(
             f"""
-            SELECT {week_expr} AS label, COALESCE(SUM(total), 0) AS revenue
+            SELECT {week_expr} AS label, COUNT(*) AS orders, COALESCE(SUM(total), 0) AS revenue
             FROM orders
             WHERE {where_sql}
             GROUP BY {week_expr}
@@ -945,7 +945,7 @@ def revenue():
         ).fetchall()
         monthly = conn.execute(
             f"""
-            SELECT {month_expr} AS label, COALESCE(SUM(total), 0) AS revenue
+            SELECT {month_expr} AS label, COUNT(*) AS orders, COALESCE(SUM(total), 0) AS revenue
             FROM orders
             WHERE {where_sql}
             GROUP BY {month_expr}

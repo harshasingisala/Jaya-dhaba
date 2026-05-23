@@ -54,7 +54,9 @@ export default function DailyReport() {
   const [activeTab, setActiveTab] = useState('daily');
   const [date, setDate] = useState(todayIso());
   const [report, setReport] = useState(null);
+  const [periodReport, setPeriodReport] = useState({ weekly: [], monthly: [] });
   const [loading, setLoading] = useState(true);
+  const [periodLoading, setPeriodLoading] = useState(false);
   const [error, setError] = useState('');
   const [pdfLoading, setPdfLoading] = useState(false);
 
@@ -63,8 +65,13 @@ export default function DailyReport() {
   }, []);
 
   useEffect(() => {
-    fetchReport(date);
-  }, [date]);
+    if (activeTab === 'daily') fetchReport(date);
+  }, [activeTab, date]);
+
+  useEffect(() => {
+    if (activeTab === 'daily') return;
+    fetchPeriodReport();
+  }, [activeTab]);
 
   async function fetchReport(targetDate = date) {
     setLoading(true);
@@ -77,6 +84,23 @@ export default function DailyReport() {
       setError(`Failed to generate report${status}.`);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function fetchPeriodReport() {
+    setPeriodLoading(true);
+    setError('');
+    try {
+      const data = await api.getRevenue();
+      setPeriodReport({
+        weekly: Array.isArray(data?.weekly) ? data.weekly : [],
+        monthly: Array.isArray(data?.monthly) ? data.monthly : [],
+      });
+    } catch (err) {
+      if (import.meta.env.DEV) console.error('Period report failed', err);
+      setError('Failed to load report.');
+    } finally {
+      setPeriodLoading(false);
     }
   }
 
@@ -128,12 +152,67 @@ export default function DailyReport() {
   }, [report]);
 
   if (activeTab !== 'daily') {
+    const rows = periodReport[activeTab] || [];
+    const totalOrders = rows.reduce((sum, row) => sum + Number(row.orders || 0), 0);
+    const totalRevenue = rows.reduce((sum, row) => sum + Number(row.revenue || 0), 0);
     return (
       <div className="min-h-[70vh] rounded-[2rem] bg-[#111111] text-white p-8">
         <ReportTabs activeTab={activeTab} setActiveTab={setActiveTab} />
-        <div className="h-[50vh] grid place-items-center text-center">
-          <p className="text-3xl font-serif italic text-[#C9A84C]">Coming Soon</p>
-        </div>
+        {periodLoading ? (
+          <div className="h-[50vh] grid place-items-center text-center">
+            <Loader2 className="animate-spin text-[#C9A84C]" size={52} />
+          </div>
+        ) : error ? (
+          <div className="h-[50vh] grid place-items-center text-center">
+            <div>
+              <p className="text-2xl font-serif italic text-red-300">{error}</p>
+              <button onClick={fetchPeriodReport} className="mt-5 min-h-[44px] rounded-xl bg-[#C9A84C] px-6 font-black uppercase text-black">
+                Retry
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-8 space-y-6">
+            <section className="grid md:grid-cols-3 gap-4">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                <p className="text-[10px] font-black uppercase tracking-widest text-white/35">Report Type</p>
+                <p className="mt-3 text-2xl font-serif italic text-[#C9A84C]">{activeTab === 'weekly' ? 'Weekly' : 'Monthly'}</p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                <p className="text-[10px] font-black uppercase tracking-widest text-white/35">Total Orders</p>
+                <p className="mt-3 text-2xl font-serif italic text-[#C9A84C]">{count(totalOrders)}</p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                <p className="text-[10px] font-black uppercase tracking-widest text-white/35">Total Revenue</p>
+                <p className="mt-3 text-2xl font-serif italic text-[#C9A84C]">{amount(totalRevenue)}</p>
+              </div>
+            </section>
+            <Panel title={`${activeTab === 'weekly' ? 'Weekly' : 'Monthly'} Orders`}>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-white/35">
+                    <th className="py-3">Period</th>
+                    <th className="py-3 text-right">Orders</th>
+                    <th className="py-3 text-right">Revenue</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.length === 0 ? (
+                    <tr className="border-t border-white/10">
+                      <td className="py-6 text-white/55" colSpan={3}>No orders found yet.</td>
+                    </tr>
+                  ) : rows.map((row) => (
+                    <tr key={row.label} className="border-t border-white/10">
+                      <td className="py-4 text-white/80">{row.label}</td>
+                      <td className="py-4 text-right text-white/70">{count(row.orders)}</td>
+                      <td className="py-4 text-right text-[#C9A84C]">{amount(row.revenue)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Panel>
+          </div>
+        )}
       </div>
     );
   }
