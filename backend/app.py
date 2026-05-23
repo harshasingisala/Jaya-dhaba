@@ -73,6 +73,9 @@ def create_app(overrides: dict | None = None) -> Flask:
         "https://www.jayadhaba.online",
         "https://jayadhaba.online",
     ]
+    for origin in ("https://www.jayadhaba.online", "https://jayadhaba.online"):
+        if origin not in cors_origins:
+            cors_origins.append(origin)
     if not is_production:
         for origin in (
             "http://localhost:5173",

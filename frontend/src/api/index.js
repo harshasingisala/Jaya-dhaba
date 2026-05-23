@@ -76,9 +76,9 @@ export function isTokenExpired(token) {
   }
 }
 
-async function ensureCsrfToken() {
+async function ensureCsrfToken(forceRefresh = false) {
   const existing = getCsrfToken();
-  if (existing) return existing;
+  if (existing && !forceRefresh) return existing;
   const res = await fetch(`${BASE_URL}/api/csrf-token`, {
     method: 'GET',
     credentials: 'include',
@@ -106,16 +106,37 @@ async function request(path, options = {}) {
   }
 
   const url = `${BASE_URL}${path}`;
-  const res = await fetch(url, {
+  const makeFetch = () => fetch(url, {
     ...fetchOptions,
     method,
     credentials: 'include',
     headers,
   });
+  let res = await makeFetch();
   const payload = await res.json().catch((err) => {
     console.error('[JAYA_DEBUG] Caught error in request json parse:', err);
     return {};
   });
+  if (
+    res.status === 403 &&
+    method !== 'GET' &&
+    String(payload.message || '').toLowerCase().includes('csrf')
+  ) {
+    headers['X-CSRF-Token'] = await ensureCsrfToken(true);
+    res = await makeFetch();
+    const retryPayload = await res.json().catch((err) => {
+      console.error('[JAYA_DEBUG] Caught error in retry request json parse:', err);
+      return {};
+    });
+    if (!res.ok) {
+      throw new ApiRequestError(
+        retryPayload.msg || retryPayload.message || retryPayload.error || `Request failed (${res.status})`,
+        { status: res.status, payload: retryPayload, url },
+      );
+    }
+    if (rawResponse) return retryPayload;
+    return retryPayload?.data ?? retryPayload;
+  }
   if (res.status === 401 || res.status === 422) {
     handleExpiredSession();
   }

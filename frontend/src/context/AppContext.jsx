@@ -61,17 +61,19 @@ export function AppProvider({ children }) {
         setMenuError(null);
         setMenuUnavailable(false);
         
-        // Update cart items to ensure they have correct integer IDs
+        const liveIds = new Set(
+          data.flatMap((item) => [
+            String(item.id),
+            `${item.id}-half`,
+            `${item.id}-full`,
+          ])
+        );
+
+        // Drop stale cart entries from older deployments so checkout never posts a missing menu item.
         setCart(prevCart => {
-          return prevCart.map(cartItem => {
-            // If cart item has string ID, try to find matching menu item
-            if (typeof cartItem.id === 'string') {
-              const menuItem = data.find(item => item.id === Number(cartItem.id) || item.client_id === cartItem.id);
-              if (menuItem) {
-                return { ...cartItem, id: menuItem.id };
-              }
-            }
-            return cartItem;
+          return prevCart.filter(cartItem => {
+            const id = String(cartItem.id || cartItem.menu_item_id || '');
+            return liveIds.has(id);
           });
         });
       } catch (error) {
