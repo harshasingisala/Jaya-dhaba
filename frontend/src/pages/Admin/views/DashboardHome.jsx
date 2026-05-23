@@ -39,7 +39,7 @@ export default function DashboardHome() {
           if (entry.isIntersecting) {
             counted.current = true;
             if (revenueRef.current) countUp(revenueRef.current, stats.revenue, 1500);
-            if (avgRef.current) avgRef.current.textContent = 'N/A';
+            if (avgRef.current) countUp(avgRef.current, Math.round((stats.revenue || 0) / Math.max(1, stats.orders || 0)), 1500);
             if (ordersRef.current) countUp(ordersRef.current, stats.orders, 1500);
             observer.disconnect();
           }
@@ -50,6 +50,8 @@ export default function DashboardHome() {
     [revenueRef, avgRef, ordersRef].forEach((r) => r.current && observer.observe(r.current));
     return () => observer.disconnect();
   }, [stats]);
+
+  const avgBill = Math.round((stats.revenue || 0) / Math.max(1, stats.orders || 0));
 
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-1000">
@@ -80,8 +82,8 @@ export default function DashboardHome() {
                 <p className="text-[9px] font-black uppercase tracking-widest text-heritage-gold">Today's Revenue • <span className="text-heritage-accent">Live</span></p>
               </div>
               <div className="space-y-2 border-l border-heritage-espresso/5 pl-16">
-                <p ref={avgRef} className="text-3xl font-serif italic text-heritage-espresso/40">N/A</p>
-                <p className="text-[9px] font-black uppercase tracking-widest text-heritage-espresso/20">Daily Average Feed</p>
+                <p className="text-3xl font-serif italic text-heritage-espresso/40">Rs <span ref={avgRef}>{avgBill.toLocaleString()}</span></p>
+                <p className="text-[9px] font-black uppercase tracking-widest text-heritage-espresso/20">Average Bill Value</p>
               </div>
             </div>
 
@@ -100,8 +102,8 @@ export default function DashboardHome() {
                   <Clock size={18} />
                 </div>
                 <div>
-                  <p className="text-lg font-serif italic text-heritage-espresso">N/A</p>
-                  <p className="text-[8px] font-black uppercase tracking-widest text-heritage-espresso/30">Avg Prep Time</p>
+                  <p className="text-lg font-serif italic text-heritage-espresso">{stats.total_active || 0}</p>
+                  <p className="text-[8px] font-black uppercase tracking-widest text-heritage-espresso/30">Active Orders</p>
                 </div>
               </div>
             </div>
@@ -126,13 +128,12 @@ export default function DashboardHome() {
 
       </div>
 
-      {/* External analytics availability */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
         {[
-          { label: 'Swiggy Performance', value: 'N/A', color: 'text-orange-600', trend: 'No feed', desc: 'Platform API not connected' },
-          { label: 'Zomato Rating', value: 'N/A', color: 'text-red-600', trend: 'No feed', desc: 'Platform API not connected' },
-          { label: 'Direct Orders', value: stats.orders, color: 'text-heritage-gold', trend: 'Live', desc: 'Backend order ledger' },
-          { label: 'Customer Retention', value: 'N/A', color: 'text-heritage-accent', trend: 'No feed', desc: 'Loyalty analytics not connected' }
+          { label: 'Pending Orders', value: stats.pending || 0, color: 'text-orange-600', trend: 'Live', desc: 'Awaiting kitchen action' },
+          { label: 'Preparing', value: stats.preparing || 0, color: 'text-red-600', trend: 'Live', desc: 'Currently in kitchen' },
+          { label: 'Enjoying', value: stats.served || 0, color: 'text-heritage-gold', trend: 'Live', desc: 'Marked as guest enjoying' },
+          { label: 'System Status', value: 'Live', color: 'text-heritage-accent', trend: 'Online', desc: 'Backend order ledger active' }
         ].map((item, i) => (
           <div key={i} className="bg-white/40 backdrop-blur-md p-10 rounded-[3.5rem] border border-heritage-espresso/5 group hover:bg-white hover:shadow-2xl transition-all cursor-pointer space-y-6">
             <p className="text-[9px] font-black uppercase tracking-[0.4em] text-heritage-espresso/20 mb-4">{item.label}</p>

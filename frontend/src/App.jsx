@@ -6,7 +6,6 @@ import FloatingBookBar from "./components/FloatingBookBar";
 import Home from "./pages/Home";
 import Admin from "./pages/Admin";
 import AdminLogin from "./pages/Admin/Login";
-import SmokeTest from "./pages/Admin/SmokeTest";
 import Checkout from "./pages/Checkout";
 import Reservation from "./pages/Reservation";
 import Track from "./pages/Track";
@@ -54,7 +53,6 @@ function AnimatedRoutes() {
           <Route path="/about" element={<Home />} />
           <Route path="/contact" element={<Home />} />
           <Route path="/admin/login" element={<AdminLogin />} />
-          <Route path="/admin/smoke-test" element={<SmokeTest />} />
           <Route path="/admin/*" element={<ProtectedRoute allowedRoles={["admin", "owner", "staff", "manager"]}><Admin /></ProtectedRoute>} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/reservation" element={<Reservation />} />

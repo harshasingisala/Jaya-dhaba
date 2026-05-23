@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Image as ImageIcon, ToggleLeft, ToggleRight, DollarSign, Info, Loader2, Sparkles, X, Save } from 'lucide-react';
+import { Plus, Edit, Trash2, Image as ImageIcon, ToggleLeft, ToggleRight, Info, Loader2, X, Save } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
 import api from '../../../api';
 import { usePollingFallback } from '../../../hooks/usePollingFallback';
@@ -223,12 +223,6 @@ export default function MenuManager() {
                   <div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-all duration-500 translate-x-4 group-hover:translate-x-0">
                     <button onClick={() => { setEditingItem(item); setIsModalOpen(true); }} className="min-h-[44px] min-w-[44px] p-3 bg-heritage-stone rounded-2xl text-heritage-espresso/40 hover:text-heritage-espresso hover:shadow-lg transition-all">
                       <Edit size={16} />
-                    </button>
-                    <button
-                      onClick={() => alert("AI Heritage Model Initializing... Photo enhancement will be ready shortly.")}
-                      className="min-h-[44px] min-w-[44px] p-3 bg-heritage-gold/10 rounded-2xl text-heritage-gold hover:bg-heritage-gold hover:text-white hover:shadow-lg transition-all"
-                    >
-                      <Sparkles size={16} />
                     </button>
                     <button onClick={() => handleDelete(item)} className="min-h-[44px] min-w-[44px] p-3 bg-heritage-stone rounded-2xl text-heritage-espresso/40 hover:text-red-500 hover:shadow-lg transition-all">
                       <Trash2 size={16} />
