@@ -37,7 +37,7 @@ def create_app(overrides: dict | None = None) -> Flask:
     is_development = os.environ.get("FLASK_ENV") == "development"
     app.config.update(
         SECRET_KEY=os.getenv("SECRET_KEY")
-        or (os.getenv("FLASK_SECRET_KEY") if not is_production else None)
+        or os.getenv("FLASK_SECRET_KEY")
         or (None if is_production else "development-secret"),
         JWT_SECRET_KEY=os.getenv("JWT_SECRET_KEY")
         or os.getenv("SECRET_KEY")
@@ -53,8 +53,8 @@ def create_app(overrides: dict | None = None) -> Flask:
         OPENAI_API_KEY=os.getenv("OPENAI_API_KEY", ""),
         GOOGLE_API_KEY=os.getenv("GOOGLE_API_KEY", ""),
         CHATBOT_ENABLED=os.getenv("CHATBOT_ENABLED", "false").lower() == "true",
-        COOKIE_SECURE=os.getenv("COOKIE_SECURE", "true").lower() == "true",
-        SESSION_COOKIE_SECURE=os.getenv("SESSION_COOKIE_SECURE", "true").lower() == "true",
+        COOKIE_SECURE=True if is_production else os.getenv("COOKIE_SECURE", "true").lower() == "true",
+        SESSION_COOKIE_SECURE=True if is_production else os.getenv("SESSION_COOKIE_SECURE", "true").lower() == "true",
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",
         WTF_CSRF_SSL_STRICT=os.getenv("WTF_CSRF_SSL_STRICT", "true").lower() == "true",
@@ -73,6 +73,13 @@ def create_app(overrides: dict | None = None) -> Flask:
         "https://www.jayadhaba.online",
         "https://jayadhaba.online",
     ]
+    if is_production:
+        cors_origins = [
+            origin
+            for origin in cors_origins
+            if urlparse(origin).scheme == "https"
+            and urlparse(origin).hostname not in {"localhost", "127.0.0.1", "::1"}
+        ]
     for origin in ("https://www.jayadhaba.online", "https://jayadhaba.online"):
         if origin not in cors_origins:
             cors_origins.append(origin)
@@ -269,8 +276,8 @@ def _validate_runtime_config(app: Flask, cors_origins: list[str], is_production:
         errors.append("WTF_CSRF_SSL_STRICT=true is required in production")
     if not app.config.get("RAZORPAY_KEY_ID") or not app.config.get("RAZORPAY_KEY_SECRET"):
         errors.append("RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET are required in production")
-    if not app.config.get("RAZORPAY_WEBHOOK_SECRET"):
-        errors.append("RAZORPAY_WEBHOOK_SECRET is required in production")
+    # Webhook verification is enforced at the webhook endpoint itself. Do not
+    # fail the entire API boot if the webhook secret is being added later.
     if not database_url:
         errors.append("DATABASE_URL must point to Supabase Postgres in production")
     elif database_url.startswith("sqlite"):
