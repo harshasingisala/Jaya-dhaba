@@ -7,6 +7,7 @@ const UI_STATE = Object.freeze({ TOAST: 'toast', CHAT: 'chat', HIDDEN: 'hidden' 
 const HISTORY_WINDOW = 6;
 const INPUT_MAX_LEN = 500;
 const TOAST_DELAY_MS = 6000;
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 const makeInitialMsg = (uid) => ({
   id: `init-${uid}`,
@@ -83,7 +84,7 @@ export default function AIChatbot({ language = 'en', menuItems = [], botOpen = f
     appendMessage('user', safe);
 
     try {
-      const res = await fetch('/api/jaya-concierge', {
+      const res = await fetch(`${API_BASE_URL}/api/jaya-concierge`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId, message: safe, history: historySnapshot, language }),

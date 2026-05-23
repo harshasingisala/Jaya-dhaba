@@ -422,13 +422,13 @@ def jaya_concierge():
 
         if isinstance(exc, ValueError) and msg == "missing_key":
             return jsonify({
-                "error": "AI assistant is temporarily unavailable.",
+                "error": "AI assistant temporarily unavailable",
                 "message": "AI service unavailable",
             }), 503
 
         if any(token in lowered for token in ("api key", "403", "invalid", "blocked", "leaked")):
             return jsonify({
-                "error": "AI assistant is temporarily unavailable.",
+                "error": "AI assistant temporarily unavailable",
                 "message": "AI service unavailable",
             }), 503
 
@@ -441,6 +441,6 @@ def jaya_concierge():
             exc_info=True,
         )
         return jsonify({
-            "error": "AI assistant is temporarily unavailable.",
+            "error": "AI assistant temporarily unavailable",
             "message": "AI service unavailable",
-        }), 500
+        }), 503

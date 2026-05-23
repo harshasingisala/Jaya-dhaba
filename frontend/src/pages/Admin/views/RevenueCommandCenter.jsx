@@ -23,16 +23,18 @@ export default function RevenueCommandCenter() {
   const [stats, setStats] = useState({ revenue: 0, orders: 0, growth: 0 });
   const [trendData, setTrendData] = useState(DEFAULT_TREND);
   const [health, setHealth] = useState({ db: 'checking', api: 'checking', storage: 'unknown', security: 'unknown', lastCheck: null });
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
 
   useEffect(() => {
     if (!restaurantId) return;
     loadSnapshot();
     loadHealth();
-  }, [restaurantId]);
+  }, [restaurantId, fromDate, toDate]);
 
   const loadSnapshot = async () => {
     try {
-      const snapshot = await fetchTodaySnapshot(restaurantId);
+      const snapshot = await fetchTodaySnapshot(restaurantId, { from_date: fromDate, to_date: toDate });
       setStats((prev) => ({
         ...prev,
         revenue: snapshot.completedRevenue,
@@ -54,7 +56,8 @@ export default function RevenueCommandCenter() {
         security: 'enforced',
         lastCheck: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
       });
-    } catch {
+    } catch (err) {
+      console.error('[JAYA_DEBUG] Caught error in loadHealth:', err);
       setHealth({
         db: 'unknown',
         api: 'down',
@@ -75,6 +78,20 @@ export default function RevenueCommandCenter() {
           <h2 className="text-6xl font-serif italic text-heritage-espresso leading-none">Revenue <span className="text-heritage-gold">Command Center</span></h2>
         </div>
         <div className="flex gap-4">
+          <input
+            type="date"
+            value={fromDate}
+            onChange={(event) => setFromDate(event.target.value)}
+            className="px-4 py-3 bg-white/50 backdrop-blur-md rounded-2xl border border-heritage-espresso/5 text-[9px] font-black uppercase tracking-widest text-heritage-espresso/50 outline-none"
+            aria-label="Revenue from date"
+          />
+          <input
+            type="date"
+            value={toDate}
+            onChange={(event) => setToDate(event.target.value)}
+            className="px-4 py-3 bg-white/50 backdrop-blur-md rounded-2xl border border-heritage-espresso/5 text-[9px] font-black uppercase tracking-widest text-heritage-espresso/50 outline-none"
+            aria-label="Revenue to date"
+          />
           <div className="px-6 py-3 bg-white/50 backdrop-blur-md rounded-2xl border border-heritage-espresso/5 flex items-center gap-3">
             <div className={`w-2 h-2 rounded-full ${health.api === 'online' ? 'bg-green-500' : 'bg-red-500'}`} />
             <span className="text-[9px] font-black uppercase tracking-widest text-heritage-espresso/40">API {health.api}</span>
@@ -218,15 +235,19 @@ function HealthRow({ label, status }) {
   );
 }
 
-const BASE_URL = import.meta.env.DEV ? '' : import.meta.env.VITE_API_URL || '';
+const BASE_URL = import.meta.env.VITE_API_URL || '';
 
 // ─── Fetch real today's data from Supabase ────────────────────────────────────
-async function fetchTodaySnapshot(restaurantId) {
-  const [stats, orders] = await Promise.all([
+async function fetchTodaySnapshot(restaurantId, dateRange = {}) {
+  const [stats, orders, revenue] = await Promise.all([
     api.getAdminStats(),
     api.getOrders(),
+    api.getRevenue(dateRange),
   ]);
-  const completedRevenue = Number(stats.revenue || 0);
+  const daily = Array.isArray(revenue?.daily) ? revenue.daily : [];
+  const completedRevenue = daily.length > 0
+    ? daily.reduce((sum, row) => sum + Number(row.revenue || 0), 0)
+    : Number(stats.revenue || 0);
   const totalOrders = Number(stats.orders || orders.length || 0);
 
   return {
@@ -236,7 +257,9 @@ async function fetchTodaySnapshot(restaurantId) {
     pendingOrders: orders.filter((o) => o.status === 'Placed' || o.status === 'Confirmed').length,
     preparingOrders: orders.filter((o) => o.status === 'Preparing').length,
     avgOrderValue: totalOrders > 0 ? Math.round(completedRevenue / totalOrders) : 0,
-    trendData: DEFAULT_TREND,
+    trendData: daily.length > 0
+      ? daily.slice().reverse().map((row) => ({ time: row.label, sales: Number(row.revenue || 0), orders: 0 }))
+      : DEFAULT_TREND,
   };
 }
 
@@ -266,7 +289,11 @@ Provide: (1) Performance summary, (2) What's working well, (3) One thing to act 
 
   const res = await fetch(`${BASE_URL}/api/jaya-concierge`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${localStorage.getItem('admin_token') || ''}`,
+    },
+    credentials: 'include',
     body: JSON.stringify({ message: prompt }),
   });
 
@@ -276,6 +303,7 @@ Provide: (1) Performance summary, (2) What's working well, (3) One thing to act 
   // Handle both possible response shapes from your existing endpoint
   return (
     data.message ||
+    data.reply ||
     data.response ||
     data.text ||
     (Array.isArray(data.content) ? data.content.map(b => b.text || '').join('') : '') ||

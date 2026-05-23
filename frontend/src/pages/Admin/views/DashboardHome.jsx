@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ShoppingBag, TrendingUp, Users, Clock } from 'lucide-react';
+import { Clock, Plus, ShoppingBag } from 'lucide-react';
 import api from '../../../api';
 import { useApp } from '../../../context/AppContext';
 import { countUp } from '../../../utils/scrollAnimations';
 
 export default function DashboardHome() {
   const { restaurantId } = useApp();
+  const navigate = useNavigate();
   const [stats, setStats] = useState({ revenue: 0, orders: 0 });
   const revenueRef = useRef(null);
   const avgRef = useRef(null);
@@ -15,11 +17,18 @@ export default function DashboardHome() {
 
   useEffect(() => {
     if (!restaurantId) return;
-    api.getAdminStats(restaurantId)
-      .then((s) => setStats((prev) => ({ ...prev, ...s })))
-      .catch(() => {
-        // Stats fetch failed; keep previous state or defaults
-      });
+    const fetchData = async () => {
+      try {
+        const result = await api.getStats(restaurantId);
+        setStats((prev) => ({ ...prev, ...result }));
+      } catch (err) {
+        console.error('Overview fetch failed:', err);
+      }
+    };
+
+    fetchData();
+    const interval = setInterval(fetchData, 60000);
+    return () => clearInterval(interval);
   }, [restaurantId]);
 
   useEffect(() => {
@@ -57,6 +66,13 @@ export default function DashboardHome() {
               <h2 className="text-4xl font-serif italic text-heritage-espresso">Welcome back, Sunil Behera</h2>
               <p className="text-[10px] font-black uppercase tracking-[0.4em] text-heritage-espresso/20">Operational Monitoring Console</p>
             </div>
+            <button
+              onClick={() => navigate('/admin/orders?action=new-order')}
+              className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-heritage-gold px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white shadow-lg transition-all hover:bg-heritage-espresso"
+            >
+              <Plus size={16} />
+              Manual Order
+            </button>
 
             <div className="flex flex-wrap gap-16">
               <div className="space-y-2">

@@ -22,6 +22,17 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileOpen]);
+
   const scrollTo = (id) => {
     setMobileOpen(false);
     const el = document.getElementById(id);
@@ -50,7 +61,7 @@ export default function Navbar() {
         {/* ── LOGO ── */}
         <button
           onClick={() => { setMobileOpen(false); navigate("/"); }}
-          className="flex items-center group"
+          className="flex items-center min-h-[44px] group"
           aria-label="Jaya Dhaba Home"
         >
           <span
@@ -107,7 +118,7 @@ export default function Navbar() {
 
         {/* ── MOBILE BURGER ── */}
         <button
-          className="lg:hidden flex flex-col gap-1.5 p-2"
+          className="relative z-[10000] lg:hidden flex min-h-[44px] min-w-[44px] flex-col items-center justify-center gap-1.5 p-2"
           onClick={() => setMobileOpen((v) => !v)}
           aria-label="Toggle menu"
         >
@@ -124,10 +135,21 @@ export default function Navbar() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="lg:hidden overflow-hidden border-t"
-            style={{ backgroundColor: "var(--bg-primary)", borderColor: "var(--brown-brand)10" }}
+            className="lg:hidden border-t"
+            style={{
+              backgroundColor: "var(--bg-primary)",
+              borderColor: "var(--brown-brand)10",
+              overflowY: "auto",
+              WebkitOverflowScrolling: "touch",
+              maxHeight: "100vh",
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              zIndex: 9999,
+            }}
           >
-            <div className="px-6 py-6 flex flex-col gap-5">
+            <div className="px-6 pb-8 pt-24 flex flex-col gap-5">
               {navLinks.map((link) => (
                 <button
                   key={link.label}
