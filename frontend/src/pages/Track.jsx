@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Package, ChefHat, CheckSquare, House, ArrowRight, Loader2, Sparkles, Info, ShoppingBag } from 'lucide-react';
+import { Search, Package, ChefHat, CheckSquare, House, ArrowRight, Loader2, Sparkles, Info, ShoppingBag, PartyPopper, Star } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../api';
 import { apiUrl } from '../api/config';
@@ -19,6 +19,11 @@ export default function Track() {
    const [order, setOrder] = useState(null);
    const [isLoading, setIsLoading] = useState(false);
    const [error, setError] = useState(null);
+   const [showThankYou, setShowThankYou] = useState(false);
+   const [rating, setRating] = useState(5);
+   const [ratingComment, setRatingComment] = useState('');
+   const [ratingStatus, setRatingStatus] = useState('');
+   const [ratingOpen, setRatingOpen] = useState(false);
    const location = useLocation();
    const navigate = useNavigate();
 
@@ -46,6 +51,13 @@ export default function Track() {
       return () => stream.close();
    }, [order?.id, location.search]);
 
+   useEffect(() => {
+      if (order?.status !== 'Served') return undefined;
+      setShowThankYou(true);
+      const timer = window.setTimeout(() => setShowThankYou(false), 5000);
+      return () => window.clearTimeout(timer);
+   }, [order?.status]);
+
    const fetchOrder = async (id, token = '', options = {}) => {
       if (!options.preserveCurrent) setIsLoading(true);
       setError(null);
@@ -69,12 +81,68 @@ export default function Track() {
       }
    };
 
+   const shareReceipt = () => {
+      if (!order) return;
+      const lines = [
+         'Jaya Dhaba Receipt',
+         `Order: #${order.order_number || order.id}`,
+         `Guest: ${order.customer_name || order.guest_name || 'Guest'}`,
+         `Status: ${order.status}`,
+         `Payment: ${order.payment_method || 'Not recorded'}`,
+         '',
+         'Items:',
+         ...(order.items || []).map((item) => {
+            const qty = item.qty || item.quantity || 1;
+            const price = Number(item.price || item.unit_price || 0);
+            return `- ${qty} x ${item.name} = Rs ${price * qty}`;
+         }),
+         '',
+         `Subtotal: Rs ${order.subtotal || order.total || 0}`,
+         order.tax ? `Tax: Rs ${order.tax}` : '',
+         `Total: Rs ${order.total || 0}`,
+         '',
+         'Thank you for coming to Jaya Dhaba. What a wonderful experience it was serving you.',
+      ].filter(Boolean);
+      window.open(`https://wa.me/?text=${encodeURIComponent(lines.join('\n'))}`, '_blank', 'noopener,noreferrer');
+   };
+
+   const submitRating = async () => {
+      if (!order?.order_number) {
+         setRatingStatus('Order number missing. Please refresh the tracking link.');
+         return;
+      }
+      setRatingStatus('Saving...');
+      try {
+         await api.submitOrderFeedback({
+            orderNumber: order.order_number,
+            rating,
+            comment: ratingComment,
+         });
+         setRatingStatus('Thank you. Your experience has been recorded.');
+         setRatingOpen(false);
+      } catch {
+         setRatingStatus('Rating could not be saved. Please try again.');
+      }
+   };
+
    const foundStepIndex = statusSteps.findIndex(s => s.id === order?.status);
    const currentStepIndex = foundStepIndex >= 0 ? foundStepIndex : 0;
 
    return (
       <div className="min-h-screen heritage-stone-bg relative overflow-hidden py-20 px-6">
          <div className="absolute inset-0 bg-gradient-to-tr from-heritage-terracotta/5 via-transparent to-heritage-gold/5 pointer-events-none" />
+         {showThankYou && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-heritage-espresso/45 backdrop-blur-sm px-6 animate-in fade-in duration-300">
+               <div className="bg-white rounded-[3rem] border border-heritage-gold/30 shadow-2xl max-w-lg w-full p-10 text-center space-y-5">
+                  <div className="w-20 h-20 mx-auto rounded-[2rem] bg-heritage-gold text-white flex items-center justify-center shadow-xl">
+                     <PartyPopper size={38} />
+                  </div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.45em] text-heritage-gold">Enjoying</p>
+                  <h2 className="text-4xl font-serif italic text-heritage-espresso leading-tight">Thank you for coming to Jaya Dhaba</h2>
+                  <p className="text-sm font-bold text-heritage-espresso/45">We hope this meal feels like a wonderful memory already.</p>
+               </div>
+            </div>
+         )}
 
          <div className="max-w-4xl mx-auto space-y-16 relative z-10">
 
@@ -196,19 +264,51 @@ export default function Track() {
                   {/* POST-SERVICE ACTIONS */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                      <button
-                        onClick={() => window.open(`https://wa.me/?text=Check out my heritage order from Jaya Dhaba! ID: #${order.id}. Track it here: ${window.location.href}`, '_blank')}
+                        onClick={shareReceipt}
                         className="bg-white/40 backdrop-blur-xl p-8 rounded-3xl border border-heritage-espresso/5 flex items-center justify-center gap-4 text-[10px] font-black uppercase tracking-widest text-heritage-espresso hover:bg-white transition-all shadow-xl"
                      >
                         <ShoppingBag size={18} className="text-heritage-gold" />
                         Share WhatsApp Receipt
                      </button>
                      {order.status === 'Served' && (
-                        <button className="bg-heritage-gold text-white p-8 rounded-3xl flex items-center justify-center gap-4 text-[10px] font-black uppercase tracking-widest hover:bg-heritage-espresso transition-all shadow-xl shadow-heritage-gold/20 animate-bounce">
+                        <button onClick={() => setRatingOpen(true)} className="bg-heritage-gold text-white p-8 rounded-3xl flex items-center justify-center gap-4 text-[10px] font-black uppercase tracking-widest hover:bg-heritage-espresso transition-all shadow-xl shadow-heritage-gold/20">
                            <Sparkles size={18} />
                            Rate Your Experience
                         </button>
                      )}
                   </div>
+
+                  {ratingOpen && (
+                     <div className="bg-white rounded-[3rem] border border-heritage-espresso/5 p-8 shadow-xl space-y-5">
+                        <div>
+                           <p className="text-[10px] font-black uppercase tracking-widest text-heritage-gold">Guest feedback</p>
+                           <h3 className="text-3xl font-serif italic text-heritage-espresso">Rate your experience</h3>
+                        </div>
+                        <div className="flex gap-2">
+                           {[1, 2, 3, 4, 5].map((value) => (
+                              <button
+                                 key={value}
+                                 onClick={() => setRating(value)}
+                                 className={`w-12 h-12 rounded-2xl flex items-center justify-center border ${rating >= value ? 'bg-heritage-gold text-white border-heritage-gold' : 'bg-white text-heritage-espresso/25 border-heritage-espresso/10'}`}
+                              >
+                                 <Star size={20} fill="currentColor" />
+                              </button>
+                           ))}
+                        </div>
+                        <textarea
+                           value={ratingComment}
+                           onChange={(event) => setRatingComment(event.target.value)}
+                           maxLength={500}
+                           placeholder="Anything we should remember for next time?"
+                           className="w-full min-h-[110px] rounded-3xl border border-heritage-espresso/10 p-5 text-sm outline-none focus:border-heritage-gold"
+                        />
+                        <div className="flex flex-wrap items-center gap-3">
+                           <button onClick={submitRating} className="px-6 py-4 rounded-full bg-heritage-espresso text-white text-[10px] font-black uppercase tracking-widest">Submit Rating</button>
+                           <button onClick={() => setRatingOpen(false)} className="px-6 py-4 rounded-full bg-heritage-stone text-heritage-espresso text-[10px] font-black uppercase tracking-widest">Cancel</button>
+                           {ratingStatus && <span className="text-xs font-bold text-heritage-espresso/45">{ratingStatus}</span>}
+                        </div>
+                     </div>
+                  )}
 
                   <p className="text-center text-[10px] font-black uppercase tracking-widest text-heritage-espresso/20 italic">
                      Questions about your journey? Sunil Behera is ready at +91 73861 85821.

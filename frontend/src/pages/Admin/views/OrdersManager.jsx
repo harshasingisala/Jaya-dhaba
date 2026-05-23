@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Archive, Check, ChefHat, ClipboardList, Loader2, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
+import { Archive, Check, ChefHat, ClipboardList, Loader2, MessageCircle, PauseCircle, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
 import api from '../../../api';
 import { getSocket } from '../../../lib/socket';
 import { usePollingFallback } from '../../../hooks/usePollingFallback';
@@ -34,6 +34,34 @@ function formatItems(order) {
   return order.items.map((item) => `${item.qty || item.quantity || 1}x ${item.name}`).join(', ');
 }
 
+function buildWhatsAppReceipt(order) {
+  const itemLines = Array.isArray(order.items) && order.items.length
+    ? order.items.map((item) => {
+        const qty = item.qty || item.quantity || 1;
+        const unit = Number(item.price || item.unit_price || 0);
+        return `- ${qty} x ${item.name} @ ${formatMoney(unit)} = ${formatMoney(unit * qty)}`;
+      })
+    : ['- Custom order'];
+  return [
+    'Jaya Dhaba Receipt',
+    `Order: ${displayId(order)}`,
+    `Guest: ${order.customer_name || order.guest_name || 'Guest'}`,
+    `Phone: ${order.customer_phone || order.guest_phone || 'Not shared'}`,
+    `Table: ${order.table || order.table_id || 'Guest'}`,
+    `Status: ${apiStatus(order)}`,
+    `Payment: ${order.payment_method || 'Not recorded'}`,
+    '',
+    'Items:',
+    ...itemLines,
+    '',
+    `Subtotal: ${formatMoney(order.subtotal || order.total || 0)}`,
+    order.tax ? `Tax: ${formatMoney(order.tax)}` : '',
+    `Total: ${formatMoney(order.total)}`,
+    '',
+    'Thank you for coming to Jaya Dhaba. What a wonderful experience it was serving you.',
+  ].filter(Boolean).join('\n');
+}
+
 function startOfDay(date) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
@@ -55,6 +83,7 @@ export default function OrdersManager() {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [clearConfirm, setClearConfirm] = useState(false);
+  const [deleteAllConfirm, setDeleteAllConfirm] = useState(false);
   const [archiveDate, setArchiveDate] = useState('');
   const [query, setQuery] = useState('');
   const [dateFilter, setDateFilter] = useState('');
@@ -121,6 +150,12 @@ export default function OrdersManager() {
     const timer = window.setTimeout(() => setClearConfirm(false), 5000);
     return () => window.clearTimeout(timer);
   }, [clearConfirm]);
+
+  useEffect(() => {
+    if (!deleteAllConfirm) return undefined;
+    const timer = window.setTimeout(() => setDeleteAllConfirm(false), 6000);
+    return () => window.clearTimeout(timer);
+  }, [deleteAllConfirm]);
 
   useEffect(() => {
     const handler = (event) => {
@@ -320,6 +355,28 @@ export default function OrdersManager() {
     }
   };
 
+  const archiveAllLiveOrders = async () => {
+    setBulkLoading(true);
+    try {
+      const result = await api.archiveAllOrders();
+      toast(`${result.archived || 0} orders moved to archive`, 'success');
+      setSelectedIds(new Set());
+      setDeleteAllConfirm(false);
+      if (!getSocket().connected) refreshAll();
+    } catch {
+      toast('Delete all failed. Nothing was changed.', 'error');
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  const shareWhatsAppReceipt = (order) => {
+    const phone = String(order.customer_phone || order.guest_phone || '').replace(/\D/g, '');
+    const text = encodeURIComponent(buildWhatsAppReceipt(order));
+    const target = phone.length >= 10 ? `91${phone.slice(-10)}` : '';
+    window.open(`https://wa.me/${target}?text=${text}`, '_blank', 'noopener,noreferrer');
+  };
+
   const toggleExpand = (id) => {
     setExpandedIds((prev) => {
       const next = new Set(prev);
@@ -414,20 +471,36 @@ export default function OrdersManager() {
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={() => setManualOpen(true)}
-            className="px-5 py-3 rounded-full bg-heritage-gold text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-2"
+            className="min-h-[54px] px-5 py-3 rounded-2xl bg-heritage-gold text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-heritage-gold/20"
           >
             <Plus size={14} />
             Manual Order
           </button>
           <button
             onClick={togglePauseOrders}
-            className={`px-5 py-3 rounded-full text-[10px] font-black uppercase tracking-widest ${ordersPaused ? 'bg-red-600 text-white' : 'bg-white text-heritage-espresso/50 border border-heritage-espresso/10'}`}
+            className={`min-h-[54px] px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-sm ${ordersPaused ? 'bg-red-600 text-white' : 'bg-white text-heritage-espresso/55 border border-heritage-espresso/10'}`}
           >
+            <PauseCircle size={14} />
             {ordersPaused ? 'Resume Orders' : 'Pause Orders'}
           </button>
+          {deleteAllConfirm ? (
+            <div className="min-h-[54px] px-4 py-2 rounded-2xl bg-red-600 text-white flex items-center gap-2 shadow-lg">
+              <span className="text-[10px] font-black uppercase tracking-widest">Delete all live?</span>
+              <button onClick={archiveAllLiveOrders} disabled={bulkLoading} className="px-3 py-2 rounded-full bg-white text-red-700 text-[10px] font-black uppercase">Yes</button>
+              <button onClick={() => setDeleteAllConfirm(false)} className="px-3 py-2 rounded-full bg-white/15 text-[10px] font-black uppercase">No</button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setDeleteAllConfirm(true)}
+              className="min-h-[54px] px-5 py-3 rounded-2xl bg-white text-red-600 border border-red-100 text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-sm"
+            >
+              <Trash2 size={14} />
+              Delete All Orders
+            </button>
+          )}
           <div className="relative">
             <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-heritage-espresso/30" />
             <input
@@ -528,9 +601,10 @@ export default function OrdersManager() {
                 <StatusBadge status={apiStatus(order)} />
                 <div className="flex flex-wrap items-center justify-end gap-2">
                   <span className="text-[11px] font-bold" style={{ color: getAgeColor(order) }}>{getAge(order)}</span>
-                  {apiStatus(order) === 'pending' && <MiniButton onClick={() => singleSetStatus(order.id, 'preparing')} label="Start Prep" />}
-                  {apiStatus(order) !== 'served' && <MiniButton onClick={() => singleSetStatus(order.id, 'served')} label="Served" />}
-                  {apiStatus(order) === 'served' && <MiniButton onClick={() => bulkArchive([order.id])} label="Archive" />}
+                  {apiStatus(order) === 'pending' && <MiniButton onClick={() => singleSetStatus(order.id, 'preparing')} icon={<ChefHat size={13} />} label="Start Prep" />}
+                  {apiStatus(order) !== 'served' && <MiniButton onClick={() => singleSetStatus(order.id, 'served')} icon={<Check size={13} />} label="Enjoying" />}
+                  <MiniButton onClick={() => shareWhatsAppReceipt(order)} icon={<MessageCircle size={13} />} label="WhatsApp" />
+                  {apiStatus(order) === 'served' && <MiniButton onClick={() => bulkArchive([order.id])} icon={<Archive size={13} />} label="Archive" />}
                 </div>
               </div>
               {expandedIds.has(order.id) && (
@@ -575,9 +649,10 @@ function ActionButton({ disabled, onClick, icon, label }) {
   );
 }
 
-function MiniButton({ onClick, label }) {
+function MiniButton({ onClick, icon, label }) {
   return (
-    <button onClick={onClick} className="min-h-[44px] px-3 py-2 rounded-full bg-heritage-stone text-[10px] font-black uppercase tracking-widest text-heritage-espresso/70 hover:bg-heritage-gold hover:text-white">
+    <button onClick={onClick} className="min-h-[44px] px-3 py-2 rounded-full bg-heritage-stone text-[10px] font-black uppercase tracking-widest text-heritage-espresso/70 hover:bg-heritage-gold hover:text-white flex items-center gap-1.5">
+      {icon}
       {label}
     </button>
   );

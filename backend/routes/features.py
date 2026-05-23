@@ -68,10 +68,17 @@ def submit_feedback():
     comment = raw_text(data.get("comment", ""), "comment", 500, required=False, allow_empty=True)
 
     def write(conn):
-        conn.execute(
-            "INSERT INTO feedback (order_id, rating, comment, created_at) VALUES (?, ?, ?, ?) ON CONFLICT (order_id) DO NOTHING",
-            (order_id, rating, comment, db.utc_now()),
-        )
+        existing = conn.execute("SELECT id FROM feedback WHERE order_id = ? LIMIT 1", (order_id,)).fetchone()
+        if existing:
+            conn.execute(
+                "UPDATE feedback SET rating = ?, comment = ?, created_at = ? WHERE id = ?",
+                (rating, comment, db.utc_now(), existing["id"]),
+            )
+        else:
+            conn.execute(
+                "INSERT INTO feedback (order_id, rating, comment, created_at) VALUES (?, ?, ?, ?)",
+                (order_id, rating, comment, db.utc_now()),
+            )
 
     db.atomic_write(write, current_app.config["DATABASE_URL"])
     return jsonify({"status": "ok"})

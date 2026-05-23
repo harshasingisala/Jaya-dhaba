@@ -466,6 +466,21 @@ const api = {
     return request('/api/admin/orders/clear-served', { method: 'PATCH' });
   },
 
+  archiveAllOrders: async () => {
+    return request('/api/admin/orders/archive-all', { method: 'PATCH' });
+  },
+
+  submitOrderFeedback: async ({ orderNumber, rating, comment = '' }) => {
+    return request('/api/feedback', {
+      method: 'POST',
+      body: JSON.stringify({
+        order_id: Number(orderNumber),
+        rating: Number(rating),
+        comment,
+      }),
+    });
+  },
+
   getAdminStats: async () => {
     const stats = await request('/api/admin/stats');
     return {

@@ -516,6 +516,27 @@ def clear_served_orders():
     return jsonify({"success": True, "cleared": cleared_count})
 
 
+@bp.patch("/admin/orders/archive-all")
+@require_role("staff")
+def archive_all_orders():
+    now = datetime.now(timezone.utc)
+    with db.get_db() as session:
+        orders = session.execute(
+            select(Order).where(Order.is_archived.is_(False))
+        ).scalars().all()
+        for order in orders:
+            order.is_archived = True
+            order.archived_at = now
+            audit(session, "order.archive_all", "order", order.id)
+        order_ids = [str(order.id) for order in orders]
+        archived_count = len(orders)
+        session.commit()
+
+    broadcast("orders_update", {"action": "cleared", "count": archived_count, "order_ids": order_ids})
+    broadcast("analytics_update", {"action": "orders_changed"})
+    return jsonify({"success": True, "archived": archived_count})
+
+
 @bp.get("/admin/orders/archive")
 @require_role("staff")
 def archived_orders():
