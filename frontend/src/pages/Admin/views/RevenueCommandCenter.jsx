@@ -235,8 +235,6 @@ function HealthRow({ label, status }) {
   );
 }
 
-const BASE_URL = import.meta.env.VITE_API_URL || '';
-
 // ─── Fetch real today's data from Supabase ────────────────────────────────────
 async function fetchTodaySnapshot(restaurantId, dateRange = {}) {
   const [stats, orders, revenue] = await Promise.all([
@@ -253,7 +251,10 @@ async function fetchTodaySnapshot(restaurantId, dateRange = {}) {
   return {
     totalOrders,
     completedRevenue,
-    topItems: [],
+    topItems: Array.isArray(stats.top_items) ? stats.top_items.map((item) => ({
+      name: item.name,
+      count: item.qty || item.count || 0,
+    })) : [],
     pendingOrders: orders.filter((o) => o.status === 'Placed' || o.status === 'Confirmed').length,
     preparingOrders: orders.filter((o) => o.status === 'Preparing').length,
     avgOrderValue: totalOrders > 0 ? Math.round(completedRevenue / totalOrders) : 0,
@@ -264,6 +265,21 @@ async function fetchTodaySnapshot(restaurantId, dateRange = {}) {
 }
 
 // ─── Call /api/jaya-concierge ─────────────────────────────────────────────────
+function localBusinessInsight(snapshot, mode = 'brief') {
+  const topItem = snapshot.topItems?.[0]?.name || 'the current best seller';
+  const activeOrders = snapshot.pendingOrders + snapshot.preparingOrders;
+  if (mode === 'brief') {
+    if (snapshot.totalOrders === 0) {
+      return "No orders are recorded yet today. Keep the kitchen ready and push today's hero items once the first rush begins.";
+    }
+    return `Today has ${snapshot.totalOrders} orders with Rs ${snapshot.completedRevenue.toFixed(0)} revenue and an average bill of Rs ${snapshot.avgOrderValue}. Keep ${topItem} visible and nudge add-ons while ${activeOrders} orders are active.`;
+  }
+  if (snapshot.totalOrders === 0) {
+    return "Performance summary: no orders are recorded yet today. What is working well: the system is ready and live. Act now: feature a strong starter or biryani offer on manual and online channels. Upsell suggestion: pair the first few orders with beverages or desserts to lift average bill value.";
+  }
+  return `Performance summary: ${snapshot.totalOrders} orders have generated Rs ${snapshot.completedRevenue.toFixed(0)} today, with an average bill of Rs ${snapshot.avgOrderValue}. What is working well: ${topItem} is leading demand. Act now: keep prep focused because ${activeOrders} orders are active. Upsell suggestion: pair ${topItem} with beverages, breads, or dessert to raise every bill.`;
+}
+
 async function callJaya(snapshot, restaurantName, mode = 'brief') {
   const topItemsList = snapshot.topItems.length > 0
     ? snapshot.topItems.map(i => `${i.name} (${i.count} orders)`).join(', ')
@@ -287,39 +303,24 @@ Be specific, use the actual numbers. Give one concrete recommendation. Keep it u
 
 Provide: (1) Performance summary, (2) What's working well, (3) One thing to act on now, (4) Upsell suggestion based on top items. Use actual numbers. Be direct. 80–100 words.`;
 
-  const res = await fetch(`${BASE_URL}/api/jaya-concierge`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${getStoredAdminToken()}`,
-    },
-    credentials: 'include',
-    body: JSON.stringify({ message: prompt }),
-  });
-
-  if (!res.ok) throw new Error(`Jaya API error: ${res.status}`);
-  const data = await res.json();
-
-  // Handle both possible response shapes from your existing endpoint
-  return (
-    data.message ||
-    data.reply ||
-    data.response ||
-    data.text ||
-    (Array.isArray(data.content) ? data.content.map(b => b.text || '').join('') : '') ||
-    'Insight unavailable.'
-  );
-}
-
-function getStoredAdminToken() {
   try {
-    const user = JSON.parse(sessionStorage.getItem('user') || 'null');
-    return user?.access_token || user?.token || '';
-  } catch {
-    return '';
+    const data = await api.request('/api/jaya-concierge', {
+      method: 'POST',
+      body: JSON.stringify({ message: prompt }),
+    });
+    const text = (
+      data.message ||
+      data.reply ||
+      data.response ||
+      data.text ||
+      (Array.isArray(data.content) ? data.content.map(b => b.text || '').join('') : '')
+    );
+    return text || localBusinessInsight(snapshot, mode);
+  } catch (err) {
+    if (import.meta.env.DEV) console.warn('[AIBriefingCard fallback]', err);
+    return localBusinessInsight(snapshot, mode);
   }
 }
-
 
 // ─── THE COMPONENT ────────────────────────────────────────────────────────────
 export function AIBriefingCard({ restaurantId, restaurantName = 'your restaurant' }) {
