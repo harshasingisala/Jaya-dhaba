@@ -20,6 +20,7 @@ from auth import ROLE_RANK, require_role, request_ip
 from events import broker, order_topic_id
 from realtime import broadcast
 from rate_limits import enforce_limit
+from security_log import log_security_event
 from validators import ValidationError, body, integer, raw_text, reject_unknown
 from models import Order, OrderItem, MenuItem, User, Payment
 from routes.orders import allocate_order_number, serialize_order
@@ -76,6 +77,17 @@ def _sign_pending_intent(payload: dict) -> str:
     body = json.dumps(payload, separators=(",", ":"), sort_keys=True, default=str).encode("utf-8")
     signature = hmac.new(current_app.config["SECRET_KEY"].encode("utf-8"), body, hashlib.sha256).hexdigest()
     return base64.urlsafe_b64encode(body).decode("ascii") + "." + signature
+
+
+def verify_razorpay_signature(order_id, payment_id, signature):
+    key = current_app.config.get("RAZORPAY_KEY_SECRET") or os.environ.get("RAZORPAY_KEY_SECRET", "")
+    message = f"{order_id}|{payment_id}"
+    expected = hmac.new(
+        key.encode(),
+        message.encode(),
+        hashlib.sha256,
+    ).hexdigest()
+    return hmac.compare_digest(expected, signature)
 
 
 def _verify_pending_intent(token: str) -> dict:
@@ -611,17 +623,13 @@ def verify_payment():
     our_order_id = raw_text(data.get("our_order_id"), "our_order_id", 120, required=False, allow_empty=True)
     pending_intent = raw_text(data.get("pending_intent", ""), "pending_intent", 20000, required=False, allow_empty=True)
 
-    expected = hmac.new(
-        current_app.config["RAZORPAY_KEY_SECRET"].encode(),
-        f"{razorpay_order_id}|{payment_id}".encode(),
-        hashlib.sha256,
-    ).hexdigest()
-    if not hmac.compare_digest(expected, signature):
+    if not verify_razorpay_signature(razorpay_order_id, payment_id, signature):
+        log_security_event("bad_payment_sig", request.remote_addr, razorpay_order_id)
         current_app.logger.warning(
             "payment_signature_mismatch",
             extra={"razorpay_payment_id": payment_id, "razorpay_order_id": razorpay_order_id},
         )
-        return jsonify({"success": False, "message": "Invalid payment signature"}), 400
+        return jsonify({"success": False, "message": "Invalid payment signature", "error": "Invalid payment signature"}), 400
 
     if pending_intent:
         try:
@@ -720,7 +728,8 @@ def verify_payment_singular_alias():
         payment_id = raw_text(data.get("razorpay_payment_id"), "razorpay_payment_id", 120)
         razorpay_order_id = raw_text(data.get("razorpay_order_id"), "razorpay_order_id", 120)
         signature = raw_text(data.get("razorpay_signature"), "razorpay_signature", 200)
-        if signature != "test_signature":
+        if not hmac.compare_digest(signature, "test_signature"):
+            log_security_event("bad_payment_sig", request.remote_addr, razorpay_order_id)
             return jsonify({"success": False, "message": "Invalid development payment signature"}), 400
         with db.transaction(current_app.config["DATABASE_URL"]) as conn:
             order = _find_order_by_razorpay_order(conn, razorpay_order_id)

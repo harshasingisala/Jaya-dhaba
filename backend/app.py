@@ -6,6 +6,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from dotenv import load_dotenv
+from werkzeug.exceptions import HTTPException
 import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
 
@@ -17,6 +18,8 @@ from auth import optional_user
 from realtime import init_realtime
 from security_middleware import init_security_middleware
 from routes import register_blueprints
+from security_log import log_security_event
+from utils.validation import validate_lengths
 from validators import ValidationError
 
 # Sentry setup
@@ -48,6 +51,7 @@ def create_app(overrides: dict | None = None) -> Flask:
         DOMAIN=os.getenv("DOMAIN", "localhost"),
         UPLOAD_FOLDER=os.getenv("UPLOAD_FOLDER", str(Path(__file__).resolve().parent / "uploads")),
         MAX_CONTENT_LENGTH=int(os.getenv("MAX_CONTENT_LENGTH_BYTES", str(20 * 1024 * 1024))),
+        JSON_MAX_CONTENT_LENGTH=int(os.getenv("JSON_MAX_CONTENT_LENGTH_BYTES", str(2 * 1024 * 1024))),
         RAZORPAY_KEY_ID=os.getenv("RAZORPAY_KEY_ID", ""),
         RAZORPAY_KEY_SECRET=os.getenv("RAZORPAY_KEY_SECRET", ""),
         RAZORPAY_WEBHOOK_SECRET=os.getenv("RAZORPAY_WEBHOOK_SECRET", ""),
@@ -122,7 +126,30 @@ def create_app(overrides: dict | None = None) -> Flask:
     def load_user():
         if request.method == "OPTIONS":
             return None
+        if _json_request_too_large(app):
+            return jsonify({"error": "Request too large. Max 2MB."}), 413
+        length_error = _validate_public_input_lengths()
+        if length_error is not None:
+            return length_error
         optional_user()
+
+    @app.after_request
+    def security_headers(response):
+        if "X-Content-Type-Options" not in response.headers:
+            response.headers["X-Content-Type-Options"] = "nosniff"
+        if "X-Frame-Options" not in response.headers:
+            response.headers["X-Frame-Options"] = "DENY"
+        if "X-XSS-Protection" not in response.headers:
+            response.headers["X-XSS-Protection"] = "1; mode=block"
+        if "Referrer-Policy" not in response.headers:
+            response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        if "Strict-Transport-Security" not in response.headers:
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        if "Permissions-Policy" not in response.headers:
+            response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        if response.status_code == 401 and request.path.startswith("/api/admin"):
+            log_security_event("unauthorized_admin", request.remote_addr, request.path)
+        return response
 
     # Routes
     register_blueprints(app)
@@ -168,9 +195,22 @@ def create_app(overrides: dict | None = None) -> Flask:
     def rate_limit(_error):
         return jsonify({"success": False, "message": "Too many requests", "data": {}, "errors": []}), 429
 
+    @app.errorhandler(413)
+    def too_large(_error):
+        return jsonify({"error": "Request too large. Max 2MB."}), 413
+
     @app.errorhandler(500)
     def internal_server_error(error):
         return jsonify({"success": False, "message": "Internal server error", "data": {}, "errors": []}), 500
+
+    @app.errorhandler(Exception)
+    def handle_exception(error):
+        if isinstance(error, HTTPException):
+            return error
+        app.logger.error("Unhandled exception: %s", error, exc_info=True)
+        if app.debug or app.testing:
+            raise error
+        return jsonify({"error": "Something went wrong"}), 500
 
     # ------------------------------------------------------------------
     # APScheduler — automatic daily flush at midnight IST (SINGLE WORKER ONLY)
@@ -251,6 +291,34 @@ def create_app(overrides: dict | None = None) -> Flask:
             app.logger.info("APScheduler: disabled on secondary worker (id=%d)", _WORKER_ID)
 
     return app
+
+
+def _json_request_too_large(app: Flask) -> bool:
+    if request.method in ("GET", "HEAD", "OPTIONS", "TRACE"):
+        return False
+    if request.mimetype not in {"application/json", "text/json"}:
+        return False
+    content_length = request.content_length or 0
+    return content_length > int(app.config.get("JSON_MAX_CONTENT_LENGTH", 2 * 1024 * 1024))
+
+
+def _validate_public_input_lengths():
+    if request.method in ("GET", "HEAD", "OPTIONS", "TRACE"):
+        return None
+    if request.path not in {"/api/contact", "/api/reservations", "/api/orders"}:
+        return None
+    data = request.get_json(silent=True) or {}
+    valid, error = validate_lengths(
+        name=data.get("name") or data.get("guest_name") or data.get("customer_name"),
+        email=data.get("email"),
+        phone=data.get("phone") or data.get("guest_phone"),
+        message=data.get("message") or data.get("notes"),
+        subject=data.get("subject"),
+        password=data.get("password"),
+    )
+    if not valid:
+        return jsonify({"error": error}), 400
+    return None
 
 
 def _validate_runtime_config(app: Flask, cors_origins: list[str], is_production: bool) -> None:

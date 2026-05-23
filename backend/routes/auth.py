@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections import defaultdict
+from datetime import datetime, timedelta
 import uuid
 
 from flask import Blueprint, current_app, g, jsonify, request
@@ -18,10 +20,25 @@ from auth import (
     log_audit
 )
 from models import User
+from security_log import log_security_event
 from validators import validate_schema, RegisterSchema, LoginSchema
 from sqlalchemy import or_, select
 
 bp = Blueprint("auth", __name__, url_prefix="/api")
+login_attempts = defaultdict(list)
+
+
+def is_locked_out(ip):
+    now = datetime.utcnow()
+    login_attempts[ip] = [
+        timestamp for timestamp in login_attempts[ip]
+        if now - timestamp < timedelta(minutes=15)
+    ]
+    return len(login_attempts[ip]) >= 5
+
+
+def record_attempt(ip):
+    login_attempts[ip].append(datetime.utcnow())
 
 
 def serialize_user(user: User) -> dict:
@@ -86,6 +103,10 @@ def register():
 
 @bp.post("/auth/login")
 def login():
+    ip = request.remote_addr
+    if is_locked_out(ip):
+        return jsonify({"error": "Too many attempts. Try again in 15 minutes."}), 429
+
     incoming = request.get_json(silent=True) or {}
     if "login" not in incoming and "email" in incoming:
         incoming["login"] = incoming["email"]
@@ -107,8 +128,11 @@ def login():
             user_data = serialize_user(user)
             
         except AuthError as error:
-            return jsonify({"success": False, "message": error.message}), error.status
+            record_attempt(ip)
+            log_security_event("failed_login", ip, schema.login)
+            return jsonify({"error": "Invalid credentials"}), 401
 
+    login_attempts[ip] = []
     response = jsonify({
         "success": True,
         "message": "Login successful",
