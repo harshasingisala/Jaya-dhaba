@@ -10,6 +10,24 @@ const formatINR = (amount) =>
     maximumFractionDigits: 2
   });
 
+const loadRazorpayCheckout = () => {
+  if (typeof window.Razorpay !== 'undefined') return Promise.resolve();
+
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = `https://checkout.razorpay.com/v1/checkout.js?v=${Date.now()}`;
+    script.async = true;
+    script.dataset.razorpayCheckout = 'true';
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('Payment system could not be loaded. Please try again.'));
+    document.head.appendChild(script);
+  }).then(() => {
+    if (typeof window.Razorpay === 'undefined') {
+      throw new Error('Payment system loading. Please wait 2 seconds and try again. Call +91 73861 85821 if this persists.');
+    }
+  });
+};
+
 export default function Checkout() {
   const { cart, getTotal, clearCart, isOffline } = useApp();
   const navigate = useNavigate();
@@ -46,8 +64,7 @@ export default function Checkout() {
     setStatus('loading')
     try {
       const { razorpay_order_id, amount: razorpayAmount, currency, key_id, pending_intent } = await api.createPaymentOrder(orderData)
-      if (typeof window.Razorpay === 'undefined')
-        throw new Error('Payment system loading. Please wait 2 seconds and try again. Call +91 73861 85821 if this persists.')
+      await loadRazorpayCheckout();
       const rzp = new window.Razorpay({
         key: key_id, amount: razorpayAmount, currency, order_id: razorpay_order_id,
         name: 'Jaya Dhaba', description: 'Heritage Kitchen · East Marredpally, Hyderabad',
@@ -102,6 +119,7 @@ export default function Checkout() {
       const orderData = {
         items: cart,
         customer_name: details.name,
+        guest_phone: details.phone,
         table_number: details.type,
         payment_mode: paymentMode,
         total: Math.round((getTotal() - (appliedCoupon?.discount || 0)) * 1.05),
