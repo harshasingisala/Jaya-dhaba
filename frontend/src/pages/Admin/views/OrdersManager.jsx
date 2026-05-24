@@ -6,13 +6,15 @@ import { getSocket } from '../../../lib/socket';
 import { usePollingFallback } from '../../../hooks/usePollingFallback';
 import { useToast } from '../../../components/Toast';
 
-const TABS = ['all', 'pending', 'preparing', 'served', 'archive'];
+const TABS = ['all', 'pending', 'preparing', 'ready', 'served', 'archive'];
 const STATUS_LABELS = {
   Placed: 'pending',
   Pending: 'pending',
   pending: 'pending',
   Preparing: 'preparing',
   preparing: 'preparing',
+  Ready: 'ready',
+  ready: 'ready',
   Served: 'served',
   served: 'served',
 };
@@ -395,6 +397,7 @@ export default function OrdersManager() {
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName)) return;
       if (event.key === 'a' || event.key === 'A') selectAll();
       if (event.key === 'p' || event.key === 'P') bulkSetStatus('preparing');
+      if (event.key === 'r' || event.key === 'R') bulkSetStatus('ready');
       if (event.key === 's' || event.key === 'S') bulkSetStatus('served');
       if (event.key === 'Escape') setSelectedIds(new Set());
     };
@@ -414,11 +417,11 @@ export default function OrdersManager() {
     if (status === 'served') {
       return 'Enjoying just now';
     }
-    const ref = status === 'preparing' && order.preparing_at ? parseServerTime(order.preparing_at) : parseServerTime(order.created_at);
+    const ref = status === 'preparing' && order.preparing_at ? parseServerTime(order.preparing_at) : parseServerTime(order.updated_at || order.created_at);
     const diff = Math.max(0, now - ref);
     const mins = Math.floor(diff / 60000);
     const secs = Math.floor((diff % 60000) / 1000);
-    return `${status === 'preparing' ? 'Cooking' : 'Waiting'} ${mins}m ${secs}s`;
+    return `${status === 'preparing' ? 'Cooking' : status === 'ready' ? 'Ready' : 'Waiting'} ${mins}m ${secs}s`;
   }
 
   function getAgeColor(order) {
@@ -451,6 +454,7 @@ export default function OrdersManager() {
           ['Active', stats.total_active || 0],
           ['Pending', stats.pending || 0],
           ['Preparing', stats.preparing || 0],
+          ['Ready', stats.ready || 0],
           ['Enjoying', stats.served || 0],
           ['Today', `${formatMoney(stats.today_revenue)} / ${stats.today_orders || 0}`],
         ].map(([label, value]) => (
@@ -550,6 +554,7 @@ export default function OrdersManager() {
             <div className="bg-heritage-espresso text-white rounded-2xl p-4 flex flex-wrap items-center gap-3 shadow-xl">
               <span className="text-sm font-black">{selectedIds.size} selected</span>
               <ActionButton disabled={bulkLoading} onClick={() => bulkSetStatus('preparing')} icon={<ChefHat size={15} />} label="Start Prep" />
+              <ActionButton disabled={bulkLoading} onClick={() => bulkSetStatus('ready')} icon={<Check size={15} />} label="Ready" />
               <ActionButton disabled={bulkLoading} onClick={() => bulkSetStatus('served')} icon={<Check size={15} />} label="Enjoying" />
               <ActionButton disabled={bulkLoading} onClick={() => bulkArchive()} icon={<Archive size={15} />} label="Archive Selected" />
               {clearConfirm ? (
@@ -584,7 +589,7 @@ export default function OrdersManager() {
               <div className="py-24 text-center text-heritage-espresso/35">
                 <ClipboardList className="mx-auto mb-4" size={42} />
                 <p className="font-serif italic text-2xl">
-                  {activeTab === 'all' ? 'No orders yet' : activeTab === 'pending' ? 'No pending orders' : activeTab === 'preparing' ? 'Nothing in the kitchen' : 'No enjoying orders'}
+                  {activeTab === 'all' ? 'No orders yet' : activeTab === 'pending' ? 'No pending orders' : activeTab === 'preparing' ? 'Nothing in the kitchen' : activeTab === 'ready' ? 'No ready orders' : 'No enjoying orders'}
                 </p>
               </div>
             ) : visibleOrders.map((order) => (
@@ -606,6 +611,7 @@ export default function OrdersManager() {
                 <div className="flex flex-wrap items-center justify-end gap-2">
                   <span className="text-[11px] font-bold" style={{ color: getAgeColor(order) }}>{getAge(order)}</span>
                   {apiStatus(order) === 'pending' && <MiniButton onClick={() => singleSetStatus(order.id, 'preparing')} icon={<ChefHat size={17} />} label="Prep" />}
+                  {apiStatus(order) === 'preparing' && <MiniButton onClick={() => singleSetStatus(order.id, 'ready')} icon={<Check size={17} />} label="Ready" />}
                   {apiStatus(order) !== 'served' && <MiniButton onClick={() => singleSetStatus(order.id, 'served')} icon={<Check size={17} />} label="Enjoying" />}
                   <MiniButton onClick={() => shareWhatsAppReceipt(order)} icon={<MessageCircle size={17} />} label="WhatsApp" />
                   {apiStatus(order) === 'served' && <MiniButton onClick={() => bulkArchive([order.id])} icon={<Archive size={17} />} label="Archive" />}
@@ -666,6 +672,7 @@ function StatusBadge({ status }) {
   const styles = {
     pending: 'bg-amber-50 text-amber-700 border-amber-200',
     preparing: 'bg-blue-50 text-blue-700 border-blue-200',
+    ready: 'bg-purple-50 text-purple-700 border-purple-200',
     served: 'bg-green-50 text-green-700 border-green-200',
   };
   return (

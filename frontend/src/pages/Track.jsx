@@ -11,7 +11,7 @@ const statusSteps = [
    { id: 'Preparing', label: 'In the Fire', icon: <ChefHat size={18} />, desc: 'Slow-cooking in our heritage tandoors' },
    { id: 'Plating', label: 'Plating Art', icon: <Sparkles size={18} />, desc: 'Final garnish and heritage aesthetics' },
    { id: 'Ready', label: 'Quality Check', icon: <CheckSquare size={18} />, desc: 'Final verification before serving' },
-   { id: 'Served', label: 'Enjoying', icon: <House size={18} />, desc: 'Relax and enjoy your Jaya Dhaba moment' },
+   { id: 'Enjoying', label: 'Enjoying', icon: <House size={18} />, desc: 'Relax and enjoy your Jaya Dhaba moment' },
 ];
 
 export default function Track() {
@@ -52,7 +52,7 @@ export default function Track() {
    }, [order?.id, location.search]);
 
    useEffect(() => {
-      if (order?.status !== 'Served') return undefined;
+      if (order?.status !== 'Enjoying') return undefined;
       setShowThankYou(true);
       const timer = window.setTimeout(() => setShowThankYou(false), 5000);
       return () => window.clearTimeout(timer);
@@ -189,7 +189,7 @@ export default function Track() {
                      </div>
 
                      {/* ETA ESTIMATOR */}
-                     {order.status !== 'Served' && (
+                     {order.status !== 'Enjoying' && (
                         <div className="bg-heritage-gold/5 p-6 rounded-3xl border border-heritage-gold/10 flex justify-between items-center">
                            <div className="flex gap-4 items-center">
                               <div className="w-10 h-10 rounded-full bg-heritage-gold flex items-center justify-center text-white">
@@ -270,7 +270,7 @@ export default function Track() {
                         <ShoppingBag size={18} className="text-heritage-gold" />
                         Share WhatsApp Receipt
                      </button>
-                     {order.status === 'Served' && (
+                     {order.status === 'Enjoying' && (
                         <button onClick={() => setRatingOpen(true)} className="bg-heritage-gold text-white p-8 rounded-3xl flex items-center justify-center gap-4 text-[10px] font-black uppercase tracking-widest hover:bg-heritage-espresso transition-all shadow-xl shadow-heritage-gold/20">
                            <Sparkles size={18} />
                            Rate Your Experience

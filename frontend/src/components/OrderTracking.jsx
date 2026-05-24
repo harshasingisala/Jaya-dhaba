@@ -60,7 +60,7 @@ const STEPS = [
   { key: 'confirmed', label: 'Confirmed', icon: CheckCircle, desc: 'The restaurant confirmed your order.' },
   { key: 'preparing', label: 'In Kitchen', icon: ChefHat, desc: 'Being freshly prepared for you.' },
   { key: 'ready', label: 'Ready', icon: Flame, desc: 'Your order is ready!' },
-  { key: 'delivered', label: 'Delivered', icon: Package, desc: 'Enjoy your meal.' },
+  { key: 'served', label: 'Enjoying', icon: Package, desc: 'Enjoy your meal.' },
 ];
 
 const STATUS_ORDER = STEPS.map((s) => s.key);
@@ -101,8 +101,9 @@ export function OrderTrackingPage({ orderId, token = '' }) {
     );
   }
 
-  const currentIdx = STATUS_ORDER.indexOf(order.status);
-  const isCancelled = order.status === 'cancelled';
+  const normalizedStatus = String(order.status || '').toLowerCase() === 'enjoying' ? 'served' : String(order.status || '').toLowerCase();
+  const currentIdx = STATUS_ORDER.indexOf(normalizedStatus);
+  const isCancelled = normalizedStatus === 'cancelled';
 
   const items = (() => {
     try {

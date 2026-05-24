@@ -506,7 +506,7 @@ def dashboard():
     with db.connect(current_app.config["DATABASE_URL"]) as conn:
         stats = live_stats(conn)
         counts = {
-            "pending_orders": conn.execute("SELECT COUNT(*) AS c FROM orders WHERE status IN ('pending','confirmed','preparing')").fetchone()["c"],
+            "pending_orders": conn.execute("SELECT COUNT(*) AS c FROM orders WHERE status IN ('pending','confirmed','preparing','ready')").fetchone()["c"],
             "ready_orders": conn.execute("SELECT COUNT(*) AS c FROM orders WHERE status = 'ready'").fetchone()["c"],
             "today_revenue": stats["revenue"],
             "top_item": stats["top_item"],
@@ -519,10 +519,17 @@ def dashboard():
 @bp.get("/admin/stats")
 @require_role("staff")
 def stats():
+    try:
+        from routes.orders import advance_order_timers
+        advance_order_timers()
+    except Exception as e:
+        current_app.logger.warning(f"order timer advance skipped: {e}")
+
     safe_payload = {
         "success": True,
         "pending": 0,
         "preparing": 0,
+        "ready": 0,
         "served": 0,
         "today_orders": 0,
         "today_revenue": 0,
@@ -555,13 +562,19 @@ def stats():
                 current_app.logger.error(f"stats error: {e}")
 
             try:
+                ready_row = conn.execute("SELECT COUNT(*) AS c FROM orders WHERE status = 'ready'").fetchone()
+                payload["ready"] = int(ready_row["c"] or 0)
+            except Exception as e:
+                current_app.logger.error(f"stats error: {e}")
+
+            try:
                 served_row = conn.execute("SELECT COUNT(*) AS c FROM orders WHERE status = 'served'").fetchone()
                 payload["served"] = int(served_row["c"] or 0)
             except Exception as e:
                 current_app.logger.error(f"stats error: {e}")
 
             try:
-                active_row = conn.execute("SELECT COUNT(*) AS c FROM orders WHERE status IN ('pending', 'confirmed', 'preparing')").fetchone()
+                active_row = conn.execute("SELECT COUNT(*) AS c FROM orders WHERE status IN ('pending', 'confirmed', 'preparing', 'ready')").fetchone()
                 payload["total_active"] = int(active_row["c"] or 0)
             except Exception as e:
                 current_app.logger.error(f"stats error: {e}")

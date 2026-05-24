@@ -49,6 +49,9 @@ def allocate_order_number(session):
 
 STAFF_ROLES = {"staff", "manager", "owner", "admin"}
 IST = timezone(timedelta(hours=5, minutes=30))
+PREPARING_TO_READY_AFTER = timedelta(minutes=7)
+READY_TO_SERVED_AFTER = timedelta(minutes=7)
+SERVED_TO_ARCHIVE_AFTER = timedelta(minutes=10)
 
 
 def _sign_pending_intent(payload: dict) -> str:
@@ -151,6 +154,9 @@ def _apply_lifecycle_status(order: Order, status: str, now: datetime) -> None:
     order.version += 1
     if status == "preparing":
         order.preparing_at = now
+    elif status == "ready":
+        if not order.preparing_at:
+            order.preparing_at = now
     elif status == "served":
         if not order.preparing_at:
             order.preparing_at = now
@@ -158,6 +164,101 @@ def _apply_lifecycle_status(order: Order, status: str, now: datetime) -> None:
     elif status == "pending":
         order.preparing_at = None
         order.served_at = None
+
+
+def _as_utc(value: datetime | None) -> datetime | None:
+    if not value:
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
+def _publish_order_lifecycle(payloads: list[dict], *, action: str, status: str | None = None, timestamp: str | None = None) -> None:
+    if not payloads:
+        return
+    for payload in payloads:
+        broker.publish("kitchen", "order.updated", payload)
+        broker.publish(f"order:{order_topic_id(payload['id'])}", "order.updated", payload)
+        if status:
+            notify_order_update(payload["id"], status)
+    broadcast("orders_update", {
+        "action": action,
+        "order_ids": [payload["id"] for payload in payloads],
+        "status": status,
+        "timestamp": timestamp,
+        "orders": payloads,
+    })
+    broadcast("analytics_update", {"action": "orders_changed"})
+
+
+def advance_order_timers() -> None:
+    now = datetime.now(timezone.utc)
+    ready_payloads: list[dict] = []
+    served_payloads: list[dict] = []
+    archived_payloads: list[dict] = []
+
+    with db.get_db() as session:
+        active_orders = session.execute(
+            select(Order).where(
+                Order.is_archived.is_(False),
+                Order.status.in_(["preparing", "ready", "served"]),
+            )
+        ).scalars().all()
+        for order in active_orders:
+            if (
+                order.status == "preparing"
+                and _as_utc(order.preparing_at)
+                and now - _as_utc(order.preparing_at) >= PREPARING_TO_READY_AFTER
+            ):
+                _apply_lifecycle_status(order, "ready", now)
+                history = list(order.status_history or [])
+                history.append({"status": "ready", "ts": now.isoformat(), "reason": "auto_timer"})
+                order.status_history = history
+                ready_payloads.append(order)
+            elif (
+                order.status == "ready"
+                and _as_utc(order.updated_at)
+                and now - _as_utc(order.updated_at) >= READY_TO_SERVED_AFTER
+            ):
+                _apply_lifecycle_status(order, "served", now)
+                history = list(order.status_history or [])
+                history.append({"status": "served", "ts": now.isoformat(), "reason": "auto_timer"})
+                order.status_history = history
+                served_payloads.append(order)
+            elif (
+                order.status == "served"
+                and _as_utc(order.served_at)
+                and now - _as_utc(order.served_at) >= SERVED_TO_ARCHIVE_AFTER
+            ):
+                order.is_archived = True
+                order.archived_at = now
+                history = list(order.status_history or [])
+                history.append({"status": "archived", "ts": now.isoformat(), "reason": "auto_timer"})
+                order.status_history = history
+                archived_payloads.append(order)
+
+        if not (ready_payloads or served_payloads or archived_payloads):
+            return
+
+        session.commit()
+        ready_serialized = []
+        served_serialized = []
+        archived_serialized = []
+        for order in ready_payloads:
+            session.refresh(order)
+            ready_serialized.append(serialize_order(order))
+        for order in served_payloads:
+            session.refresh(order)
+            served_serialized.append(serialize_order(order))
+        for order in archived_payloads:
+            session.refresh(order)
+            archived_serialized.append(serialize_order(order))
+
+    _publish_order_lifecycle(ready_serialized, action="status_changed", status="ready", timestamp=now.isoformat())
+    _publish_order_lifecycle(served_serialized, action="status_changed", status="served", timestamp=now.isoformat())
+    if archived_serialized:
+        _publish_order_lifecycle(archived_serialized, action="archived", timestamp=now.isoformat())
 
 
 def _orders_paused() -> bool:
@@ -384,6 +485,7 @@ def create_order():
 
 @bp.get("/orders/<uuid:order_id>")
 def get_order(order_id: uuid.UUID):
+    advance_order_timers()
     with db.get_db() as session:
         order = session.execute(select(Order).filter_by(id=order_id)).scalar_one_or_none()
         if not order:
@@ -397,6 +499,7 @@ def get_order(order_id: uuid.UUID):
 
 @bp.get("/orders/by-number/<int:order_number>")
 def get_order_by_number(order_number: int):
+    advance_order_timers()
     with db.get_db() as session:
         order = session.execute(select(Order).filter_by(order_number=order_number)).scalar_one_or_none()
         if not order:
@@ -411,11 +514,12 @@ def get_order_by_number(order_number: int):
 @bp.get("/admin/orders")
 @require_role("staff")
 def list_admin_orders():
+    advance_order_timers()
     status = request.args.get("status", "all")
     page = max(1, int(request.args.get("page", 1)))
     per_page = min(max(1, int(request.args.get("per_page", 50))), 100)
     offset = (page - 1) * per_page
-    allowed_statuses = {"pending", "preparing", "served", "all"}
+    allowed_statuses = {"pending", "preparing", "ready", "served", "all"}
     if status not in allowed_statuses:
         return jsonify({"success": False, "message": "Invalid status"}), 400
     with db.get_db() as session:
@@ -439,7 +543,7 @@ def list_admin_orders():
 def bulk_order_status():
     data = request.get_json(silent=True) or {}
     status = data.get("status")
-    if status not in {"pending", "preparing", "served"}:
+    if status not in {"pending", "preparing", "ready", "served"}:
         return jsonify({"success": False, "message": "Invalid status"}), 400
     order_ids, error = _parse_order_ids(data.get("order_ids"))
     if error:
@@ -566,6 +670,7 @@ def archived_orders():
 @bp.get("/admin/orders/stats")
 @require_role("staff")
 def order_stats():
+    advance_order_timers()
     today_ist = datetime.now(IST).date()
     start_utc = datetime.combine(today_ist, time.min, tzinfo=IST).astimezone(timezone.utc)
     end_utc = start_utc + timedelta(days=1)
@@ -577,7 +682,7 @@ def order_stats():
             select(Order).where(Order.created_at >= start_utc, Order.created_at < end_utc)
         ).scalars().all()
 
-    counts = {"pending": 0, "preparing": 0, "served": 0}
+    counts = {"pending": 0, "preparing": 0, "ready": 0, "served": 0}
     for order in active_orders:
         if order.status in counts:
             counts[order.status] += 1
@@ -610,18 +715,16 @@ def update_order_status(order_id: uuid.UUID):
             deduct_stock_for_order(session, order.id, actor_id=user_id)
             
         # Update order
-        order.status = new_status
-        order.version += 1 # Layer 6: Optimistic Locking
+        now = datetime.now(timezone.utc)
+        _apply_lifecycle_status(order, new_status, now)
         
         # Record history
-        history = list(order.status_history)
-        history.append({"status": new_status, "ts": datetime.now(timezone.utc).isoformat(), "reason": schema.reason})
+        history = list(order.status_history or [])
+        history.append({"status": new_status, "ts": now.isoformat(), "reason": schema.reason})
         order.status_history = history
         
         if new_status == "confirmed" and not order.confirmed_at:
-            order.confirmed_at = datetime.now(timezone.utc)
-        if new_status == "served" and not order.served_at:
-            order.served_at = datetime.now(timezone.utc)
+            order.confirmed_at = now
             
         audit(session, "order.status_change", "order", order.id, {"from": old_status, "to": new_status})
         session.commit()
@@ -633,7 +736,7 @@ def update_order_status(order_id: uuid.UUID):
             "action": "status_changed",
             "order_ids": [str(order.id)],
             "status": new_status,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": now.isoformat(),
         })
         broadcast("analytics_update", {"action": "orders_changed"})
         

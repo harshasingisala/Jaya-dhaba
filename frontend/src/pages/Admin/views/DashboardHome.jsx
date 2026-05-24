@@ -139,6 +139,7 @@ export default function DashboardHome() {
         {[
           { label: 'Pending Orders', value: stats.pending || 0, color: 'text-orange-600', trend: 'Live', desc: 'Awaiting kitchen action' },
           { label: 'Preparing', value: stats.preparing || 0, color: 'text-red-600', trend: 'Live', desc: 'Currently in kitchen' },
+          { label: 'Ready', value: stats.ready || 0, color: 'text-purple-700', trend: 'Live', desc: 'Cooked and awaiting service' },
           { label: 'Enjoying', value: stats.served || 0, color: 'text-heritage-gold', trend: 'Live', desc: 'Marked as guest enjoying' },
           { label: 'System Status', value: 'Live', color: 'text-heritage-accent', trend: 'Online', desc: 'Backend order ledger active' }
         ].map((item, i) => (
