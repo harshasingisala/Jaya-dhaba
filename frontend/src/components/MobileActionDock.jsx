@@ -28,7 +28,7 @@ export default function MobileActionDock() {
   };
 
   return (
-    <div className="mobile-action-dock fixed inset-x-0 bottom-0 z-[95] px-3 pb-3 pt-2">
+    <div className="mobile-action-dock md:hidden fixed inset-x-0 bottom-0 z-[95] px-3 pb-3 pt-2">
       <div className="grid grid-cols-5 rounded-[1.65rem] border border-white/50 bg-[#fffaf0]/95 shadow-[0_-12px_35px_rgba(26,15,10,0.16)] backdrop-blur-xl">
         {items.map(({ label, icon: Icon, action }) => (
           <button
