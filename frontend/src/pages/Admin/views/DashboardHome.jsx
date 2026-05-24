@@ -27,8 +27,15 @@ export default function DashboardHome() {
     };
 
     fetchData();
+    const refreshFromRealtime = () => fetchData();
+    window.addEventListener('rt:orders', refreshFromRealtime);
+    window.addEventListener('rt:analytics', refreshFromRealtime);
     const interval = setInterval(fetchData, 60000);
-    return () => clearInterval(interval);
+    return () => {
+      window.removeEventListener('rt:orders', refreshFromRealtime);
+      window.removeEventListener('rt:analytics', refreshFromRealtime);
+      clearInterval(interval);
+    };
   }, [restaurantId]);
 
   useEffect(() => {

@@ -289,7 +289,8 @@ export default function OrdersManager() {
       await api.bulkUpdateOrderStatus(ids, status);
       toast(`${ids.length} orders marked ${status}`, 'success');
       setSelectedIds(new Set());
-      if (!getSocket().connected) refreshAll();
+      const socket = getSocket();
+      if (!socket.connected || socket.joined_admin === false) refreshAll();
     } catch {
       setOrders(previousOrders);
       toast('Action failed. Try again.', 'error');
@@ -313,7 +314,8 @@ export default function OrdersManager() {
     setBulkLoading(true);
     try {
       await api.bulkUpdateOrderStatus([orderId], status);
-      if (!getSocket().connected) refreshAll();
+      const socket = getSocket();
+      if (!socket.connected || socket.joined_admin === false) refreshAll();
     } catch {
       setOrders(previousOrders);
       toast('Status update failed', 'error');
@@ -332,7 +334,8 @@ export default function OrdersManager() {
       await api.bulkArchiveOrders(ids);
       toast(`${ids.length} orders archived`, 'success');
       setSelectedIds(new Set());
-      if (!getSocket().connected) refreshAll();
+      const socket = getSocket();
+      if (!socket.connected || socket.joined_admin === false) refreshAll();
     } catch {
       toast('Archive failed', 'error');
     } finally {
@@ -347,7 +350,8 @@ export default function OrdersManager() {
       toast(`${result.cleared || 0} enjoying orders archived`, 'success');
       setSelectedIds(new Set());
       setClearConfirm(false);
-      if (!getSocket().connected) refreshAll();
+      const socket = getSocket();
+      if (!socket.connected || socket.joined_admin === false) refreshAll();
     } catch {
       toast('Clear failed', 'error');
     } finally {
@@ -362,7 +366,8 @@ export default function OrdersManager() {
       toast(`${result.archived || 0} orders moved to archive`, 'success');
       setSelectedIds(new Set());
       setDeleteAllConfirm(false);
-      if (!getSocket().connected) refreshAll();
+      const socket = getSocket();
+      if (!socket.connected || socket.joined_admin === false) refreshAll();
     } catch {
       toast('Delete all failed. Nothing was changed.', 'error');
     } finally {

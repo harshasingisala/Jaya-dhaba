@@ -22,7 +22,7 @@ from schemas import OrderCreate, OrderStatusUpdate
 from services.billing import calculate_order_totals
 from services.inventory import deduct_stock_for_order
 from events import broker, order_topic_id
-from realtime import broadcast
+from realtime import broadcast, notify_order_update
 from security_log import log_security_event
 from utils.validation import extract_fields
 from order_queue import enqueue_order, finish_order
@@ -446,6 +446,7 @@ def bulk_order_status():
         return jsonify({"success": False, "message": error}), 400
 
     now = datetime.now(timezone.utc)
+    updated_payloads = []
     with db.get_db() as session:
         orders = session.execute(
             select(Order).where(Order.id.in_(order_ids), Order.is_archived.is_(False))
@@ -458,13 +459,21 @@ def bulk_order_status():
             order.status_history = history
             audit(session, "order.bulk_status", "order", order.id, {"from": old_status, "to": status})
         session.commit()
+        for order in orders:
+            session.refresh(order)
+            updated_payloads.append(serialize_order(order))
 
     id_payload = [str(order_id) for order_id in order_ids]
+    for payload in updated_payloads:
+        broker.publish("kitchen", "order.updated", payload)
+        broker.publish(f"order:{order_topic_id(payload['id'])}", "order.updated", payload)
+        notify_order_update(payload["id"], status)
     broadcast("orders_update", {
         "action": "status_changed",
         "order_ids": id_payload,
         "status": status,
         "timestamp": now.isoformat(),
+        "orders": updated_payloads,
     })
     broadcast("analytics_update", {"action": "orders_changed"})
     return jsonify({"success": True, "updated": len(orders), "status": status})
