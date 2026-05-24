@@ -10,7 +10,9 @@ const TABS = ['all', 'pending', 'preparing', 'ready', 'served', 'archive'];
 const STATUS_LABELS = {
   Placed: 'pending',
   Pending: 'pending',
+  Confirmed: 'pending',
   pending: 'pending',
+  confirmed: 'pending',
   Preparing: 'preparing',
   preparing: 'preparing',
   Ready: 'ready',
@@ -36,6 +38,10 @@ function formatItems(order) {
   return order.items.map((item) => `${item.qty || item.quantity || 1}x ${item.name}`).join(', ');
 }
 
+function tableDisplay(order) {
+  return order.table_label || order.table || order.table_number || (order.table_id ? `ID ${String(order.table_id).slice(0, 8)}` : 'Guest');
+}
+
 function buildWhatsAppReceipt(order) {
   const itemLines = Array.isArray(order.items) && order.items.length
     ? order.items.map((item) => {
@@ -49,7 +55,7 @@ function buildWhatsAppReceipt(order) {
     `Order: ${displayId(order)}`,
     `Guest: ${order.customer_name || order.guest_name || 'Guest'}`,
     `Phone: ${order.customer_phone || order.guest_phone || 'Not shared'}`,
-    `Table: ${order.table || order.table_id || 'Guest'}`,
+    `Table: ${tableDisplay(order)}`,
     `Status: ${apiStatus(order)}`,
     `Payment: ${order.payment_method || 'Not recorded'}`,
     '',
@@ -602,7 +608,7 @@ export default function OrdersManager() {
                 <div>
                   <p className="font-serif italic text-xl text-heritage-espresso">{order.customer_name || order.guest_name || 'Guest'}</p>
                   <p className="text-[10px] font-black uppercase tracking-widest text-heritage-espresso/30">
-                    Table {order.table || order.table_id || 'Guest'} {String(order.payment_method || '').toLowerCase() === 'cash' ? ' / Rs CASH' : ''}
+                    Table {tableDisplay(order)} {String(order.payment_method || '').toLowerCase() === 'cash' ? ' / Rs CASH' : ''}
                   </p>
                 </div>
                 <p className="text-sm text-heritage-espresso/60 truncate">{formatItems(order)}</p>

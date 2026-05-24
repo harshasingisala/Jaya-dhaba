@@ -14,9 +14,14 @@ def _cors_allowed_origins() -> list[str]:
         "https://www.jayadhaba.online",
         "https://jayadhaba.online",
     ]
-    if os.getenv("FLASK_ENV") == "development":
-        origins.append("http://localhost:5173")
-        origins.append("http://localhost:5174")
+    runtime_env = (os.getenv("APP_ENV") or os.getenv("FLASK_ENV") or "").lower()
+    if runtime_env != "production":
+        origins.extend([
+            "http://localhost:5173",
+            "http://localhost:5174",
+            "http://127.0.0.1:5173",
+            "http://127.0.0.1:5174",
+        ])
     return origins
 
 

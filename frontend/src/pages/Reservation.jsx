@@ -242,8 +242,8 @@ export default function Reservation() {
 
                   <MagneticButton 
                     disabled={isSubmitting || ledgerStampActive}
+                    type="submit"
                     className="w-full py-6 bg-[var(--text-main)] text-[var(--bg-primary)] font-black text-[10px] uppercase tracking-[0.5em] shadow-xl hover:bg-[var(--cta-color)] transition-all font-sans"
-                    onClick={handleSubmit}
                   >
                      {isSubmitting || ledgerStampActive ? 'Imprinting...' : 'Seal the Ledger'}
                   </MagneticButton>

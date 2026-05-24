@@ -11,6 +11,7 @@ const DashboardHome = React.lazy(() => import('./Admin/views/DashboardHome'));
 const ReservationsManager = React.lazy(() => import('./Admin/views/ReservationsManager'));
 const OrdersManager = React.lazy(() => import('./Admin/views/OrdersManager'));
 const MenuManager = React.lazy(() => import('./Admin/views/MenuManager'));
+const QRTableManager = React.lazy(() => import('./Admin/views/QRTableManager'));
 const SettingsManager = React.lazy(() => import('./Admin/views/SettingsManager'));
 const AnalyticsView = React.lazy(() => import('./Admin/views/AnalyticsView'));
 const RevenueCommandCenter = React.lazy(() => import('./Admin/views/RevenueCommandCenter'));
@@ -102,7 +103,7 @@ export default function Admin() {
   }
 
   return (
-    <div className="flex bg-[#FAF9F6] h-screen text-heritage-espresso font-sans relative overflow-hidden">
+    <div className="flex min-h-dvh bg-[#FAF9F6] text-heritage-espresso font-sans relative overflow-x-hidden">
       <PageMeta
         title="Control Suite"
         description="Jaya Dhaba private admin control suite."
@@ -118,18 +119,19 @@ export default function Admin() {
       <AdminSidebar mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />
 
       {/* MAIN CONTENT AREA */}
-      <div className="flex-1 flex flex-col h-screen relative z-10 w-full overflow-hidden">
+      <div className="flex-1 flex min-h-dvh min-w-0 flex-col relative z-10 w-full">
         
         {/* Header with Mobile Toggle Trigger */}
         <AdminHeader onMenuToggle={() => setMobileOpen(true)} onTestSound={playNewOrderSound} />
         
-        <main className="flex-1 min-h-0 overflow-y-auto p-4 md:p-10 w-full">
+        <main className="flex-1 w-full overflow-x-hidden p-4 md:p-10">
           <div className="max-w-[1600px] mx-auto w-full">
           <Suspense fallback={<div>Loading...</div>}>
             <Routes>
               <Route path="/" element={<DashboardHome />} />
               <Route path="/reservations" element={<ReservationsManager />} />
               <Route path="/orders" element={<OrdersManager />} />
+              <Route path="/tables" element={<QRTableManager />} />
               <Route path="/menu" element={<MenuManager />} />
               <Route path="/settings" element={<SettingsManager />} />
               <Route path="/analytics" element={<AnalyticsView />} />

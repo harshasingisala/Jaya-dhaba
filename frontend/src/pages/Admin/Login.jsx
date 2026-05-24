@@ -30,7 +30,7 @@ export default function Login() {
       showToast('🔑 Access granted. Welcome back.', 'success');
       navigate('/admin');
     } catch (err) {
-      console.error('[JAYA_DEBUG] Caught error in handleSubmit:', err);
+      console.error('Admin login failed:', err);
       showToast('❌ Identity verification failed.', 'error');
     } finally {
       setLoading(false);

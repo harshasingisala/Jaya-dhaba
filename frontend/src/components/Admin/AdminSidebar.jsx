@@ -12,7 +12,8 @@ import {
   Mail,
   X,
   TrendingUp,
-  BarChart3
+  BarChart3,
+  QrCode
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api';
@@ -73,6 +74,7 @@ export default function AdminSidebar({ mobileOpen, setMobileOpen }) {
     { icon: <BarChart3 size={18} />, label: 'Reports', path: '/admin/reports' },
     { icon: <Mail size={18} />, label: 'Inbox', path: '/admin/inbox', badge: unreadInbox },
     { icon: <ShoppingBag size={18} />, label: 'Live Orders', path: '/admin/orders' },
+    { icon: <QrCode size={18} />, label: 'Tables & QR', path: '/admin/tables' },
     { icon: <UtensilsCrossed size={18} />, label: 'The Menu', path: '/admin/menu' },
     { icon: <Users size={18} />, label: 'Reservations', path: '/admin/reservations' },
     { icon: <PieChart size={18} />, label: 'Intelligence', path: '/admin/analytics' },
@@ -138,14 +140,14 @@ export default function AdminSidebar({ mobileOpen, setMobileOpen }) {
   return (
     <>
       {/* DESKTOP SIDEBAR */}
-      <div className="hidden lg:block w-80 h-screen sticky top-0 no-print shrink-0">
+      <div className="hidden lg:block w-80 h-dvh sticky top-0 no-print shrink-0">
         {sidebarContent}
       </div>
 
       {/* MOBILE DRAWER */}
       <div className={`fixed inset-0 z-[200] lg:hidden transition-opacity duration-500 ${mobileOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
-         <div className={`absolute top-0 left-0 w-80 h-full transition-transform duration-500 transform ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+         <div className={`absolute top-0 left-0 w-80 h-dvh transition-transform duration-500 transform ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
             {sidebarContent}
          </div>
       </div>

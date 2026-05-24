@@ -14,7 +14,7 @@ const load = (key, fallback) => {
     if (Array.isArray(fallback) && !Array.isArray(parsed)) return fallback;
     return parsed ?? fallback;
   } catch (err) {
-    console.error('[JAYA_DEBUG] Caught error in load:', err);
+    console.error('Failed to load saved cart:', err);
     localStorage.removeItem(key);
     return fallback;
   }
@@ -56,7 +56,7 @@ export function AppProvider({ children }) {
   useEffect(() => {
     const fetchMenu = async () => {
       try {
-        const data = await api.getMenu(restaurantId);
+        const data = await api.getMenu();
         setMenuItems(data);
         setMenuError(null);
         setMenuUnavailable(false);
@@ -82,7 +82,7 @@ export function AppProvider({ children }) {
         setMenuItems([]);
         window.setTimeout(async () => {
           try {
-            const retryData = await api.getMenu(restaurantId);
+            const retryData = await api.getMenu();
             setMenuItems(retryData);
             setMenuError(null);
             setMenuUnavailable(false);
@@ -151,7 +151,7 @@ export function AppProvider({ children }) {
     setCartOpen(true);
     vibrate(15);
     trackEvent("add_to_cart", { restaurantId, item: item.id, qty, spiceLevel }).catch((err) => {
-      console.error('[JAYA_DEBUG] Caught error in addToCart trackEvent:', err);
+      console.error('Failed to track add-to-cart event:', err);
     });
   };
 

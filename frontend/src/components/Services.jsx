@@ -3,6 +3,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import MagneticButton from "./MagneticButton";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -15,6 +16,16 @@ const services = [
 export default function Services() {
   const containerRef = useRef(null);
   const imagesRef = useRef([]);
+  const navigate = useNavigate();
+
+  const openEnquiry = () => {
+    const contactEl = document.getElementById("contact");
+    if (contactEl) {
+      contactEl.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+    navigate("/contact");
+  };
 
   useEffect(() => {
     imagesRef.current.forEach((img) => {
@@ -60,7 +71,10 @@ export default function Services() {
             </div>
 
             <div className="px-8 flex justify-center">
-               <MagneticButton className="px-10 py-4 bg-heritage-espresso text-white rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-heritage-gold transition-colors font-sans w-full max-w-[200px]">
+               <MagneticButton
+                 className="px-10 py-4 bg-heritage-espresso text-white rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-heritage-gold transition-colors font-sans w-full max-w-[200px]"
+                 onClick={openEnquiry}
+               >
                  Enquire
                </MagneticButton>
             </div>

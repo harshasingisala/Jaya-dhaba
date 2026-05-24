@@ -187,6 +187,7 @@ def _ensure_order_lifecycle_schema():
         if engine.dialect.name == "postgresql":
             conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS is_archived BOOLEAN NOT NULL DEFAULT false"))
             conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ"))
+            conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS confirmed_at TIMESTAMPTZ"))
             conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS preparing_at TIMESTAMPTZ"))
             conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS served_at TIMESTAMPTZ"))
             conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS source VARCHAR(20) NOT NULL DEFAULT 'customer'"))
@@ -199,6 +200,8 @@ def _ensure_order_lifecycle_schema():
             conn.execute(text("ALTER TABLE orders ADD COLUMN is_archived BOOLEAN NOT NULL DEFAULT 0"))
         if "archived_at" not in columns:
             conn.execute(text("ALTER TABLE orders ADD COLUMN archived_at DATETIME"))
+        if "confirmed_at" not in columns:
+            conn.execute(text("ALTER TABLE orders ADD COLUMN confirmed_at DATETIME"))
         if "preparing_at" not in columns:
             conn.execute(text("ALTER TABLE orders ADD COLUMN preparing_at DATETIME"))
         if "served_at" not in columns:

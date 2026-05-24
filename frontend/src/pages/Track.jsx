@@ -66,7 +66,7 @@ export default function Track() {
          const res = await api.getOrder(id, token);
          setOrder(res);
       } catch (err) {
-         console.error('[JAYA_DEBUG] Caught error in fetchOrder:', err);
+         console.error('Failed to fetch order tracking details:', err);
          setError('This secure tracking link is invalid or expired. Please use the link from your order confirmation.');
       } finally {
          setIsLoading(false);

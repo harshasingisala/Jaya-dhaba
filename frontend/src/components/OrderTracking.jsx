@@ -28,7 +28,7 @@ export function useOrderTracking(orderId, token = '') {
         setError(null);
       })
       .catch((err) => {
-        console.error('[JAYA_DEBUG] Caught error in useOrderTracking initial load:', err);
+        console.error('Failed to load order tracking details:', err);
         setError(err.message || 'Order not found.');
       })
       .finally(() => setLoading(false));
@@ -38,7 +38,7 @@ export function useOrderTracking(orderId, token = '') {
       api.getOrder(orderId, token)
         .then((data) => setOrder(data))
         .catch((err) => {
-          console.error('[JAYA_DEBUG] Caught error in useOrderTracking refreshOrder:', err);
+          console.error('Failed to refresh order tracking details:', err);
           setError(err.message || 'Order not found.');
         });
     };
@@ -109,7 +109,7 @@ export function OrderTrackingPage({ orderId, token = '' }) {
     try {
       return Array.isArray(order.items) ? order.items : JSON.parse(order.items || '[]');
     } catch (err) {
-      console.error('[JAYA_DEBUG] Caught error in OrderTrackingPage items parse:', err);
+      console.error('Failed to parse tracked order items:', err);
       return [];
     }
   })();

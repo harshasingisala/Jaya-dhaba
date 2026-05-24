@@ -61,51 +61,59 @@ def serialize(row) -> dict:
 
 
 def find_available_table(conn, party_size: int, reserved_at: str, duration: int, preferred_table_id: str | None):
-    table_filter = "AND t.id = ?" if preferred_table_id else ""
-    params = [party_size, reserved_at, str(duration), reserved_at]
-    if preferred_table_id:
-        params.append(preferred_table_id)
+    table_filter = "AND t.id = :preferred_table_id" if preferred_table_id else ""
+    params = {
+        "party_size": party_size,
+        "reserved_at": reserved_at,
+        "duration": duration,
+        "preferred_table_id": preferred_table_id,
+    }
+    if db.engine.dialect.name == "postgresql":
+        overlap_sql = """
+                AND r.reserved_at < (:reserved_at + (:duration * INTERVAL '1 minute'))
+                AND :reserved_at < (r.reserved_at + (r.duration_minutes * INTERVAL '1 minute'))
+        """
+    else:
+        overlap_sql = """
+                AND datetime(r.reserved_at) < datetime(:reserved_at, '+' || :duration || ' minutes')
+                AND datetime(:reserved_at) < datetime(r.reserved_at, '+' || r.duration_minutes || ' minutes')
+        """
     table = conn.execute(
         f"""
         SELECT t.*
         FROM tables t
         WHERE t.active = true
-          AND t.capacity >= ?
+          AND t.capacity >= :party_size
           {table_filter}
           AND NOT EXISTS (
               SELECT 1
               FROM reservations r
               WHERE r.table_id = t.id
                 AND r.status = 'confirmed'
-                AND datetime(r.reserved_at) < datetime(?, '+' || ? || ' minutes')
-                AND datetime(?) < datetime(r.reserved_at, '+' || r.duration_minutes || ' minutes')
+                {overlap_sql}
           )
         ORDER BY t.capacity ASC, t.id ASC
         LIMIT 1
         """,
-        tuple(params),
+        params,
     ).fetchone()
     if table:
         return table, None
 
-    conflict_params = [party_size, reserved_at, str(duration), reserved_at]
-    if preferred_table_id:
-        conflict_params.append(preferred_table_id)
     conflict = conn.execute(
         f"""
         SELECT r.reserved_at
         FROM reservations r
         JOIN tables t ON t.id = r.table_id
         WHERE t.active = true
-          AND t.capacity >= ?
+          AND t.capacity >= :party_size
           {table_filter}
           AND r.status = 'confirmed'
-          AND datetime(r.reserved_at) < datetime(?, '+' || ? || ' minutes')
-          AND datetime(?) < datetime(r.reserved_at, '+' || r.duration_minutes || ' minutes')
+          {overlap_sql}
         ORDER BY r.reserved_at ASC
         LIMIT 1
         """,
-        tuple(conflict_params),
+        params,
     ).fetchone()
     return None, conflict["reserved_at"] if conflict else None
 
@@ -136,29 +144,44 @@ def create_reservation():
                 if conflict_at:
                     message = f"No table is available for that time. Conflicting slot: {conflict_at}"
                 raise ValidationError(message, "reserved_at", 409)
-            cursor = conn.execute(
-                """
-                INSERT INTO reservations
-                (user_id, table_id, party_size, reserved_at, duration_minutes, status,
-                 idempotency_key, request_hash, guest_name, guest_phone, celebration_type, created_at)
-                VALUES (?, ?, ?, ?, ?, 'confirmed', ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    user["id"] if user else None,
-                    table["id"],
-                    party_size,
-                    reserved_at,
-                    duration,
-                    key,
-                    fingerprint,
-                    raw_text(data.get("guest_name", ""), "guest_name", 120, required=False, allow_empty=True),
-                    raw_text(data.get("guest_phone", ""), "guest_phone", 40, required=False, allow_empty=True),
-                    celebration_type,
-                    db.utc_now(),
-                ),
-            )
-            row = conn.execute("SELECT * FROM reservations WHERE id = ?", (cursor.lastrowid,)).fetchone()
-            audit(conn, "reservation.create", "reservation", cursor.lastrowid)
+            insert_params = {
+                "user_id": user["id"] if user else None,
+                "table_id": table["id"],
+                "party_size": party_size,
+                "reserved_at": reserved_at,
+                "duration": duration,
+                "key": key,
+                "fingerprint": fingerprint,
+                "guest_name": raw_text(data.get("guest_name", ""), "guest_name", 120, required=False, allow_empty=True),
+                "guest_phone": raw_text(data.get("guest_phone", ""), "guest_phone", 40, required=False, allow_empty=True),
+                "celebration_type": celebration_type,
+                "created_at": db.utc_now(),
+            }
+            if db.engine.dialect.name == "postgresql":
+                row = conn.execute(
+                    """
+                    INSERT INTO reservations
+                    (user_id, table_id, party_size, reserved_at, duration_minutes, status,
+                     idempotency_key, request_hash, guest_name, guest_phone, celebration_type, created_at)
+                    VALUES (:user_id, :table_id, :party_size, :reserved_at, :duration, 'confirmed',
+                            :key, :fingerprint, :guest_name, :guest_phone, :celebration_type, :created_at)
+                    RETURNING *
+                    """,
+                    insert_params,
+                ).fetchone()
+            else:
+                cursor = conn.execute(
+                    """
+                    INSERT INTO reservations
+                    (user_id, table_id, party_size, reserved_at, duration_minutes, status,
+                     idempotency_key, request_hash, guest_name, guest_phone, celebration_type, created_at)
+                    VALUES (:user_id, :table_id, :party_size, :reserved_at, :duration, 'confirmed',
+                            :key, :fingerprint, :guest_name, :guest_phone, :celebration_type, :created_at)
+                    """,
+                    insert_params,
+                )
+                row = conn.execute("SELECT * FROM reservations WHERE id = ?", (cursor.lastrowid,)).fetchone()
+            audit(conn, "reservation.create", "reservation", row["id"])
             return serialize(row), 201
 
     payload, status = db.run_write(operation)

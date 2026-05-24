@@ -45,7 +45,7 @@ export default function ChatBot() {
       const raw = sessionStorage.getItem(SESSION_KEY);
       return raw ? JSON.parse(raw) : [];
     } catch (err) {
-      console.error('[JAYA_DEBUG] Caught error in ChatBot session restore:', err);
+      console.error('Failed to restore chat session:', err);
       return [];
     }
   });
@@ -128,7 +128,7 @@ export default function ChatBot() {
                 updateAssistant(assistantId, `\n${parsed.message || "Chat failed."}`, true);
               }
             } catch (err) {
-              console.error('[JAYA_DEBUG] Caught error in ChatBot stream chunk parse:', err);
+              console.error('Failed to parse chat response chunk:', err);
               // ignore malformed stream chunks
             }
           }
@@ -137,7 +137,7 @@ export default function ChatBot() {
       }
       updateAssistant(assistantId, "", true);
     } catch (err) {
-      console.error('[JAYA_DEBUG] Caught error in ChatBot sendMessage:', err);
+      console.error('Failed to send chat message:', err);
       updateAssistant(assistantId, "Sorry, I couldn’t respond right now. Please try again in a moment.", true);
     } finally {
       if (abortRef.current === controller) abortRef.current = null;

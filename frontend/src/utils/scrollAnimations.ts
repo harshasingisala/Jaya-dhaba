@@ -53,17 +53,6 @@ export function initScrollProgressBar() {
   handler();
 }
 
-export function initCursorGlow() {
-  if (window.innerWidth < 768 || reducedMotion()) return;
-  const glow = document.createElement("div");
-  glow.style.cssText = "position:fixed;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(184,134,11,0.15) 0%,transparent 70%);pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:opacity 0.3s";
-  document.body.appendChild(glow);
-  document.addEventListener("mousemove", (e) => {
-    glow.style.left = `${e.clientX}px`;
-    glow.style.top = `${e.clientY}px`;
-  });
-}
-
 export function initHorizontalWheel(el: HTMLElement) {
   el.addEventListener("wheel", (e) => {
     e.preventDefault();

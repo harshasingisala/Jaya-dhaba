@@ -107,9 +107,9 @@ function getCsrfToken() {
 function getAuthToken() {
   try {
     const user = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null');
-    return user?.access_token || user?.token || '';
+    return user?.access_token || user?.token || localStorage.getItem('adminToken') || '';
   } catch (err) {
-    return '';
+    return localStorage.getItem('adminToken') || '';
   }
 }
 
@@ -122,6 +122,12 @@ class ApiRequestError extends Error {
     this.status = status;
     this.payload = payload;
     this.url = url;
+  }
+}
+
+function logDevWarning(message, err) {
+  if (import.meta.env.DEV) {
+    console.warn(message, err);
   }
 }
 
@@ -142,7 +148,7 @@ export function isTokenExpired(token) {
     const payload = JSON.parse(atob(token.split('.')[1]));
     return (payload.exp - 10) * 1000 < Date.now();
   } catch (err) {
-    console.error('[JAYA_DEBUG] Caught error in isTokenExpired:', err);
+    logDevWarning('Unable to read admin session token.', err);
     return false;
   }
 }
@@ -178,7 +184,6 @@ async function request(path, options = {}) {
 
   const url = `${BASE_URL}${path}`;
   const makeFetch = async () => {
-    const startedAt = performance.now();
     const response = await dedupedFetch(url, {
       ...fetchOptions,
       method,
@@ -189,7 +194,7 @@ async function request(path, options = {}) {
   };
   let res = await makeFetch();
   const payload = await res.json().catch((err) => {
-    console.error('[JAYA_DEBUG] Caught error in request json parse:', err);
+    logDevWarning('Unable to parse API response JSON.', err);
     return {};
   });
   if (
@@ -200,7 +205,7 @@ async function request(path, options = {}) {
     headers['X-CSRF-Token'] = await ensureCsrfToken(true);
     res = await makeFetch();
     const retryPayload = await res.json().catch((err) => {
-      console.error('[JAYA_DEBUG] Caught error in retry request json parse:', err);
+      logDevWarning('Unable to parse retried API response JSON.', err);
       return {};
     });
     if (!res.ok) {
@@ -223,6 +228,33 @@ async function request(path, options = {}) {
   }
   if (rawResponse) return payload;
   return payload?.data ?? payload;
+}
+
+async function blobRequest(path, options = {}) {
+  const method = (options.method || 'GET').toUpperCase();
+  const headers = {
+    ...(options.headers || {}),
+  };
+  const token = getAuthToken();
+  if (token && !headers.Authorization) headers.Authorization = `Bearer ${token}`;
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(method) && !headers['X-CSRF-Token']) {
+    headers['X-CSRF-Token'] = await ensureCsrfToken();
+  }
+  const res = await fetchWithRetry(`${BASE_URL}${path}`, {
+    ...options,
+    method,
+    credentials: 'include',
+    headers,
+  });
+  if (!res.ok) {
+    const payload = await res.json().catch(() => ({}));
+    throw new ApiRequestError(payload.message || payload.error || `Request failed (${res.status})`, {
+      status: res.status,
+      payload,
+      url: `${BASE_URL}${path}`,
+    });
+  }
+  return res.blob();
 }
 
 function normalizeMenuItem(item) {
@@ -267,7 +299,8 @@ function normalizeOrder(order) {
     status,
     customer_name: order.customer_name || order.guest_name || 'Guest',
     customer: order.customer || order.guest_name || 'Guest',
-    table: order.table || order.table_number || order.table_id || 'Guest',
+    table: order.table_label || order.table || order.table_number || order.table_id || 'Guest',
+    table_label: order.table_label || order.table || order.table_number || '',
     time: order.time || (order.created_at ? new Date(order.created_at).toLocaleString('en-IN') : ''),
     total,
     subtotal,
@@ -315,14 +348,55 @@ function normalizeReservation(reservation) {
   };
 }
 
+function normalizeReservationPayload(payload = {}) {
+  const date = String(payload.date || '').trim();
+  const time = String(payload.time || '19:00').trim();
+  const reservedAt = payload.reserved_at || (date ? `${date}T${time || '19:00'}:00+05:30` : '');
+  const partySize = parseInt(payload.party_size ?? payload.guests ?? payload.partySize ?? 1, 10);
+
+  return {
+    table_id: payload.table_id || null,
+    party_size: Number.isFinite(partySize) ? partySize : 1,
+    reserved_at: reservedAt,
+    duration_minutes: parseInt(payload.duration_minutes ?? 90, 10) || 90,
+    guest_name: String(payload.guest_name ?? payload.name ?? '').trim(),
+    guest_phone: String(payload.guest_phone ?? payload.phone ?? '').trim(),
+    notes: String(payload.notes ?? payload.note ?? '').trim(),
+  };
+}
+
 const api = {
   request,
 
-  getMenu: async () => {
-    if (USE_DEV_CUSTOMER_FALLBACKS) return DEV_MENU_ITEMS.map(normalizeMenuItem);
-    const data = await request('/api/menu');
+  getMenu: async (tableParam = '') => {
+    if (USE_DEV_CUSTOMER_FALLBACKS && !tableParam) return DEV_MENU_ITEMS.map(normalizeMenuItem);
+    const query = tableParam ? `?table=${encodeURIComponent(tableParam)}` : '';
+    let data;
+    try {
+      data = await request(`/api/menu${query}`);
+    } catch (err) {
+      if (!tableParam) return DEV_MENU_ITEMS.map(normalizeMenuItem);
+      throw err;
+    }
+    if (tableParam) {
+      return {
+        ...data,
+        table: data.table || null,
+        categories: Array.isArray(data.categories) ? data.categories : [],
+        items: Array.isArray(data.items) ? data.items.map(normalizeMenuItem) : [],
+      };
+    }
     if (data.items && Array.isArray(data.items)) return data.items.map(normalizeMenuItem);
     return [];
+  },
+
+  resolveTable: async (tableNumber) => {
+    const data = await request(`/api/tables/resolve?table=${encodeURIComponent(tableNumber)}`);
+    return data.table || data;
+  },
+
+  placeOrder: async (payload) => {
+    return api.createOrder(payload);
   },
 
   getAdminMenu: async () => {
@@ -417,8 +491,45 @@ const api = {
     return (Array.isArray(data) ? data : []).map(normalizeOrder);
   },
 
+  getAdminOrders: async () => {
+    return api.getOrders();
+  },
+
   getOrderStats: async () => {
     return request('/api/admin/orders/stats');
+  },
+
+  getAdminTables: async () => {
+    const data = await request('/api/admin/tables');
+    return Array.isArray(data) ? data : data.tables || [];
+  },
+
+  bulkCreateTables: async (count, capacity = 4) => {
+    const data = await request('/api/admin/tables/bulk', {
+      method: 'POST',
+      body: JSON.stringify({ count: Number(count), capacity: Number(capacity) }),
+    });
+    return Array.isArray(data) ? data : data.tables || [];
+  },
+
+  getTableQRCode: async (tableId) => {
+    return blobRequest(`/api/admin/tables/${tableId}/qr-code`, { method: 'GET' });
+  },
+
+  downloadAllQRs: async () => {
+    return blobRequest('/api/admin/tables/qr-codes', { method: 'POST' });
+  },
+
+  clearTable: async (tableId) => {
+    return request(`/api/admin/tables/${tableId}/clear`, { method: 'PATCH' });
+  },
+
+  updateTable: async (tableId, updates) => {
+    const data = await request(`/api/admin/tables/${tableId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    });
+    return data.table || data;
   },
 
   getOrderArchive: async (date = '') => {
@@ -679,7 +790,7 @@ const api = {
     return request('/api/reservations', {
       method: 'POST',
       headers: { 'Idempotency-Key': idempotencyKey },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(normalizeReservationPayload(payload)),
     });
   },
 
@@ -739,8 +850,14 @@ const api = {
       },
       body: JSON.stringify(payload),
     });
-    if (!res.ok) throw new Error('Contact submission failed');
-    return res.json();
+    const responsePayload = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new ApiRequestError(
+        responsePayload.msg || responsePayload.message || responsePayload.error || 'Contact submission failed',
+        { status: res.status, payload: responsePayload, url: `${BASE_URL}/api/contact` },
+      );
+    }
+    return responsePayload;
   },
 
   trackEvent: async (eventName, properties = {}) => {

@@ -22,9 +22,8 @@ export default function MenuDisplay() {
     let isMounted = true;
     const fetchMenu = async () => {
       try {
-        if (!restaurantId) return;
         setLoading(true);
-        const data = await api.getMenu(restaurantId);
+        const data = await api.getMenu();
         if (isMounted) {
           setMenu(data || []);
           if (!data || data.length === 0) setError("Using Heritage Backup Ledger.");
@@ -49,7 +48,7 @@ export default function MenuDisplay() {
       stream.close();
       window.clearInterval(pollingFallback);
     };
-  }, [restaurantId]);
+  }, []);
 
   const categories = ['All', ...new Set(menu.map(item => item.category))];
   const filteredMenu = activeCategory === 'All' ? menu : menu.filter(item => item.category === activeCategory);

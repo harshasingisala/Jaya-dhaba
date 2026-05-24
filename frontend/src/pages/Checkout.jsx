@@ -55,7 +55,7 @@ export default function Checkout() {
     try {
       return JSON.parse(sessionStorage.getItem('user') || 'null');
     } catch (err) {
-      console.error('[JAYA_DEBUG] Caught error in checkout user parse:', err);
+      console.error('Failed to restore checkout user:', err);
       return null;
     }
   })();
@@ -95,7 +95,7 @@ export default function Checkout() {
       })
       rzp.on('payment.failed', (r) => { setError(`Payment failed: ${r.error.description}`); setStatus('idle') })
       rzp.open()
-    } catch (e) { console.error('[JAYA_DEBUG] Caught error in handlePayment:', e); setError(e.message || 'Payment unavailable. Please call us.'); setStatus('idle') }
+    } catch (e) { console.error('Payment failed:', e); setError(e.message || 'Payment unavailable. Please call us.'); setStatus('idle') }
   }
 
   useEffect(() => {
@@ -134,7 +134,7 @@ export default function Checkout() {
         clearCart();
       }
     } catch (err) {
-      console.error('[JAYA_DEBUG] Caught error in handlePlaceOrder:', err);
+      console.error('Failed to place checkout order:', err);
       setCheckoutError(err.message || 'The culinary gates are temporarily closed. Please try calling us directly at +91 73861 85821.');
     } finally {
       setIsProcessing(false);
@@ -345,7 +345,7 @@ export default function Checkout() {
                         setAppliedCoupon(res);
                         alert(`Masterpiece Code Applied: ${res.title}`);
                       } catch (e) {
-                        console.error('[JAYA_DEBUG] Caught error in applyCoupon:', e);
+                        console.error('Failed to apply coupon:', e);
                         alert(e.message || "Code not recognized by the vault.");
                       } finally {
                         setIsApplying(false);

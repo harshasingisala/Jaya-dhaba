@@ -15,8 +15,8 @@ from sqlalchemy.exc import IntegrityError as SAIntegrityError
 from sqlalchemy import select
 
 import db
-from audit import audit
-from auth import ROLE_RANK, require_role, request_ip
+from audit import audit as legacy_audit
+from auth import ROLE_RANK, log_audit, require_role, request_ip
 from events import broker, order_topic_id
 from realtime import broadcast
 from rate_limits import enforce_limit
@@ -31,6 +31,13 @@ bp = Blueprint("payments", __name__, url_prefix="/api")
 
 STAFF_PAYMENT_ROLES = {"staff", "manager", "owner", "admin"}
 IST = timezone(timedelta(hours=5, minutes=30))
+
+
+def audit(conn_or_session, action: str, entity_type: str, entity_id, payload: dict | None = None, user_id=None) -> None:
+    if hasattr(conn_or_session, "add") and hasattr(conn_or_session, "flush"):
+        log_audit(conn_or_session, action, entity_type, entity_id, payload, user_id=user_id)
+        return
+    legacy_audit(conn_or_session, action, entity_type, entity_id, payload, user_id=user_id)
 
 
 def _is_development() -> bool:
@@ -667,7 +674,7 @@ def verify_payment():
         except ValidationError:
             raise
         except Exception as exc:
-            current_app.logger.critical(
+            current_app.logger.exception(
                 "payment_recorded_pending",
                 extra={"razorpay_payment_id": payment_id, "razorpay_order_id": razorpay_order_id, "error": str(exc)},
             )

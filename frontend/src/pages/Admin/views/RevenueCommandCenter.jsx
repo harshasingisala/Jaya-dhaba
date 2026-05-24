@@ -58,7 +58,7 @@ export default function RevenueCommandCenter() {
         lastCheck: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
       });
     } catch (err) {
-      console.error('[JAYA_DEBUG] Caught error in loadHealth:', err);
+      console.error('Failed to load revenue health metrics:', err);
       setHealth({
         db: 'unknown',
         api: 'down',

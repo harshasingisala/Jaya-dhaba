@@ -152,6 +152,25 @@ def test_guest_order_placement_succeeds(client, seeded_menu):
     assert data["data"]["order_number"] is not None
 
 
+def test_contact_enquiry_submission_succeeds(client):
+    csrf = get_csrf(client)
+    resp = client.post(
+        "/api/contact",
+        json={
+            "name": "Test Guest",
+            "email": "guest@example.com",
+            "phone": "+917386185821",
+            "subject": "Event enquiry",
+            "message": "Please share catering details.",
+        },
+        headers={"X-CSRF-Token": csrf},
+    )
+    assert resp.status_code == 201, f"Contact enquiry failed: {resp.data}"
+    data = resp.get_json()
+    assert data.get("success") is True
+    assert data["data"]["id"] is not None
+
+
 def test_order_idempotency(client, admin_headers, seeded_menu):
     table_qr, item_id = seeded_menu
     key = uuid.uuid4().hex

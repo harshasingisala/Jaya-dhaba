@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from "react";
+import React, { Suspense, lazy, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import HeroContainer from "../components/HeroContainer";
@@ -29,7 +29,9 @@ const PageSkeleton = () => (
  * Unified under the 'Saffron & Stone' Premium Heritage System.
  */
 export default function Home() {
-  const { pathname } = useLocation();
+  const { hash, pathname } = useLocation();
+  const isContactPage = pathname === "/contact";
+  const isMenuPage = pathname === "/menu";
   const page = pathname === "/menu"
     ? {
         title: "Menu",
@@ -46,7 +48,52 @@ export default function Home() {
           title: "Authentic Indian Restaurant in Secunderabad",
           description: "Jaya Dhaba - Heritage Restored. Flavor Perfected. Authentic Indian dining in East Marredpally, Secunderabad. Open 11 AM - 11 PM daily.",
           url: "/",
-        };
+      };
+
+  useEffect(() => {
+    if (isContactPage || isMenuPage) return;
+    const targetId = pathname === "/contact" ? "contact" : hash.replace("#", "");
+    if (!targetId) return;
+
+    const timer = window.setTimeout(() => {
+      document.getElementById(targetId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
+
+    return () => window.clearTimeout(timer);
+  }, [hash, isContactPage, isMenuPage, pathname]);
+
+  if (isContactPage) {
+    return (
+      <div className="home-root min-h-screen">
+        <PageMeta {...page} />
+        <ContactSchema />
+        <main>
+          <section id="contact">
+            <Contact />
+          </section>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (isMenuPage) {
+    return (
+      <div className="home-root min-h-screen">
+        <PageMeta {...page} />
+        <WebSiteSchema />
+        <main>
+          <section id="menu">
+            <Suspense fallback={<PageSkeleton />}>
+              <MenuDisplay />
+            </Suspense>
+          </section>
+        </main>
+        <Footer />
+        <StickyCartBar />
+      </div>
+    );
+  }
 
   return (
     <div className="home-root min-h-screen">

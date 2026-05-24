@@ -170,6 +170,7 @@ class Order(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     user: Mapped["User"] = relationship(back_populates="orders")
+    table = relationship("RestaurantTable")
     items: Mapped[List["OrderItem"]] = relationship(back_populates="order", cascade="all, delete-orphan")
     payment = relationship("Payment", back_populates="order")
 
@@ -199,6 +200,8 @@ class Order(Base):
             "source": self.source,
             "payment_method": self.payment_method,
             "table_id": str(self.table_id) if self.table_id else None,
+            "table_label": self.table.label if self.table else None,
+            "table": self.table.label if self.table else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "preparing_at": self.preparing_at.isoformat() if self.preparing_at else None,

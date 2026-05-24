@@ -9,7 +9,7 @@ function loadStoredUser() {
     localStorage.removeItem('admin_token');
     return saved ? JSON.parse(saved) : null;
   } catch (err) {
-    console.error('[JAYA_DEBUG] Caught error in AuthContext user restore:', err);
+    console.error('Failed to restore authenticated user:', err);
     localStorage.removeItem('user');
     localStorage.removeItem('admin_token');
     return null;

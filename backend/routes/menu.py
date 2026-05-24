@@ -5,6 +5,7 @@ import os
 import threading
 import uuid
 import warnings
+import re
 from datetime import datetime, timezone
 from io import BytesIO
 from uuid import uuid4
@@ -37,6 +38,9 @@ def _image_url(value) -> str:
 
 
 def serialize_item(row) -> dict:
+    dietary_tags = db.decode_json(row["dietary_tags"], [])
+    tag_text = " ".join(str(tag).lower() for tag in dietary_tags)
+    is_veg = "veg" in tag_text and "non-veg" not in tag_text and "non veg" not in tag_text
     return {
         "id": row["id"],
         "client_id": str(row["id"]),
@@ -46,7 +50,9 @@ def serialize_item(row) -> dict:
         "description": row["description"],
         "price": int(row["price"]),
         "image_url": row["image_url"],
-        "dietary_tags": db.decode_json(row["dietary_tags"], []),
+        "dietary_tags": dietary_tags,
+        "active": bool(row["available"]),
+        "is_veg": is_veg,
         "chef_note": row["chef_note"] if "chef_note" in row.keys() else "",
         "ingredients": db.decode_json(row["ingredients"], []) if "ingredients" in row.keys() else [],
         "spice_level": int(row["spice_level"] or 0) if "spice_level" in row.keys() else 0,
@@ -64,6 +70,22 @@ def serialize_item(row) -> dict:
 
 def serialize_category(row) -> dict:
     return {"id": row["id"], "name": row["name"], "display_order": row["display_order"], "active": bool(row["active"])}
+
+
+def _table_number_from_label(label: str) -> int | None:
+    match = re.search(r"(\d+)", str(label or ""))
+    return int(match.group(1)) if match else None
+
+
+def serialize_table(row) -> dict:
+    if not row:
+        return None
+    payload = dict(row)
+    payload["id"] = str(payload["id"])
+    payload["table_id"] = str(payload["id"])
+    payload["active"] = bool(payload["active"])
+    payload["table_number"] = _table_number_from_label(payload.get("label")) or payload.get("label")
+    return payload
 
 
 def fetch_menu_item_payload(conn, item_id: str) -> dict | None:
@@ -99,14 +121,22 @@ def get_celebration_for_table(conn, table_id: int) -> dict | None:
     return {"type": row["celebration_type"], "message": messages.get(row["celebration_type"], "")}
 
 
-def load_menu(table_token: str | None = None, include_unavailable: bool = False) -> dict:
-    cache_key = f"menu:{table_token or 'public'}:{'admin' if include_unavailable else 'public'}"
+def load_menu(table_token: str | None = None, table_number: str | None = None, include_unavailable: bool = False) -> dict:
+    cache_key = f"menu:{table_token or table_number or 'public'}:{'admin' if include_unavailable else 'public'}"
     cached = menu_cache.get(cache_key)
     if cached is not None:
         return cached
     with db.connect(current_app.config["DATABASE_URL"]) as conn:
         table = None
-        if table_token:
+        if table_number:
+            number = integer(table_number, "table", 1, 500)
+            table = conn.execute(
+                "SELECT * FROM tables WHERE active = true AND (label = ? OR label = ?)",
+                (f"Table {number}", str(number)),
+            ).fetchone()
+            if not table:
+                raise ValidationError("Table not found. Please scan the QR code again.", "table", 404)
+        elif table_token:
             table = conn.execute("SELECT * FROM tables WHERE qr_token = ? AND active = true", (table_token,)).fetchone()
             if not table:
                 raise ValidationError("Table QR token was not found", "qr_token", 404)
@@ -125,7 +155,7 @@ def load_menu(table_token: str | None = None, include_unavailable: bool = False)
         ).fetchall()
         celebration = get_celebration_for_table(conn, table["id"]) if table else None
     payload = {
-        "table": dict(table) if table else None,
+        "table": serialize_table(table) if table else None,
         "celebration": celebration,
         "categories": [serialize_category(row) for row in categories],
         "items": [serialize_item(row) for row in items],
@@ -136,7 +166,15 @@ def load_menu(table_token: str | None = None, include_unavailable: bool = False)
 
 @bp.get("/menu")
 def menu():
-    return jsonify(load_menu(request.args.get("table_token") or request.args.get("table")))
+    table_token = request.args.get("table_token")
+    table_param = request.args.get("table")
+    if table_token:
+        return jsonify(load_menu(table_token=table_token))
+    if table_param:
+        if str(table_param).strip().isdigit():
+            return jsonify(load_menu(table_number=table_param))
+        return jsonify(load_menu(table_token=table_param))
+    return jsonify(load_menu())
 
 
 @bp.post("/menu/pairings")

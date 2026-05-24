@@ -282,12 +282,22 @@ def create_app(overrides: dict | None = None) -> Flask:
                     # Acquire distributed lock via database
                     with db.transaction(app.config["DATABASE_URL"]) as conn:
                         # Check if another worker already flushed today (within last 5 minutes)
-                        recent = conn.execute(
+                        recent_sql = (
                             """
-                            SELECT closed_at FROM daily_closures 
+                            SELECT closed_at FROM daily_closures
+                            WHERE closed_at > (now() - INTERVAL '5 minutes')
+                            LIMIT 1
+                            """
+                            if db.engine.dialect.name == "postgresql"
+                            else
+                            """
+                            SELECT closed_at FROM daily_closures
                             WHERE closed_at > datetime('now', '-5 minutes')
                             LIMIT 1
                             """
+                        )
+                        recent = conn.execute(
+                            recent_sql
                         ).fetchone()
                         if recent:
                             app.logger.info("APScheduler: flush already completed by another worker")
@@ -296,13 +306,22 @@ def create_app(overrides: dict | None = None) -> Flask:
                         # Proceed with flush
                         from routes.admin import live_stats
                         payload = live_stats(conn)
-                        conn.execute(
-                            """
-                            INSERT INTO daily_closures (closed_at, revenue, orders, created_at, created_by)
-                            VALUES (datetime('now', 'utc'), ?, ?, datetime('now', 'utc'), NULL)
-                            """,
-                            (payload["revenue"], payload["orders"]),
-                        )
+                        if db.engine.dialect.name == "postgresql":
+                            conn.execute(
+                                """
+                                INSERT INTO daily_closures (closed_at, revenue, orders, created_at, created_by)
+                                VALUES (now(), :revenue, :orders, now(), NULL)
+                                """,
+                                {"revenue": payload["revenue"], "orders": payload["orders"]},
+                            )
+                        else:
+                            conn.execute(
+                                """
+                                INSERT INTO daily_closures (closed_at, revenue, orders, created_at, created_by)
+                                VALUES (datetime('now', 'utc'), ?, ?, datetime('now', 'utc'), NULL)
+                                """,
+                                (payload["revenue"], payload["orders"]),
+                            )
                         conn.commit()
 
                     app.logger.info("APScheduler: daily flush completed — revenue=%s orders=%s", payload["revenue"], payload["orders"])

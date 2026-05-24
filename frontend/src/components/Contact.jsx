@@ -12,8 +12,8 @@ export default function Contact() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState('');
-  const [contact, setContact] = useState(null);
-  const [isContactLoading, setIsContactLoading] = useState(true);
+  const [contact, setContact] = useState(DEFAULT_CONTACT);
+  const [isContactLoading, setIsContactLoading] = useState(false);
 
   useEffect(() => {
     let isMounted = true;

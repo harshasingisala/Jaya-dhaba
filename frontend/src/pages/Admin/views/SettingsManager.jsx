@@ -28,7 +28,7 @@ export function useSettings(restaurantId) {
     api.getSettings(restaurantId)
       .then((data) => setSettings((prev) => ({ ...prev, ...data })))
       .catch((err) => {
-        console.error('[JAYA_DEBUG] Caught error in useSettings getSettings:', err);
+        console.error('Failed to load settings:', err);
         /* defaults already set */
       })
       .finally(() => setLoading(false));
@@ -53,7 +53,7 @@ export function useSettings(restaurantId) {
       });
       setMsg({ type: 'success', text: 'Heritage settings updated successfully.' });
     } catch (err) {
-      console.error('[JAYA_DEBUG] Caught error in handleSave:', err);
+      console.error('Failed to save settings:', err);
       setMsg({ type: 'error', text: err.message || 'Failed to update settings.' });
     } finally {
       setSaving(false);

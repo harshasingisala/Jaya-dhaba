@@ -836,12 +836,15 @@ def contact_message():
     def operation():
         with db.transaction(current_app.config["DATABASE_URL"]) as conn:
             _ensure_contact_submissions_table(conn)
-            cursor = conn.execute(
-                """
+            insert_sql = """
                 INSERT INTO contact_submissions
                     (name, email, phone, subject, message, created_at, is_read)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-                """,
+            """
+            if db.engine.dialect.name == "postgresql":
+                insert_sql += " RETURNING id"
+            cursor = conn.execute(
+                insert_sql,
                 (
                     payload["name"],
                     payload["email"],
@@ -852,9 +855,11 @@ def contact_message():
                     False if db.engine.dialect.name == "postgresql" else 0,
                 ),
             )
-            audit(conn, "contact.create", "contact_submission", cursor.lastrowid, {"email": payload["email"]})
-            broadcast("contact_update", {"action": "created", "submission_id": cursor.lastrowid})
-            return {"success": True, "data": {"id": cursor.lastrowid, "is_read": False}}, 201
+            returned = cursor.fetchone() if db.engine.dialect.name == "postgresql" else None
+            submission_id = returned["id"] if returned else cursor.lastrowid
+            audit(conn, "contact.create", "contact_submission", submission_id, {"email": payload["email"]})
+            broadcast("contact_update", {"action": "created", "submission_id": submission_id})
+            return {"success": True, "data": {"id": submission_id, "is_read": False}}, 201
 
     result, status = db.run_write(operation)
     return jsonify(result), status
