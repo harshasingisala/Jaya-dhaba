@@ -20,6 +20,7 @@ import FavoritesDrawer from "./components/FavoritesDrawer";
 import CartDrawer from "./components/CartDrawer";
 import ScrollToTop from "./components/ScrollToTop";
 import Navbar from "./components/Navbar";
+import MobileActionDock from "./components/MobileActionDock";
 import RestaurantSchema from "./components/SEO/RestaurantSchema";
 
 const pageVariants = {
@@ -70,6 +71,7 @@ function AnimatedRoutes() {
             <FavoritesDrawer />
             <CartDrawer />
             <FloatingBookBar />
+            <MobileActionDock />
             <ScrollToTop />
           </>
         )}

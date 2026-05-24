@@ -51,12 +51,12 @@ export default function Navbar() {
     <nav
       className={`fixed top-0 left-0 w-full z-[100] transition-all duration-500 ${
         isScrolled
-          ? "py-3 shadow-sm border-b border-[var(--brown-brand)]/8"
-          : "py-5"
+          ? "py-2 md:py-3 shadow-sm border-b border-[var(--brown-brand)]/8"
+          : "py-3 md:py-5"
       }`}
       style={{ backgroundColor: "var(--bg-primary)" }}
     >
-      <div className="max-w-7xl mx-auto px-6 md:px-10 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-4 md:px-10 flex items-center justify-between">
 
         {/* ── LOGO ── */}
         <button

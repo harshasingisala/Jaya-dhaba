@@ -133,12 +133,13 @@
   }
 
   .mobile-hero-card {
-    min-height: calc(100svh - 118px) !important;
-    border-radius: 24px !important;
+    min-height: calc(100svh - 96px) !important;
+    border-radius: 0 0 28px 28px !important;
+    margin-inline: -0.75rem;
   }
 
   .mobile-hero-card .hero-bg {
-    object-position: 34% center !important;
+    object-position: 38% center !important;
     transform: scale(1.04);
   }
 
@@ -149,17 +150,31 @@
 
   .mobile-hero-copy {
     align-self: flex-end;
-    padding-top: 42svh;
+    padding: 44svh 1.25rem 1.5rem !important;
   }
 
   .mobile-hero-copy h1 {
-    font-size: clamp(2.3rem, 13vw, 3.45rem) !important;
+    font-size: clamp(2.75rem, 15vw, 4.1rem) !important;
     line-height: 0.98 !important;
     max-width: 9ch;
+    margin-bottom: 0.85rem !important;
+  }
+
+  .mobile-hero-kicker {
+    display: inline-flex;
+    max-width: 100%;
+    border-radius: 999px;
+    background: rgba(255, 250, 240, 0.14);
+    padding: 0.55rem 0.75rem;
+    letter-spacing: 0.16em !important;
   }
 
   .mobile-hero-copy p {
     max-width: 24ch;
+  }
+
+  .mobile-hero-subtitle {
+    margin-bottom: 1.25rem !important;
   }
 
   .mobile-hero-actions {
@@ -176,7 +191,8 @@
   }
 
   .mobile-menu-section {
-    padding-bottom: 7.5rem;
+    padding-bottom: 8.75rem;
+    padding-top: 4.25rem !important;
   }
 
   .mobile-category-tabs {
@@ -189,10 +205,56 @@
   }
 
   .mobile-cart-bar {
-    bottom: max(0.75rem, env(safe-area-inset-bottom)) !important;
+    bottom: max(5.8rem, calc(env(safe-area-inset-bottom) + 5.8rem)) !important;
   }
 
   .floating-book-bar {
     bottom: max(0.75rem, env(safe-area-inset-bottom)) !important;
+  }
+
+  .mobile-action-dock {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+
+  .home-root {
+    padding-bottom: 5.75rem;
+  }
+
+  .home-root section:not(#hero) {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+
+  .home-root h2 {
+    max-width: 11ch;
+  }
+
+  #owner {
+    padding-top: 4rem !important;
+    padding-bottom: 4rem !important;
+  }
+
+  #owner [class*="border-[4px]"] {
+    border-width: 2px !important;
+    border-radius: 24px;
+    overflow: hidden;
+  }
+
+  #services,
+  #gallery,
+  #testimonials,
+  #platforms,
+  #info,
+  #contact {
+    padding-top: 4.5rem !important;
+    padding-bottom: 4.5rem !important;
+  }
+
+  #services .rounded-\[3\.5rem\] {
+    border-radius: 24px !important;
+  }
+
+  #gallery .rounded-\[2\.5rem\] {
+    border-radius: 18px !important;
   }
 }

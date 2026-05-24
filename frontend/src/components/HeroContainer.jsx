@@ -49,7 +49,7 @@ export default function HeroContainer() {
     <section
       ref={heroRef}
       id="hero"
-      className="pt-20 pb-8 px-3 sm:px-6 md:px-10 max-w-7xl mx-auto sm:pt-24 sm:pb-12"
+      className="pt-[4.75rem] pb-7 px-3 sm:px-6 md:px-10 max-w-7xl mx-auto sm:pt-24 sm:pb-12"
     >
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━ HERO CARD ━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <div
@@ -90,7 +90,7 @@ export default function HeroContainer() {
           <div className="mobile-hero-copy w-full max-w-lg px-6 py-10 md:px-14 md:py-16 text-left">
             <motion.p
               variants={ITEM_VARIANTS}
-              className="uppercase tracking-[0.25em] text-[11px] font-bold mb-5"
+              className="mobile-hero-kicker uppercase tracking-[0.25em] text-[11px] font-bold mb-5"
               style={{ color: "var(--gold-brand)", opacity: 0.85 }}
             >
               Est. 1995 · East Marredpally
@@ -113,7 +113,7 @@ export default function HeroContainer() {
 
             <motion.p
               variants={ITEM_VARIANTS}
-              className="text-white/60 text-base md:text-lg font-normal mb-9 leading-relaxed"
+              className="mobile-hero-subtitle text-white/70 text-base md:text-lg font-normal mb-8 leading-relaxed"
               style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
             >
               Experience the soul of East Marredpally.

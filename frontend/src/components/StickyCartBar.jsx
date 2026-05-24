@@ -15,7 +15,7 @@ const StickyCartBar = () => {
           animate={{ y: 0, x: '-50%', opacity: 1 }}
           exit={{ y: 100, x: '-50%', opacity: 0 }}
           onClick={() => setCartOpen(true)}
-          className="mobile-cart-bar fixed bottom-4 md:bottom-8 left-1/2 -translate-x-1/2 z-[100] w-[calc(100%-1rem)] max-w-lg cursor-pointer group"
+          className="mobile-cart-bar fixed bottom-24 md:bottom-8 left-1/2 -translate-x-1/2 z-[100] w-[calc(100%-1rem)] max-w-lg cursor-pointer group"
         >
           <div className="glass p-3 md:p-4 rounded-[1.5rem] md:rounded-full border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex items-center justify-between gap-3 group-hover:border-heritage-gold/30 transition-all duration-500 overflow-hidden relative">
             
