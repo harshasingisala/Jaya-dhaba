@@ -119,6 +119,133 @@
 [data-delay="300"]{transition-delay:0.3s}
 [data-delay="400"]{transition-delay:0.4s}
 
+.customer-phone-shell {
+  width: min(100vw, 430px);
+  margin-inline: auto;
+  min-height: 100svh;
+  overflow-x: hidden;
+  position: relative;
+  background: var(--bg-primary);
+  box-shadow: 0 0 0 1px rgba(26, 15, 10, 0.06), 0 24px 80px rgba(26, 15, 10, 0.12);
+}
+
+.customer-phone-shell nav.fixed,
+.customer-phone-shell .mobile-action-dock,
+.customer-phone-shell .mobile-cart-bar {
+  left: 50%;
+  right: auto;
+  width: min(100vw, 430px);
+  transform: translateX(-50%);
+}
+
+.customer-phone-shell .home-root {
+  padding-bottom: 5.75rem;
+}
+
+.customer-phone-shell main > section {
+  overflow-x: clip;
+}
+
+.customer-phone-shell #hero {
+  padding-top: 4.75rem;
+  padding-bottom: 1.75rem;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+}
+
+.customer-phone-shell .mobile-hero-card {
+  min-height: calc(100svh - 96px) !important;
+  border-radius: 0 0 28px 28px !important;
+  margin-inline: -0.75rem;
+}
+
+.customer-phone-shell .mobile-hero-card .hero-bg {
+  object-position: 38% center !important;
+  transform: scale(1.04);
+}
+
+.customer-phone-shell .hero-readable-overlay {
+  background:
+    linear-gradient(to bottom, rgba(20, 10, 4, 0.18) 0%, rgba(20, 10, 4, 0.5) 42%, rgba(20, 10, 4, 0.88) 100%) !important;
+}
+
+.customer-phone-shell .mobile-hero-copy {
+  align-self: flex-end;
+  padding: 44svh 1.25rem 1.5rem !important;
+}
+
+.customer-phone-shell .mobile-hero-copy h1 {
+  font-size: clamp(2.75rem, 15vw, 4.1rem) !important;
+  line-height: 0.98 !important;
+  max-width: 9ch;
+  margin-bottom: 0.85rem !important;
+}
+
+.customer-phone-shell .mobile-hero-kicker {
+  display: inline-flex;
+  max-width: 100%;
+  border-radius: 999px;
+  background: rgba(255, 250, 240, 0.14);
+  padding: 0.55rem 0.75rem;
+  letter-spacing: 0.16em !important;
+}
+
+.customer-phone-shell .mobile-hero-subtitle {
+  max-width: 24ch;
+  margin-bottom: 1.25rem !important;
+}
+
+.customer-phone-shell .mobile-hero-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 100%;
+}
+
+.customer-phone-shell .mobile-hero-actions button {
+  min-height: 48px;
+  padding-left: 0.75rem !important;
+  padding-right: 0.75rem !important;
+  white-space: nowrap;
+}
+
+.customer-phone-shell .home-root section:not(#hero) {
+  padding-left: 1rem !important;
+  padding-right: 1rem !important;
+}
+
+.customer-phone-shell .mobile-menu-section {
+  padding-top: 4.25rem !important;
+  padding-bottom: 8.75rem;
+}
+
+.customer-phone-shell .mobile-category-tabs {
+  box-shadow: 0 16px 24px rgba(250, 249, 246, 0.92);
+}
+
+.customer-phone-shell .mobile-menu-card {
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(26, 26, 26, 0.06);
+}
+
+.customer-phone-shell .mobile-cart-bar {
+  bottom: max(5.8rem, calc(env(safe-area-inset-bottom) + 5.8rem)) !important;
+}
+
+.customer-phone-shell .mobile-action-dock {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+
+.customer-phone-shell #owner,
+.customer-phone-shell #services,
+.customer-phone-shell #gallery,
+.customer-phone-shell #testimonials,
+.customer-phone-shell #platforms,
+.customer-phone-shell #info,
+.customer-phone-shell #contact {
+  padding-top: 4.5rem !important;
+  padding-bottom: 4.5rem !important;
+}
+
 @media (max-width: 640px) {
   html {
     scroll-padding-top: 76px;

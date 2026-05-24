@@ -77,7 +77,7 @@ export default function Navbar() {
         </button>
 
         {/* ── DESKTOP NAV ── */}
-        <div className="hidden lg:flex items-center gap-8">
+        <div className="hidden items-center gap-8">
           {navLinks.map((link) => (
             <button
               key={link.label}
@@ -118,7 +118,7 @@ export default function Navbar() {
 
         {/* ── MOBILE BURGER ── */}
         <button
-          className="relative z-[10000] lg:hidden flex min-h-[44px] min-w-[44px] flex-col items-center justify-center gap-1.5 p-2"
+          className="relative z-[10000] flex min-h-[44px] min-w-[44px] flex-col items-center justify-center gap-1.5 p-2"
           onClick={() => setMobileOpen((v) => !v)}
           aria-label="Toggle menu"
         >
@@ -135,7 +135,7 @@ export default function Navbar() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="lg:hidden border-t"
+            className="border-t"
             style={{
               backgroundColor: "var(--bg-primary)",
               borderColor: "var(--brown-brand)10",

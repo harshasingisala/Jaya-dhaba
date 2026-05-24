@@ -44,7 +44,7 @@ function AnimatedRoutes() {
         exit="exit"
         variants={pageVariants}
         transition={pageTransition}
-        className={isAdmin ? "" : "min-h-screen"}
+        className={isAdmin ? "" : "customer-phone-shell min-h-screen"}
       >
         {!isAdmin && <Navbar />}
 
