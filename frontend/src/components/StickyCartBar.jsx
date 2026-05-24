@@ -15,15 +15,15 @@ const StickyCartBar = () => {
           animate={{ y: 0, x: '-50%', opacity: 1 }}
           exit={{ y: 100, x: '-50%', opacity: 0 }}
           onClick={() => setCartOpen(true)}
-          className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-lg cursor-pointer group"
+          className="mobile-cart-bar fixed bottom-4 md:bottom-8 left-1/2 -translate-x-1/2 z-[100] w-[calc(100%-1rem)] max-w-lg cursor-pointer group"
         >
-          <div className="glass p-4 rounded-full border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex items-center justify-between group-hover:border-heritage-gold/30 transition-all duration-500 overflow-hidden relative">
+          <div className="glass p-3 md:p-4 rounded-[1.5rem] md:rounded-full border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex items-center justify-between gap-3 group-hover:border-heritage-gold/30 transition-all duration-500 overflow-hidden relative">
             
             {/* BACKGROUND GLOW */}
             <div className="absolute inset-0 bg-gradient-to-r from-heritage-gold/5 via-transparent to-heritage-gold/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             
             <div className="flex items-center gap-6 relative z-10">
-              <div className="w-12 h-12 bg-heritage-gold rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-500">
+              <div className="w-11 h-11 md:w-12 md:h-12 bg-heritage-gold rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-500 shrink-0">
                 <ShoppingBag size={20} className="text-white" />
               </div>
               <div>
@@ -36,8 +36,8 @@ const StickyCartBar = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-4 bg-heritage-espresso/5 group-hover:bg-heritage-gold transition-colors duration-500 px-6 py-3 rounded-full relative z-10">
-               <span className="text-[10px] font-black uppercase tracking-widest text-heritage-espresso group-hover:text-white transition-colors duration-500">View Cart</span>
+            <div className="flex items-center gap-2 md:gap-4 bg-heritage-espresso/5 group-hover:bg-heritage-gold transition-colors duration-500 px-4 md:px-6 py-3 rounded-full relative z-10 shrink-0">
+               <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-heritage-espresso group-hover:text-white transition-colors duration-500">View</span>
                <ChevronRight size={16} className="text-heritage-espresso/20 group-hover:text-white transition-colors duration-500" />
             </div>
 

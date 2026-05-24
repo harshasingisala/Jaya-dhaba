@@ -1,5 +1,5 @@
 
-import { API_BASE_URL } from './config.js';
+import { API_BASE_URL, USE_DEV_CUSTOMER_FALLBACKS } from './config.js';
 import { supabase } from '../supabaseClient.js';
 import { pickFields } from '../utils/sanitize.js';
 import { fetchWithRetry } from '../utils/retry.js';
@@ -8,6 +8,59 @@ const BASE_URL = API_BASE_URL;
 const SESSION_KEY = 'user';
 let redirectingToLogin = false;
 const pendingRequests = new Map();
+
+const DEV_MENU_ITEMS = [
+  {
+    id: 'dev-biryani',
+    name: 'Heritage Chicken Biryani',
+    category: 'Biryani',
+    description: 'Aromatic long-grain rice layered with slow-cooked chicken and house spices.',
+    price_half: 180,
+    price_full: 320,
+    price: 320,
+    img: '/chicken.png',
+    available: true,
+    dietary_tags: ['Halal'],
+    spice_level: 3,
+  },
+  {
+    id: 'dev-paneer',
+    name: 'Paneer Butter Masala',
+    category: 'Curries',
+    description: 'Soft paneer simmered in a rich tomato and cashew gravy.',
+    price_half: 160,
+    price_full: 280,
+    price: 280,
+    img: '/paneer.png',
+    available: true,
+    dietary_tags: ['Veg'],
+    spice_level: 2,
+  },
+  {
+    id: 'dev-naan',
+    name: 'Garlic Butter Naan',
+    category: 'Breads',
+    description: 'Tandoor-baked naan brushed with garlic butter.',
+    price_full: 70,
+    price: 70,
+    img: '/naan.png',
+    available: true,
+    dietary_tags: ['Veg'],
+    spice_level: 1,
+  },
+  {
+    id: 'dev-lassi',
+    name: 'Royal Sweet Lassi',
+    category: 'Beverages',
+    description: 'Chilled yogurt drink with a smooth, classic finish.',
+    price_full: 90,
+    price: 90,
+    img: '/lassi.png',
+    available: true,
+    dietary_tags: ['Veg'],
+    spice_level: 1,
+  },
+];
 
 const dedupedFetch = async (url, options = {}) => {
   const method = (options.method || 'GET').toUpperCase();
@@ -266,6 +319,7 @@ const api = {
   request,
 
   getMenu: async () => {
+    if (USE_DEV_CUSTOMER_FALLBACKS) return DEV_MENU_ITEMS.map(normalizeMenuItem);
     const data = await request('/api/menu');
     if (data.items && Array.isArray(data.items)) return data.items.map(normalizeMenuItem);
     return [];
@@ -545,6 +599,13 @@ const api = {
   },
 
   getContact: async () => {
+    if (USE_DEV_CUSTOMER_FALLBACKS) {
+      return {
+        phone: '07386185821',
+        address: 'East Marredpally, Secunderabad',
+        hours: '11 AM - 11 PM',
+      };
+    }
     return request('/api/contact');
   },
 
@@ -647,6 +708,7 @@ const api = {
   },
 
   getOrderPauseStatus: async () => {
+    if (USE_DEV_CUSTOMER_FALLBACKS) return { paused: false };
     return request('/api/orders/status');
   },
 
@@ -662,6 +724,9 @@ const api = {
   },
 
   submitContact: async (payload) => {
+    if (USE_DEV_CUSTOMER_FALLBACKS) {
+      return { success: true, data: { ...payload, offlinePreview: true } };
+    }
     const csrfToken = await ensureCsrfToken();
     const idempotencyKey = payload.idempotency_key || crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`;
     const res = await fetchWithRetry(`${BASE_URL}/api/contact`, {

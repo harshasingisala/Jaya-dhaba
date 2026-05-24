@@ -49,11 +49,11 @@ export default function HeroContainer() {
     <section
       ref={heroRef}
       id="hero"
-      className="pt-24 pb-12 px-4 sm:px-6 md:px-10 max-w-7xl mx-auto"
+      className="pt-20 pb-8 px-3 sm:px-6 md:px-10 max-w-7xl mx-auto sm:pt-24 sm:pb-12"
     >
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━ HERO CARD ━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <div
-        className="relative w-full overflow-hidden"
+        className="mobile-hero-card relative w-full overflow-hidden"
         style={{
           borderRadius: "32px",
           minHeight: "clamp(300px, 52vw, 520px)",
@@ -72,7 +72,7 @@ export default function HeroContainer() {
 
         {/* Dark gradient overlay — right-to-left so text is readable */}
         <div
-          className="absolute inset-0"
+          className="hero-readable-overlay absolute inset-0"
           style={{
             background:
               "linear-gradient(to right, transparent 0%, transparent 35%, rgba(20,10,4,0.65) 55%, rgba(20,10,4,0.82) 100%)",
@@ -87,7 +87,7 @@ export default function HeroContainer() {
           className="relative z-10 h-full flex items-center justify-end"
           style={{ minHeight: "inherit" }}
         >
-          <div className="w-full max-w-lg px-8 py-12 md:px-14 md:py-16 text-left">
+          <div className="mobile-hero-copy w-full max-w-lg px-6 py-10 md:px-14 md:py-16 text-left">
             <motion.p
               variants={ITEM_VARIANTS}
               className="uppercase tracking-[0.25em] text-[11px] font-bold mb-5"
@@ -119,7 +119,7 @@ export default function HeroContainer() {
               Experience the soul of East Marredpally.
             </motion.p>
 
-            <motion.div variants={ITEM_VARIANTS} className="flex flex-wrap gap-4">
+            <motion.div variants={ITEM_VARIANTS} className="mobile-hero-actions flex flex-wrap gap-3 sm:gap-4">
               <button
                 onClick={scrollToMenu}
                 className="font-semibold text-sm px-8 py-3.5 rounded-full transition-all duration-300 hover:brightness-110 active:scale-95 shadow-lg"

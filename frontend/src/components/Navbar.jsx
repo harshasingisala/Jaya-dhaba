@@ -61,11 +61,11 @@ export default function Navbar() {
         {/* ── LOGO ── */}
         <button
           onClick={() => { setMobileOpen(false); navigate("/"); }}
-          className="flex items-center min-h-[44px] group"
+          className="flex items-center min-h-[44px] min-w-0 group"
           aria-label="Jaya Dhaba Home"
         >
           <span
-            className="text-3xl tracking-tight transition-colors duration-300 group-hover:opacity-80"
+            className="text-2xl sm:text-3xl tracking-tight transition-colors duration-300 group-hover:opacity-80 truncate"
             style={{
               fontFamily: "'Playfair Display', serif",
               color: "var(--brown-brand)",
@@ -149,12 +149,12 @@ export default function Navbar() {
               zIndex: 9999,
             }}
           >
-            <div className="px-6 pb-8 pt-24 flex flex-col gap-5">
+            <div className="px-5 pb-8 pt-24 flex flex-col gap-2">
               {navLinks.map((link) => (
                 <button
                   key={link.label}
                   onClick={link.action}
-                  className="text-left text-base font-medium transition-colors"
+                  className="text-left text-xl font-serif py-4 border-b border-[var(--brown-brand)]/10 transition-colors"
                   style={{ color: "var(--brown-brand)" }}
                 >
                   {link.label}
@@ -162,7 +162,7 @@ export default function Navbar() {
               ))}
               <button
                 onClick={() => setLanguage(language === "en" ? "te" : "en")}
-                className="text-left text-base font-medium transition-colors"
+                className="text-left text-sm font-bold py-4 uppercase tracking-[0.18em] transition-colors"
                 style={{ color: "var(--brown-brand)" }}
               >
                 {language === "en" ? "English | తెలుగు" : "తెలుగు | English"}

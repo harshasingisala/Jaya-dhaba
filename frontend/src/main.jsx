@@ -11,6 +11,12 @@ import GlobalErrorBoundary from "./components/GlobalErrorBoundary";
 import AdminLogin from "./pages/Admin/Login";
 import "./index.css";
 
+if (import.meta.env.DEV && "serviceWorker" in navigator) {
+  navigator.serviceWorker.getRegistrations()
+    .then((registrations) => registrations.forEach((registration) => registration.unregister()))
+    .catch(() => {});
+}
+
 function RootShell() {
   const location = useLocation();
 
