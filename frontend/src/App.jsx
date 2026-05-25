@@ -22,7 +22,6 @@ import CartDrawer from "./components/CartDrawer";
 import ScrollToTop from "./components/ScrollToTop";
 import Navbar from "./components/Navbar";
 import MobileActionDock from "./components/MobileActionDock";
-import RestaurantSchema from "./components/SEO/RestaurantSchema";
 
 const pageVariants = {
   initial: { opacity: 0, y: 16 },
@@ -99,7 +98,6 @@ function App() {
     <SmoothScroll>
       <Preloader />
       <div className="app-container antialiased heritage-stone-bg min-h-screen">
-        <RestaurantSchema />
         <AnimatedRoutes />
       </div>
     </SmoothScroll>

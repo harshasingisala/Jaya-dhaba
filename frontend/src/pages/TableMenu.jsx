@@ -2,6 +2,18 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AlertCircle, CheckCircle2, Loader2, Minus, Plus, ShoppingCart, X } from 'lucide-react';
 import api from '../api';
+import PageMeta from '../components/SEO/PageMeta';
+
+function TableMenuMeta() {
+  return (
+    <PageMeta
+      title="Table Ordering Menu"
+      description="Order from your table at Jaya Dhaba."
+      url="/menu"
+      robots="noindex, nofollow"
+    />
+  );
+}
 
 function formatMoney(value) {
   return `₹${Number(value || 0).toLocaleString('en-IN')}`;
@@ -145,44 +157,55 @@ export default function TableMenu() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-amber-50 flex items-center justify-center px-6 text-amber-950">
-        <div className="text-center">
-          <Loader2 className="mx-auto animate-spin text-orange-600" size={42} />
-          <p className="mt-4 font-serif italic text-2xl">Loading your table menu...</p>
-        </div>
-      </main>
+      <>
+        <TableMenuMeta />
+        <main className="min-h-screen bg-amber-50 flex items-center justify-center px-6 text-amber-950">
+          <div className="text-center">
+            <Loader2 className="mx-auto animate-spin text-orange-600" size={42} />
+            <p className="mt-4 font-serif italic text-2xl">Loading your table menu...</p>
+          </div>
+        </main>
+      </>
     );
   }
 
   if (error && !menu.table) {
     return (
-      <main className="min-h-screen bg-amber-50 flex items-center justify-center px-6 text-amber-950">
-        <div className="max-w-sm rounded-[2rem] bg-white p-8 text-center shadow-xl border border-orange-100">
-          <AlertCircle className="mx-auto text-orange-600" size={44} />
-          <h1 className="mt-4 font-serif italic text-3xl">Table not found</h1>
-          <p className="mt-3 text-sm leading-6 text-amber-950/65">Table not found. Please scan the QR code again.</p>
-        </div>
-      </main>
+      <>
+        <TableMenuMeta />
+        <main className="min-h-screen bg-amber-50 flex items-center justify-center px-6 text-amber-950">
+          <div className="max-w-sm rounded-[2rem] bg-white p-8 text-center shadow-xl border border-orange-100">
+            <AlertCircle className="mx-auto text-orange-600" size={44} />
+            <h1 className="mt-4 font-serif italic text-3xl">Table not found</h1>
+            <p className="mt-3 text-sm leading-6 text-amber-950/65">Table not found. Please scan the QR code again.</p>
+          </div>
+        </main>
+      </>
     );
   }
 
   if (order) {
     return (
-      <main className="min-h-screen bg-amber-50 flex items-center justify-center px-6 text-amber-950">
-        <div className="max-w-sm rounded-[2rem] bg-white p-8 text-center shadow-xl border border-green-100">
-          <CheckCircle2 className="mx-auto text-green-600" size={52} />
-          <h1 className="mt-5 font-serif italic text-4xl">Order Placed! 🎉</h1>
-          <p className="mt-3 text-base leading-7 text-amber-950/70">{tableLabel} - your order is being prepared</p>
-          <p className="mt-5 rounded-full bg-amber-100 px-4 py-3 text-xs font-black uppercase tracking-widest text-amber-900">
-            Order #{order.order_number || String(order.id).slice(0, 8)}
-          </p>
-        </div>
-      </main>
+      <>
+        <TableMenuMeta />
+        <main className="min-h-screen bg-amber-50 flex items-center justify-center px-6 text-amber-950">
+          <div className="max-w-sm rounded-[2rem] bg-white p-8 text-center shadow-xl border border-green-100">
+            <CheckCircle2 className="mx-auto text-green-600" size={52} />
+            <h1 className="mt-5 font-serif italic text-4xl">Order Placed! 🎉</h1>
+            <p className="mt-3 text-base leading-7 text-amber-950/70">{tableLabel} - your order is being prepared</p>
+            <p className="mt-5 rounded-full bg-amber-100 px-4 py-3 text-xs font-black uppercase tracking-widest text-amber-900">
+              Order #{order.order_number || String(order.id).slice(0, 8)}
+            </p>
+          </div>
+        </main>
+      </>
     );
   }
 
   return (
-    <main className="min-h-screen bg-amber-50 pb-32 text-amber-950">
+    <>
+      <TableMenuMeta />
+      <main className="min-h-screen bg-amber-50 pb-32 text-amber-950">
       <section className="sticky top-0 z-20 bg-gradient-to-br from-orange-700 via-amber-600 to-yellow-500 px-5 pb-5 pt-6 text-white shadow-lg">
         <div className="mx-auto max-w-5xl">
           <div className="flex items-start justify-between gap-4">
@@ -336,6 +359,7 @@ export default function TableMenu() {
           </section>
         </div>
       )}
-    </main>
+      </main>
+    </>
   );
 }
