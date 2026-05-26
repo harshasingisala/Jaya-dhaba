@@ -20,10 +20,25 @@ function formatMoney(value) {
 }
 
 function isVeg(item) {
-  if (typeof item.is_veg === 'boolean') return item.is_veg;
   const tags = Array.isArray(item.dietary_tags) ? item.dietary_tags : [];
-  const text = tags.join(' ').toLowerCase();
-  return text.includes('veg') && !text.includes('non-veg') && !text.includes('non veg');
+  const tagText = tags.join(' ').toLowerCase();
+  const nonVegPattern = /\b(non[\s-]?veg|chicken|chk|egg|mutton|fish|prawn|sea\s*food|seafood)\b/;
+  const vegPattern = /\b(veg(?:etarian)?|paneer|mushroom|gobi|corn|potato|dal)\b/;
+  if (nonVegPattern.test(tagText)) return false;
+  if (vegPattern.test(tagText)) return true;
+
+  const nameText = String(item.name || '').toLowerCase();
+  if (nonVegPattern.test(nameText)) return false;
+  if (vegPattern.test(nameText)) return true;
+
+  const categoryText = String(item.category || item.category_name || '').toLowerCase();
+  const hasNonVeg = /\bnon[\s-]?veg\b/.test(categoryText);
+  const hasVeg = /\bveg(?:etarian)?\b/.test(categoryText.replace(/\bnon[\s-]?veg\b/g, ''));
+  if (hasNonVeg && !hasVeg) return false;
+  if (hasVeg && !hasNonVeg) return true;
+  if (/\b(mutton|egg|fish|prawn|sea\s*food|seafood)\b/.test(categoryText)) return false;
+  if (/\b(dal|roti|drink|ice\s*cream)\b/.test(categoryText)) return true;
+  return null;
 }
 
 function itemImage(item) {
@@ -239,6 +254,8 @@ export default function TableMenu() {
         {visibleItems.map((item) => {
           const qty = cart[item.id]?.qty || 0;
           const veg = isVeg(item);
+          const dietColor = veg === true ? 'bg-green-600' : veg === false ? 'bg-red-600' : 'bg-amber-400';
+          const dietLabel = veg === true ? 'Veg' : veg === false ? 'Non-Veg' : 'Ask staff';
           return (
             <article key={item.id} className="overflow-hidden rounded-[1.75rem] border border-orange-100 bg-white shadow-sm">
               <div className="aspect-[4/3] bg-amber-100">
@@ -248,7 +265,7 @@ export default function TableMenu() {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className={`h-3 w-3 rounded-full ${veg ? 'bg-green-600' : 'bg-red-600'}`} />
+                      <span className={`h-3 w-3 rounded-full ${dietColor}`} />
                       <h2 className="text-lg font-black leading-tight text-amber-950">{item.name}</h2>
                     </div>
                     <p className="mt-2 line-clamp-2 min-h-10 text-sm leading-5 text-amber-950/60">{item.description || item.desc}</p>
@@ -276,7 +293,7 @@ export default function TableMenu() {
                     </button>
                   )}
                   <span className="text-[10px] font-black uppercase tracking-widest text-amber-950/35">
-                    {veg ? 'Veg' : 'Non-Veg'}
+                    {dietLabel}
                   </span>
                 </div>
               </div>

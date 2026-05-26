@@ -37,10 +37,37 @@ def _image_url(value) -> str:
     return cleaned
 
 
+def _dietary_classification(row, dietary_tags: list) -> bool | None:
+    tag_text = " ".join(str(tag).lower() for tag in dietary_tags)
+    if re.search(r"\bnon[\s-]?veg\b|\b(chicken|chk|egg|mutton|fish|prawn|sea\s*food|seafood)\b", tag_text):
+        return False
+    if re.search(r"\bveg(?:etarian)?\b", tag_text):
+        return True
+
+    name_text = str(row["name"] or "").lower()
+    if re.search(r"\b(chicken|chk|egg|mutton|fish|prawn|sea\s*food|seafood)\b", name_text):
+        return False
+    if re.search(r"\b(veg(?:etarian)?|paneer|mushroom|gobi|corn|potato|dal)\b", name_text):
+        return True
+
+    category_text = str(row["category_name"] or "").lower()
+    has_non_veg = bool(re.search(r"\bnon[\s-]?veg\b", category_text))
+    positive_category_text = re.sub(r"\bnon[\s-]?veg\b", "", category_text)
+    has_veg = bool(re.search(r"\bveg(?:etarian)?\b", positive_category_text))
+    if has_non_veg and not has_veg:
+        return False
+    if has_veg and not has_non_veg:
+        return True
+    if re.search(r"\b(mutton|egg|fish|prawn|sea\s*food|seafood)\b", category_text):
+        return False
+    if re.search(r"\b(dal|roti|drink|ice\s*cream)\b", category_text):
+        return True
+    return None
+
+
 def serialize_item(row) -> dict:
     dietary_tags = db.decode_json(row["dietary_tags"], [])
-    tag_text = " ".join(str(tag).lower() for tag in dietary_tags)
-    is_veg = "veg" in tag_text and "non-veg" not in tag_text and "non veg" not in tag_text
+    is_veg = _dietary_classification(row, dietary_tags)
     return {
         "id": row["id"],
         "client_id": str(row["id"]),
