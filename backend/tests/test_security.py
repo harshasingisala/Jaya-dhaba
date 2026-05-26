@@ -27,6 +27,24 @@ def test_security_headers(client):
     assert "default-src 'self'" in resp.headers["Content-Security-Policy"]
 
 
+def test_seed_does_not_create_known_admin_without_bootstrap_variables(app, monkeypatch):
+    import db
+    from models import User
+    from sqlalchemy import select
+
+    monkeypatch.delenv("ADMIN_BOOTSTRAP_EMAIL", raising=False)
+    monkeypatch.delenv("ADMIN_BOOTSTRAP_PASSWORD", raising=False)
+
+    with app.app_context():
+        db.seed_db()
+        with db.get_db() as session:
+            unsafe_admin = session.execute(
+                select(User).filter_by(email="admin@jayadhaba.in")
+            ).scalar_one_or_none()
+
+    assert unsafe_admin is None
+
+
 def test_public_user_cannot_forge_manual_order(client):
     from conftest import csrf_headers, order_payload
 

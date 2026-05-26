@@ -1,3 +1,4 @@
+import logging
 import os
 import uuid
 from contextlib import contextmanager
@@ -11,6 +12,8 @@ from sqlalchemy.pool import QueuePool
 from models import Base, User, MenuCategory, RestaurantTable, MenuItem
 from utils.encryption import Encryptor
 from utils.crypto import hash_password
+
+logger = logging.getLogger(__name__)
 
 # Constants for status/roles
 ORDER_STATUSES = ("pending", "confirmed", "preparing", "ready", "served", "cancelled")
@@ -474,20 +477,23 @@ def seed_db():
                 item.available = False
                 item.deleted_at = utc_now()
 
-        # 4. Bootstrap Admin
-        admin_email = os.getenv("ADMIN_BOOTSTRAP_EMAIL", "admin@jayadhaba.in")
-        admin_pass = os.getenv("ADMIN_BOOTSTRAP_PASSWORD", "Admin@1234")
-        exists = db.execute(select(User).filter_by(email=admin_email)).scalar_one_or_none()
-        if not exists:
-            db.add(User(
-                email=admin_email,
-                password_hash=hash_password(admin_pass),
-                role="owner"
-            ))
-        elif os.getenv("ADMIN_BOOTSTRAP_PASSWORD"):
-            exists.password_hash = hash_password(admin_pass)
-            if exists.role not in {"owner", "admin"}:
-                exists.role = "owner"
+        # 4. Bootstrap Admin only when private deployment variables are explicitly configured.
+        admin_email = (os.getenv("ADMIN_BOOTSTRAP_EMAIL") or "").strip().lower()
+        admin_pass = os.getenv("ADMIN_BOOTSTRAP_PASSWORD") or ""
+        if bool(admin_email) != bool(admin_pass):
+            logger.warning("Admin bootstrap skipped: set both ADMIN_BOOTSTRAP_EMAIL and ADMIN_BOOTSTRAP_PASSWORD.")
+        elif admin_email and admin_pass:
+            exists = db.execute(select(User).filter_by(email=admin_email)).scalar_one_or_none()
+            if not exists:
+                db.add(User(
+                    email=admin_email,
+                    password_hash=hash_password(admin_pass),
+                    role="owner"
+                ))
+            else:
+                exists.password_hash = hash_password(admin_pass)
+                if exists.role not in {"owner", "admin"}:
+                    exists.role = "owner"
 
         db.commit()
 
