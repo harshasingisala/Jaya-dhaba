@@ -1,3 +1,12 @@
+function productionApiFallback() {
+  if (!import.meta.env.PROD || typeof window === 'undefined') return '';
+  const host = window.location.hostname;
+  if (host === 'jayadhaba.online' || host === 'www.jayadhaba.online') {
+    return 'https://api.jayadhaba.online';
+  }
+  return '';
+}
+
 function normalizeApiBaseUrl(value) {
   const baseUrl = String(value || '').replace(/\/+$/, '');
   if (!baseUrl) return '';
@@ -26,7 +35,9 @@ function normalizeApiBaseUrl(value) {
   return baseUrl;
 }
 
-export const API_BASE_URL = normalizeApiBaseUrl(import.meta.env.VITE_API_URL || '');
+export const API_BASE_URL = normalizeApiBaseUrl(
+  import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || productionApiFallback(),
+);
 export const USE_DEV_CUSTOMER_FALLBACKS =
   import.meta.env.DEV && import.meta.env.VITE_USE_DEV_CUSTOMER_FALLBACKS === 'true';
 
