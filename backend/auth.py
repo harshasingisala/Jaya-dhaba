@@ -153,6 +153,14 @@ def get_fingerprint() -> str:
     return hashlib.sha256(f"{ua}:{ip}".encode()).hexdigest()
 
 
+def _as_utc(value):
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
 def token_hash(token: str) -> str:
     secret = current_app.config["JWT_SECRET_KEY"]
     return hashlib.sha256(f"{secret}:{token}".encode("utf-8")).hexdigest()
@@ -285,7 +293,7 @@ def authenticate_login(session_db, login: str, password: str, mfa_code: str | No
         raise AuthError("Invalid credentials", 401)
     
     # Check lockout
-    if user.locked_until and user.locked_until > datetime.now(timezone.utc):
+    if user.locked_until and _as_utc(user.locked_until) > datetime.now(timezone.utc):
         raise AuthError("Account temporarily locked due to multiple failed attempts", 429)
     
     # Verify password
@@ -327,7 +335,7 @@ def rotate_refresh_token(session_db, refresh_token: str):
         select(UserSession).filter_by(refresh_token_hash=hashed, revoked=False)
     ).scalar_one_or_none()
     
-    if not session_record or session_record.expires_at < datetime.now(timezone.utc):
+    if not session_record or _as_utc(session_record.expires_at) < datetime.now(timezone.utc):
         raise AuthError("Invalid or expired refresh token", 401)
     
     # Revoke old one
