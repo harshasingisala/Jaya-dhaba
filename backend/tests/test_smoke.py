@@ -181,6 +181,54 @@ def test_signed_qr_creates_table_session(client, app):
     assert menu_data.get("table"), f"No table returned for session menu: {menu_data}"
 
 
+def test_group_cart_checkout_uses_table_session(client, app):
+    from sqlalchemy import create_engine, text
+    from sqlalchemy.orm import sessionmaker
+
+    from qr_sessions import generate_qr_token
+
+    engine = create_engine(app.config["DATABASE_URL"])
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    table = session.execute(text("SELECT id, qr_token FROM tables LIMIT 1")).fetchone()
+    item = session.execute(text("SELECT id FROM menu_items WHERE available = 1 LIMIT 1")).fetchone()
+    session.close()
+    assert table and item
+
+    with app.app_context():
+        token = generate_qr_token(str(table[0]), table_version=str(table[1]))
+
+    csrf = get_csrf(client)
+    verify_resp = client.post("/api/qr/verify", json={"token": token}, headers={"X-CSRF-Token": csrf})
+    assert verify_resp.status_code == 200, f"QR verify failed: {verify_resp.data}"
+    table_session = verify_resp.get_json()["table_session"]
+
+    add_resp = client.post(
+        "/api/session/cart/add",
+        json={"table_session": table_session, "item_id": str(item[0]), "quantity": 2, "added_by": "Asha"},
+        headers={"X-CSRF-Token": csrf},
+    )
+    assert add_resp.status_code == 200, f"Group cart add failed: {add_resp.data}"
+    assert len(add_resp.get_json()["cart"]) == 1
+
+    order_resp = client.post(
+        "/api/orders",
+        json={
+            "table_session": table_session,
+            "group_cart": True,
+            "items": [],
+            "idempotency_key": uuid.uuid4().hex,
+        },
+        headers={"X-CSRF-Token": csrf},
+    )
+    assert order_resp.status_code == 201, f"Group cart order failed: {order_resp.data}"
+    assert order_resp.get_json()["data"]["order_number"] is not None
+
+    cart_resp = client.get(f"/api/session/cart?table_session={table_session}")
+    assert cart_resp.status_code == 200
+    assert cart_resp.get_json()["cart"] == []
+
+
 def test_contact_enquiry_submission_succeeds(client):
     csrf = get_csrf(client)
     resp = client.post(

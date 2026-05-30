@@ -5,6 +5,7 @@ from .menu import bp as menu_bp
 from .orders import bp as orders_bp
 from .tables import bp as tables_bp
 from .payments import bp as payments_bp
+from .qr_sessions import bp as qr_sessions_bp
 from .reservations import bp as reservations_bp
 from .sse import bp as sse_bp
 from .staff import bp as staff_bp
@@ -16,6 +17,7 @@ def register_blueprints(app):
     app.register_blueprint(menu_bp)
     app.register_blueprint(orders_bp)
     app.register_blueprint(tables_bp)
+    app.register_blueprint(qr_sessions_bp)
     app.register_blueprint(payments_bp)
     app.register_blueprint(reservations_bp)
     app.register_blueprint(admin_bp)

@@ -426,6 +426,36 @@ const api = {
     };
   },
 
+  getGroupCart: async (tableSession) => {
+    const data = await request(`/api/session/cart?table_session=${encodeURIComponent(tableSession)}`);
+    return Array.isArray(data?.cart) ? data.cart : [];
+  },
+
+  addGroupCartItem: async ({ tableSession, itemId, quantity = 1, addedBy = 'Guest' }) => {
+    const data = await request('/api/session/cart/add', {
+      method: 'POST',
+      body: JSON.stringify({
+        table_session: tableSession,
+        item_id: itemId,
+        quantity,
+        added_by: addedBy,
+      }),
+    });
+    return Array.isArray(data?.cart) ? data.cart : [];
+  },
+
+  removeGroupCartItem: async ({ tableSession, itemId, addedBy = 'Guest' }) => {
+    const data = await request('/api/session/cart/remove', {
+      method: 'POST',
+      body: JSON.stringify({
+        table_session: tableSession,
+        item_id: itemId,
+        added_by: addedBy,
+      }),
+    });
+    return Array.isArray(data?.cart) ? data.cart : [];
+  },
+
   resolveTable: async (tableNumber) => {
     const data = await request(`/api/tables/resolve?table=${encodeURIComponent(tableNumber)}`);
     return data.table || data;
@@ -596,6 +626,7 @@ const api = {
     if (orderPayload.table_id) payload.table_id = orderPayload.table_id;
     if (orderPayload.table_token) payload.table_token = orderPayload.table_token;
     if (orderPayload.table_session) payload.table_session = orderPayload.table_session;
+    if (orderPayload.group_cart) payload.group_cart = true;
     const idempotencyKey = orderPayload.idempotency_key || crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`;
     const data = await request('/api/orders', {
       method: 'POST',
@@ -620,6 +651,7 @@ const api = {
     if (orderPayload.table_id) intentPayload.table_id = orderPayload.table_id;
     if (orderPayload.table_token) intentPayload.table_token = orderPayload.table_token;
     if (orderPayload.table_session) intentPayload.table_session = orderPayload.table_session;
+    if (orderPayload.group_cart) intentPayload.group_cart = true;
     const intent = await request('/api/orders', {
       method: 'POST',
       headers: { 'Idempotency-Key': intentPayload.idempotency_key },

@@ -101,6 +101,7 @@ def create_table_session(
         "table_id": str(table_id),
         "restaurant_id": restaurant_id,
         "created_at": int(time.time()),
+        "group_cart": [],
         "orders": [],
         "ip": request.headers.get("CF-Connecting-IP") or request.remote_addr,
     }
@@ -174,6 +175,90 @@ def remember_table_order(session_id: str | None, order_id: str) -> None:
             _SESSIONS.pop(str(session_id), None)
             return
         payload.setdefault("orders", []).append(str(order_id))
+
+
+def add_to_group_cart(session_id: str | None, item: dict) -> list[dict] | None:
+    def mutate(payload: dict) -> list[dict]:
+        cart = payload.setdefault("group_cart", [])
+        cart.append({
+            "item_id": str(item.get("item_id") or ""),
+            "name": str(item.get("name") or ""),
+            "price": int(item.get("price") or 0),
+            "quantity": max(1, int(item.get("quantity") or 1)),
+            "added_by": str(item.get("added_by") or "Guest").strip()[:80] or "Guest",
+            "timestamp": int(time.time()),
+        })
+        return cart
+
+    return _mutate_table_session(session_id, mutate)
+
+
+def remove_from_group_cart(session_id: str | None, item_id: str, added_by: str) -> list[dict] | None:
+    clean_item_id = str(item_id or "")
+    clean_added_by = str(added_by or "Guest").strip()[:80] or "Guest"
+
+    def mutate(payload: dict) -> list[dict]:
+        cart = payload.setdefault("group_cart", [])
+        for index, line in enumerate(cart):
+            if str(line.get("item_id")) == clean_item_id and str(line.get("added_by") or "Guest") == clean_added_by:
+                quantity = max(1, int(line.get("quantity") or 1))
+                if quantity > 1:
+                    line["quantity"] = quantity - 1
+                else:
+                    cart.pop(index)
+                break
+        return cart
+
+    return _mutate_table_session(session_id, mutate)
+
+
+def get_group_cart(session_id: str | None) -> list[dict] | None:
+    payload = get_table_session(session_id)
+    if not payload:
+        return None
+    return list(payload.get("group_cart") or [])
+
+
+def clear_group_cart(session_id: str | None) -> list[dict] | None:
+    def mutate(payload: dict) -> list[dict]:
+        payload["group_cart"] = []
+        return payload["group_cart"]
+
+    return _mutate_table_session(session_id, mutate)
+
+
+def _mutate_table_session(session_id: str | None, mutate):
+    if not session_id:
+        return None
+    client = redis_client()
+    if client is not None:
+        key = f"table_session:{session_id}"
+        raw = client.get(key)
+        if not raw:
+            return None
+        if isinstance(raw, bytes):
+            raw = raw.decode("utf-8")
+        try:
+            payload = json.loads(raw)
+            result = mutate(payload)
+            client.setex(key, TABLE_SESSION_TTL_SECONDS, json.dumps(payload))
+            return list(result or [])
+        except Exception:
+            return None
+    if _runtime_env() == "production":
+        return None
+
+    with _SESSIONS_LOCK:
+        value = _SESSIONS.get(str(session_id))
+        if not value:
+            return None
+        payload, expires_at = value
+        if expires_at <= time.time():
+            _SESSIONS.pop(str(session_id), None)
+            return None
+        result = mutate(payload)
+        _SESSIONS[str(session_id)] = (payload, time.time() + TABLE_SESSION_TTL_SECONDS)
+        return list(result or [])
 
 
 def _prune_expired_sessions() -> None:

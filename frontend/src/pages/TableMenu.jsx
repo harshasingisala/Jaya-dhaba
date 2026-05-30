@@ -58,10 +58,13 @@ export default function TableMenu() {
   const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
   const [activeCategory, setActiveCategory] = useState('');
   const [cart, setCart] = useState({});
+  const [sharedCart, setSharedCart] = useState([]);
   const [cartOpen, setCartOpen] = useState(false);
   const [guestName, setGuestName] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [order, setOrder] = useState(null);
+  const useGroupCart = Boolean(tableSession);
+  const addedBy = guestName.trim() || 'Guest';
 
   useEffect(() => {
     let cancelled = false;
@@ -121,6 +124,25 @@ export default function TableMenu() {
     };
   }, [initialTableSession, qrToken, tableParam, tableToken]);
 
+  useEffect(() => {
+    if (!useGroupCart || awaitingConfirmation || !menu.table || order) return undefined;
+    let cancelled = false;
+    async function syncCart() {
+      try {
+        const rows = await api.getGroupCart(tableSession);
+        if (!cancelled) setSharedCart(rows);
+      } catch (err) {
+        if (!cancelled) setError(err.message || 'Shared cart could not be synced.');
+      }
+    }
+    syncCart();
+    const interval = window.setInterval(syncCart, 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [awaitingConfirmation, menu.table, order, tableSession, useGroupCart]);
+
   const categories = useMemo(() => {
     return menu.categories.filter((category) =>
       menu.items.some((item) => String(item.category_id) === String(category.id))
@@ -133,8 +155,31 @@ export default function TableMenu() {
   }, [activeCategory, menu.items]);
 
   const cartLines = useMemo(() => {
+    if (useGroupCart) {
+      return sharedCart
+        .filter((line) => Number(line.quantity || 0) > 0)
+        .map((line, index) => ({
+          cart_key: `${line.item_id}-${line.added_by || 'Guest'}-${line.timestamp || index}`,
+          added_by: line.added_by || 'Guest',
+          qty: Number(line.quantity || 1),
+          item: {
+            ...(line.item || {}),
+            id: line.item_id,
+            name: line.name || line.item?.name || 'Menu item',
+            price: Number(line.price ?? line.item?.price ?? 0),
+            image_url: line.item?.image_url,
+          },
+        }));
+    }
     return Object.values(cart).filter((line) => line.qty > 0);
-  }, [cart]);
+  }, [cart, sharedCart, useGroupCart]);
+
+  const cartQtyByItem = useMemo(() => {
+    return cartLines.reduce((next, line) => {
+      next[line.item.id] = (next[line.item.id] || 0) + line.qty;
+      return next;
+    }, {});
+  }, [cartLines]);
 
   const subtotal = useMemo(() => {
     return cartLines.reduce((sum, line) => sum + Number(line.item.price || 0) * line.qty, 0);
@@ -148,7 +193,20 @@ export default function TableMenu() {
     ? `/track?id=${encodeURIComponent(order.id)}&token=${encodeURIComponent(order.public_token)}`
     : '';
 
-  const changeQty = (item, delta) => {
+  const changeQty = async (item, delta, owner = addedBy) => {
+    if (useGroupCart) {
+      if (!tableSession) return;
+      setError('');
+      try {
+        const rows = delta > 0
+          ? await api.addGroupCartItem({ tableSession, itemId: item.id, quantity: 1, addedBy })
+          : await api.removeGroupCartItem({ tableSession, itemId: item.id, addedBy: owner || addedBy });
+        setSharedCart(rows);
+      } catch (err) {
+        setError(err.message || 'Shared cart update failed.');
+      }
+      return;
+    }
     setCart((prev) => {
       const current = prev[item.id]?.qty || 0;
       const qty = Math.max(0, current + delta);
@@ -171,11 +229,12 @@ export default function TableMenu() {
         table_id: menu.table?.id || menu.table?.table_id,
         table_session: tableSession,
         table_token: menu.table?.qr_token,
+        group_cart: useGroupCart,
         guest_name: guestName.trim(),
         order_type: 'dine_in',
         source: 'customer',
         payment_method: 'cash',
-        items: cartLines.map((line) => ({
+        items: useGroupCart ? [] : cartLines.map((line) => ({
           menu_item_id: line.item.id,
           qty: line.qty,
         })),
@@ -184,6 +243,7 @@ export default function TableMenu() {
       setOrder(created);
       setCartOpen(false);
       setCart({});
+      setSharedCart([]);
     } catch (err) {
       if (err.status === 409) {
         setError('This table already has an active order. Please ask your server.');
@@ -362,7 +422,7 @@ export default function TableMenu() {
 
       <section className="mx-auto grid max-w-5xl gap-4 px-4 py-5 sm:grid-cols-2 lg:grid-cols-3">
         {visibleItems.map((item) => {
-          const qty = cart[item.id]?.qty || 0;
+          const qty = cartQtyByItem[item.id] || 0;
           const veg = isVeg(item);
           const dietColor = veg === true ? 'bg-green-600' : veg === false ? 'bg-red-600' : 'bg-amber-400';
           const dietLabel = veg === true ? 'Veg' : veg === false ? 'Non-Veg' : 'Ask staff';
@@ -443,13 +503,23 @@ export default function TableMenu() {
             </div>
             <div className="mt-5 space-y-3">
               {cartLines.map((line) => (
-                <div key={line.item.id} className="flex items-center justify-between gap-3 rounded-2xl bg-amber-50 p-3">
+                <div key={line.cart_key || line.item.id} className="flex items-center justify-between gap-3 rounded-2xl bg-amber-50 p-3">
                   <div>
                     <p className="font-bold text-amber-950">{line.item.name}</p>
                     <p className="text-sm text-amber-950/55">{formatMoney(line.item.price)} each</p>
+                    {useGroupCart && (
+                      <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-orange-700/60">
+                        Added by {line.added_by || 'Guest'}
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center rounded-full bg-white text-orange-700 shadow-sm">
-                    <button onClick={() => changeQty(line.item, -1)} className="grid h-10 w-10 place-items-center" aria-label={`Remove ${line.item.name}`}>
+                    <button
+                      onClick={() => changeQty(line.item, -1, line.added_by)}
+                      disabled={useGroupCart && (line.added_by || 'Guest') !== addedBy}
+                      className="grid h-10 w-10 place-items-center disabled:opacity-30"
+                      aria-label={`Remove ${line.item.name}`}
+                    >
                       <Minus size={16} />
                     </button>
                     <span className="min-w-8 text-center text-sm font-black">{line.qty}</span>

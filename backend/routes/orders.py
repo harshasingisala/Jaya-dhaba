@@ -30,7 +30,7 @@ from realtime import broadcast, notify_order_update
 from security_log import log_security_event
 from utils.validation import extract_fields
 from order_queue import enqueue_order, finish_order
-from qr_sessions import get_table_session, remember_table_order
+from qr_sessions import clear_group_cart, get_group_cart, get_table_session, remember_table_order
 
 bp = Blueprint("orders", __name__, url_prefix="/api")
 audit = log_audit
@@ -349,6 +349,7 @@ def create_order():
         "table_id",
         "table_token",
         "table_session",
+        "group_cart",
         "guest_name",
         "guest_phone",
         "customer_name",
@@ -378,6 +379,20 @@ def create_order():
             paused_row = conn.execute("SELECT value FROM site_settings WHERE key = 'orders_paused'").fetchone()
         if paused_row and paused_row["value"] == "true":
             return jsonify({"success": False, "message": "Orders are paused right now"}), 409
+    table_session_id = raw.get("table_session")
+    use_group_cart = bool(raw.get("group_cart"))
+    if use_group_cart:
+        if not table_session_id:
+            return jsonify({"success": False, "message": "Table session is required for group cart checkout"}), 400
+        group_cart = get_group_cart(table_session_id)
+        if group_cart is None:
+            return jsonify({"success": False, "message": "Table session expired. Please scan the QR code again."}), 403
+        group_items = [
+            {"menu_item_id": str(line.get("item_id") or ""), "qty": max(1, int(line.get("quantity") or 1))}
+            for line in group_cart
+            if line.get("item_id")
+        ]
+        raw["items"] = group_items + list(raw.get("items") or [])
     items_raw = raw.get("items", [])
     for it in items_raw:
         mid = it.get("menu_item_id")
@@ -388,7 +403,6 @@ def create_order():
                 it["menu_item_id"] = candidate
             except Exception:
                 pass
-    table_session_id = raw.get("table_session")
     if table_session_id and not raw.get("table_id"):
         session_payload = get_table_session(table_session_id)
         if not session_payload:
@@ -403,6 +417,7 @@ def create_order():
                 return jsonify({"success": False, "message": "Table not found"}), 404
             raw["table_id"] = str(table.id)
     raw.pop("table_session", None)
+    raw.pop("group_cart", None)
     schema = validate_schema(OrderCreate, data=raw)
     user_id = uuid.UUID(g.current_user["id"]) if hasattr(g, "current_user") and g.current_user else None
     
@@ -543,6 +558,8 @@ def create_order():
         session.refresh(new_order)
         serialized = serialize_order(new_order, include_public_token=True)
         remember_table_order(table_session_id, str(new_order.id))
+        if use_group_cart:
+            clear_group_cart(table_session_id)
 
         broker.publish("kitchen", "order.created", serialized)
         broker.publish(f"order:{order_topic_id(new_order.id)}", "order.created", serialized)
