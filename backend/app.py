@@ -150,6 +150,7 @@ def create_app(overrides: dict | None = None) -> Flask:
                 cors_origins.append(origin)
 
     _validate_runtime_config(app, cors_origins, is_production)
+    app.config["CORS_ORIGINS_RESOLVED"] = cors_origins
 
     # CORS
     CORS(

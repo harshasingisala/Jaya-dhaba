@@ -16,6 +16,9 @@ def init_security_middleware(app: Flask):
     
     @app.before_request
     def security_checks():
+        if request.method == "OPTIONS":
+            return None
+
         runtime_env = (os.getenv("APP_ENV") or os.getenv("FLASK_ENV") or "").lower()
         if not current_app.config.get("TESTING") and runtime_env == "production":
             expected = current_app.config.get("CLOUDFLARE_TUNNEL_SECRET")
@@ -24,7 +27,7 @@ def init_security_middleware(app: Flask):
 
         # 1. Rate Limiting (Global & Auth)
         if not current_app.config.get("TESTING"):
-            if request.method == "OPTIONS" or request.path.startswith("/socket.io"):
+            if request.path.startswith("/socket.io"):
                 return None
             if runtime_env == "development":
                 return None
@@ -78,11 +81,11 @@ def init_security_middleware(app: Flask):
         # 2. CSP (Strict)
         csp = (
             "default-src 'self'; "
-            "script-src 'self' https://checkout.razorpay.com https://cdnjs.cloudflare.com; "
+            "script-src 'self' https://checkout.razorpay.com https://cdn.razorpay.com https://cdnjs.cloudflare.com https://static.cloudflareinsights.com; "
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
             "font-src 'self' https://fonts.gstatic.com; "
             "img-src 'self' data: blob: https:; "
-            "connect-src 'self' https://api.jayadhaba.online https://*.supabase.co https://api.razorpay.com https://checkout.razorpay.com wss:; "
+            "connect-src 'self' https://api.jayadhaba.online https://*.supabase.co https://api.razorpay.com https://checkout.razorpay.com https://static.cloudflareinsights.com https://cloudflareinsights.com wss:; "
             "frame-src https://*.razorpay.com; "
             "frame-ancestors 'none'; "
             "object-src 'none'; "
@@ -98,7 +101,6 @@ def init_security_middleware(app: Flask):
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), payment=(), usb=(), bluetooth=(), accelerometer=(), gyroscope=(), magnetometer=()"
-        response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
         response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
         response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
         response.headers["X-Permitted-Cross-Domain-Policies"] = "none"
@@ -106,6 +108,15 @@ def init_security_middleware(app: Flask):
         if request.path.startswith("/api/auth/") or request.path.startswith("/api/admin/"):
             response.headers["Cache-Control"] = "no-store, max-age=0"
             response.headers["Pragma"] = "no-cache"
+        if request.path.startswith("/api/"):
+            origin = request.headers.get("Origin")
+            allowed_origins = current_app.config.get("CORS_ORIGINS_RESOLVED") or []
+            if origin in allowed_origins:
+                response.headers["Access-Control-Allow-Origin"] = origin
+                response.headers["Access-Control-Allow-Credentials"] = "true"
+                response.headers["Vary"] = "Origin"
+                response.headers["Access-Control-Allow-Headers"] = "Content-Type, X-CSRF-Token, Authorization, Idempotency-Key"
+                response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
         response.headers.pop("X-Powered-By", None)
         response.headers.pop("Server", None)
         
