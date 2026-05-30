@@ -189,23 +189,16 @@ def create_app(overrides: dict | None = None) -> Flask:
 
     @app.get("/api/health")
     def health():
-        checks = {
-            "status": "ok",
-            "version": "1.0.0",
-            "timestamp": datetime.utcnow().isoformat(),
-            "ai": "ok" if app.config.get("GOOGLE_API_KEY") else "unavailable",
-        }
+        status = "ok"
         try:
             db_breaker.call(db.check_health)
-            checks["database"] = "ok"
         except Exception:
-            checks["database"] = "degraded"
-            checks["status"] = "degraded"
-        return jsonify(checks), 200 if checks["status"] == "ok" else 503
+            status = "degraded"
+        return jsonify({"status": status}), 200 if status == "ok" else 503
 
     @app.get("/health")
     def health_check():
-        return jsonify({"status": "ok", "version": "1.0.0"}), 200
+        return jsonify({"status": "ok"}), 200
 
     @app.errorhandler(ValidationError)
     def handle_validation_error(error: ValidationError):

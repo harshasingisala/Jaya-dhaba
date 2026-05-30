@@ -27,6 +27,13 @@ def test_security_headers(client):
     assert "default-src 'self'" in resp.headers["Content-Security-Policy"]
 
 
+def test_health_response_is_minimal(client):
+    resp = client.get("/api/health")
+
+    assert resp.status_code == 200
+    assert resp.get_json() == {"status": "ok"}
+
+
 def test_seed_does_not_create_known_admin_without_bootstrap_variables(app, monkeypatch):
     import db
     from models import User
