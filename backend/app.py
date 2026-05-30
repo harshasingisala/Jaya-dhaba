@@ -101,6 +101,7 @@ def create_app(overrides: dict | None = None) -> Flask:
         RAZORPAY_KEY_ID=os.getenv("RAZORPAY_KEY_ID", ""),
         RAZORPAY_KEY_SECRET=os.getenv("RAZORPAY_KEY_SECRET", ""),
         RAZORPAY_WEBHOOK_SECRET=os.getenv("RAZORPAY_WEBHOOK_SECRET", ""),
+        QR_SESSION_SECRET=os.getenv("QR_SESSION_SECRET", ""),
         REDIS_URL=os.getenv("REDIS_URL", ""),
         DB_ENCRYPTION_KEY=os.getenv("DB_ENCRYPTION_KEY", ""),
         ENCRYPTION_KEY=os.getenv("ENCRYPTION_KEY", ""),
@@ -506,6 +507,8 @@ def _validate_runtime_config(app: Flask, cors_origins: list[str], is_production:
         errors.append("RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET are required in production")
     if not app.config.get("RAZORPAY_WEBHOOK_SECRET"):
         errors.append("RAZORPAY_WEBHOOK_SECRET is required in production")
+    if not app.config.get("QR_SESSION_SECRET"):
+        errors.append("QR_SESSION_SECRET is required in production")
     if not app.config.get("REDIS_URL"):
         errors.append("REDIS_URL is required in production")
     if not app.config.get("DB_ENCRYPTION_KEY") and not app.config.get("ENCRYPTION_KEY"):

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import re
+import secrets
 import uuid
 import zipfile
 from datetime import datetime, time, timedelta, timezone
@@ -11,6 +12,8 @@ from flask import Blueprint, current_app, jsonify, request, send_file
 import db
 from audit import audit
 from auth import require_role
+from qr_sessions import create_table_session, generate_qr_token, verify_qr_token
+from rate_limits import enforce_limit
 from realtime import broadcast
 from validators import ValidationError, body, boolean, integer, raw_text, reject_unknown
 
@@ -27,10 +30,8 @@ def _table_number_from_label(label: str) -> int | None:
 def _table_url(table) -> str:
     base_url = current_app.config.get("QR_BASE_URL") or "https://jayadhaba.online"
     base_url = str(base_url).rstrip("/")
-    table_number = _table_number_from_label(table["label"])
-    if table_number:
-        return f"{base_url}/menu?table={table_number}"
-    return f"{base_url}/menu?table_token={table['qr_token']}"
+    token = generate_qr_token(str(table["id"]), table_version=str(table["qr_token"]))
+    return f"{base_url}/menu?t={token}"
 
 
 def _table_id_variants(table_id: str) -> tuple[str, str]:
@@ -193,6 +194,43 @@ def resolve_table():
         return jsonify({"success": False, "message": "Table not found"}), 404
     table = _table_dict(row)
     return jsonify({"success": True, "table": table, "data": table})
+
+
+@bp.post("/qr/verify")
+def verify_qr():
+    data = request.get_json(silent=True) or {}
+    token = raw_text(data.get("token") or data.get("t"), "token", 2048)
+    payload = verify_qr_token(token)
+    if not payload:
+        return jsonify({"success": False, "message": "Invalid or expired QR code"}), 403
+
+    table_id = str(payload["table"])
+    rate_limited = enforce_limit(f"qr_scan:{table_id}", 20, 60)
+    if rate_limited is not None:
+        return rate_limited
+
+    id_variants = _table_id_variants(table_id)
+    with db.transaction(current_app.config["DATABASE_URL"]) as conn:
+        row = conn.execute(
+            _table_select_sql("WHERE t.id IN (?, ?) AND t.active = true"),
+            id_variants,
+        ).fetchone()
+        if not row:
+            return jsonify({"success": False, "message": "Table not found"}), 404
+        table = _table_dict(row)
+        if not secrets.compare_digest(str(table.get("qr_token") or ""), str(payload.get("v") or "")):
+            audit(conn, "qr.scan_rejected", "table", table["id"], {"reason": "version_mismatch"})
+            return jsonify({"success": False, "message": "This QR code has been replaced. Please ask staff for a fresh QR."}), 403
+        session_id = create_table_session(table["id"], restaurant_id=str(payload["restaurant"]))
+        audit(conn, "qr.scan", "table", table["id"], {"restaurant_id": payload["restaurant"]})
+
+    return jsonify({
+        "success": True,
+        "session_id": session_id,
+        "table_session": session_id,
+        "table": table,
+        "data": {"session_id": session_id, "table_session": session_id, "table": table},
+    })
 
 
 @bp.get("/admin/tables")

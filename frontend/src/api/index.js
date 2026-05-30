@@ -408,6 +408,24 @@ const api = {
     return [];
   },
 
+  verifyQrToken: async (token) => {
+    const data = await request('/api/qr/verify', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    });
+    return data?.data || data;
+  },
+
+  getTableSessionMenu: async (tableSession) => {
+    const data = await request(`/api/menu?table_session=${encodeURIComponent(tableSession)}`);
+    return {
+      ...data,
+      table: data.table || null,
+      categories: Array.isArray(data.categories) ? data.categories : [],
+      items: Array.isArray(data.items) ? data.items.map(normalizeMenuItem) : [],
+    };
+  },
+
   resolveTable: async (tableNumber) => {
     const data = await request(`/api/tables/resolve?table=${encodeURIComponent(tableNumber)}`);
     return data.table || data;
@@ -577,6 +595,7 @@ const api = {
     };
     if (orderPayload.table_id) payload.table_id = orderPayload.table_id;
     if (orderPayload.table_token) payload.table_token = orderPayload.table_token;
+    if (orderPayload.table_session) payload.table_session = orderPayload.table_session;
     const idempotencyKey = orderPayload.idempotency_key || crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`;
     const data = await request('/api/orders', {
       method: 'POST',
@@ -600,6 +619,7 @@ const api = {
     };
     if (orderPayload.table_id) intentPayload.table_id = orderPayload.table_id;
     if (orderPayload.table_token) intentPayload.table_token = orderPayload.table_token;
+    if (orderPayload.table_session) intentPayload.table_session = orderPayload.table_session;
     const intent = await request('/api/orders', {
       method: 'POST',
       headers: { 'Idempotency-Key': intentPayload.idempotency_key },

@@ -17,6 +17,7 @@ from audit import audit
 from auth import require_role
 from cache import menu_cache
 from events import broker, stream_topic
+from qr_sessions import get_table_session
 from realtime import broadcast
 from validators import ValidationError, body, boolean, integer, raw_text, reject_unknown, tags, url
 from utils.validation import validate_image_url
@@ -104,6 +105,14 @@ def _table_number_from_label(label: str) -> int | None:
     return int(match.group(1)) if match else None
 
 
+def _table_id_variants(table_id: str) -> tuple[str, str]:
+    try:
+        parsed = uuid.UUID(str(table_id))
+    except ValueError:
+        return str(table_id), str(table_id)
+    return str(parsed), parsed.hex
+
+
 def serialize_table(row) -> dict:
     if not row:
         return None
@@ -148,14 +157,30 @@ def get_celebration_for_table(conn, table_id: int) -> dict | None:
     return {"type": row["celebration_type"], "message": messages.get(row["celebration_type"], "")}
 
 
-def load_menu(table_token: str | None = None, table_number: str | None = None, include_unavailable: bool = False) -> dict:
-    cache_key = f"menu:{table_token or table_number or 'public'}:{'admin' if include_unavailable else 'public'}"
-    cached = menu_cache.get(cache_key)
+def load_menu(
+    table_token: str | None = None,
+    table_number: str | None = None,
+    table_session: str | None = None,
+    include_unavailable: bool = False,
+) -> dict:
+    cache_key = f"menu:{table_session or table_token or table_number or 'public'}:{'admin' if include_unavailable else 'public'}"
+    cached = None if table_session else menu_cache.get(cache_key)
     if cached is not None:
         return cached
     with db.connect(current_app.config["DATABASE_URL"]) as conn:
         table = None
-        if table_number:
+        if table_session:
+            session_payload = get_table_session(table_session)
+            if not session_payload:
+                raise ValidationError("Table session expired. Please scan the QR code again.", "table_session", 403)
+            table_id = str(session_payload.get("table_id") or "")
+            table = conn.execute(
+                "SELECT * FROM tables WHERE active = true AND id IN (?, ?)",
+                _table_id_variants(table_id),
+            ).fetchone()
+            if not table:
+                raise ValidationError("Table not found. Please scan the QR code again.", "table_session", 404)
+        elif table_number:
             number = integer(table_number, "table", 1, 500)
             table = conn.execute(
                 "SELECT * FROM tables WHERE active = true AND (label = ? OR label = ?)",
@@ -187,14 +212,18 @@ def load_menu(table_token: str | None = None, table_number: str | None = None, i
         "categories": [serialize_category(row) for row in categories],
         "items": [serialize_item(row) for row in items],
     }
-    menu_cache.set(cache_key, payload)
+    if not table_session:
+        menu_cache.set(cache_key, payload)
     return payload
 
 
 @bp.get("/menu")
 def menu():
+    table_session = request.args.get("table_session")
     table_token = request.args.get("table_token")
     table_param = request.args.get("table")
+    if table_session:
+        return jsonify(load_menu(table_session=table_session))
     if table_token:
         return jsonify(load_menu(table_token=table_token))
     if table_param:

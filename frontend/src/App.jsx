@@ -35,7 +35,7 @@ function AnimatedRoutes() {
   const location = useLocation();
   const isAdmin = location.pathname.startsWith("/admin");
   const menuParams = new URLSearchParams(location.search);
-  const isTableMenu = location.pathname === "/menu" && (menuParams.has("table") || menuParams.has("table_token"));
+  const isTableMenu = location.pathname === "/menu" && (menuParams.has("table") || menuParams.has("table_token") || menuParams.has("t") || menuParams.has("table_session"));
 
   return (
     <AnimatePresence mode="wait">
@@ -85,7 +85,7 @@ function AnimatedRoutes() {
 function MenuRoute() {
   const location = useLocation();
   const params = new URLSearchParams(location.search);
-  const hasTableContext = params.has("table") || params.has("table_token");
+  const hasTableContext = params.has("table") || params.has("table_token") || params.has("t") || params.has("table_session");
   return hasTableContext ? <TableMenu /> : <Home />;
 }
 

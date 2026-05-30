@@ -355,7 +355,7 @@ export default function QRTableManager() {
                       <Loader2 className="animate-spin" />
                     </div>
                   )}
-                  <p className="mt-4 text-center text-xs font-bold text-heritage-espresso/50">
+                  <p className="mt-4 break-all text-center text-xs font-bold text-heritage-espresso/50">
                     {qrLink}
                   </p>
                 </div>

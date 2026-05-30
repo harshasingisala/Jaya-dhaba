@@ -152,6 +152,35 @@ def test_guest_order_placement_succeeds(client, seeded_menu):
     assert data["data"]["order_number"] is not None
 
 
+def test_signed_qr_creates_table_session(client, app):
+    from sqlalchemy import create_engine, text
+    from sqlalchemy.orm import sessionmaker
+
+    from qr_sessions import generate_qr_token
+
+    engine = create_engine(app.config["DATABASE_URL"])
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    table = session.execute(text("SELECT id, qr_token FROM tables LIMIT 1")).fetchone()
+    session.close()
+    assert table, "No table in test DB"
+
+    with app.app_context():
+        token = generate_qr_token(str(table[0]), table_version=str(table[1]))
+
+    csrf = get_csrf(client)
+    resp = client.post("/api/qr/verify", json={"token": token}, headers={"X-CSRF-Token": csrf})
+    assert resp.status_code == 200, f"QR verify failed: {resp.data}"
+    data = resp.get_json()
+    table_session = data.get("table_session") or (data.get("data") or {}).get("table_session")
+    assert table_session, f"No table session returned: {data}"
+
+    menu_resp = client.get(f"/api/menu?table_session={table_session}")
+    assert menu_resp.status_code == 200, f"Session menu failed: {menu_resp.data}"
+    menu_data = menu_resp.get_json()
+    assert menu_data.get("table"), f"No table returned for session menu: {menu_data}"
+
+
 def test_contact_enquiry_submission_succeeds(client):
     csrf = get_csrf(client)
     resp = client.post(

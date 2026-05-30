@@ -30,6 +30,7 @@ from realtime import broadcast, notify_order_update
 from security_log import log_security_event
 from utils.validation import extract_fields
 from order_queue import enqueue_order, finish_order
+from qr_sessions import get_table_session, remember_table_order
 
 bp = Blueprint("orders", __name__, url_prefix="/api")
 audit = log_audit
@@ -347,6 +348,7 @@ def create_order():
     raw = extract_fields(raw, {
         "table_id",
         "table_token",
+        "table_session",
         "guest_name",
         "guest_phone",
         "customer_name",
@@ -386,6 +388,12 @@ def create_order():
                 it["menu_item_id"] = candidate
             except Exception:
                 pass
+    table_session_id = raw.get("table_session")
+    if table_session_id and not raw.get("table_id"):
+        session_payload = get_table_session(table_session_id)
+        if not session_payload:
+            return jsonify({"success": False, "message": "Table session expired. Please scan the QR code again."}), 403
+        raw["table_id"] = str(session_payload.get("table_id") or "")
     if raw.get("table_token") and not raw.get("table_id"):
         with db.get_db() as session:
             table = session.execute(
@@ -394,6 +402,7 @@ def create_order():
             if not table:
                 return jsonify({"success": False, "message": "Table not found"}), 404
             raw["table_id"] = str(table.id)
+    raw.pop("table_session", None)
     schema = validate_schema(OrderCreate, data=raw)
     user_id = uuid.UUID(g.current_user["id"]) if hasattr(g, "current_user") and g.current_user else None
     
@@ -416,6 +425,7 @@ def create_order():
         existing = session.execute(select(Order).filter_by(idempotency_key=idempotency_key)).scalar_one_or_none()
         if existing:
             serialized = serialize_order(existing, include_public_token=True)
+            remember_table_order(table_session_id, str(existing.id))
             return jsonify({"success": True, "data": serialized, **serialized}), 200
 
         resolved_table = None
@@ -532,6 +542,7 @@ def create_order():
         session.commit()
         session.refresh(new_order)
         serialized = serialize_order(new_order, include_public_token=True)
+        remember_table_order(table_session_id, str(new_order.id))
 
         broker.publish("kitchen", "order.created", serialized)
         broker.publish(f"order:{order_topic_id(new_order.id)}", "order.created", serialized)

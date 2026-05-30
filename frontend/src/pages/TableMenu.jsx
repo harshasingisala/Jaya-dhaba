@@ -47,11 +47,15 @@ function itemImage(item) {
 
 export default function TableMenu() {
   const [searchParams] = useSearchParams();
+  const qrToken = searchParams.get('t') || '';
   const tableParam = searchParams.get('table') || '';
   const tableToken = searchParams.get('table_token') || '';
+  const initialTableSession = searchParams.get('table_session') || '';
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [menu, setMenu] = useState({ table: null, categories: [], items: [] });
+  const [tableSession, setTableSession] = useState(initialTableSession);
+  const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
   const [activeCategory, setActiveCategory] = useState('');
   const [cart, setCart] = useState({});
   const [cartOpen, setCartOpen] = useState(false);
@@ -65,13 +69,28 @@ export default function TableMenu() {
       setLoading(true);
       setError('');
       try {
-        const queryValue = tableToken || tableParam;
+        const queryValue = qrToken || initialTableSession || tableToken || tableParam;
         if (!queryValue) {
           throw new Error('Table not found. Please scan the QR code again.');
         }
-        const data = tableToken
-          ? await api.request(`/api/menu?table_token=${encodeURIComponent(tableToken)}`)
-          : await api.getMenu(tableParam);
+        if (qrToken) {
+          const verified = await api.verifyQrToken(qrToken);
+          if (cancelled) return;
+          const sessionId = verified.table_session || verified.session_id;
+          if (!sessionId || !verified.table) {
+            throw new Error('Table not found. Please scan the QR code again.');
+          }
+          setTableSession(sessionId);
+          setMenu({ table: verified.table, categories: [], items: [] });
+          setAwaitingConfirmation(true);
+          setActiveCategory('');
+          return;
+        }
+        const data = initialTableSession
+          ? await api.getTableSessionMenu(initialTableSession)
+          : tableToken
+            ? await api.request(`/api/menu?table_token=${encodeURIComponent(tableToken)}`)
+            : await api.getMenu(tableParam);
         if (cancelled) return;
         const nextMenu = {
           table: data.table || null,
@@ -81,6 +100,8 @@ export default function TableMenu() {
         if (!nextMenu.table) {
           throw new Error('Table not found. Please scan the QR code again.');
         }
+        setTableSession(initialTableSession);
+        setAwaitingConfirmation(false);
         setMenu(nextMenu);
         setActiveCategory(nextMenu.categories[0]?.id || nextMenu.items[0]?.category_id || '');
       } catch (err) {
@@ -98,7 +119,7 @@ export default function TableMenu() {
     return () => {
       cancelled = true;
     };
-  }, [tableParam, tableToken]);
+  }, [initialTableSession, qrToken, tableParam, tableToken]);
 
   const categories = useMemo(() => {
     return menu.categories.filter((category) =>
@@ -148,6 +169,7 @@ export default function TableMenu() {
     try {
       const payload = {
         table_id: menu.table?.id || menu.table?.table_id,
+        table_session: tableSession,
         table_token: menu.table?.qr_token,
         guest_name: guestName.trim(),
         order_type: 'dine_in',
@@ -170,6 +192,30 @@ export default function TableMenu() {
       }
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const confirmTable = async () => {
+    if (!tableSession || loading) return;
+    setLoading(true);
+    setError('');
+    try {
+      const data = await api.getTableSessionMenu(tableSession);
+      const nextMenu = {
+        table: data.table || null,
+        categories: Array.isArray(data.categories) ? data.categories : [],
+        items: Array.isArray(data.items) ? data.items : [],
+      };
+      if (!nextMenu.table) {
+        throw new Error('Table not found. Please scan the QR code again.');
+      }
+      setMenu(nextMenu);
+      setActiveCategory(nextMenu.categories[0]?.id || nextMenu.items[0]?.category_id || '');
+      setAwaitingConfirmation(false);
+    } catch (err) {
+      setError(err.message || 'Table session expired. Please scan the QR code again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -196,6 +242,34 @@ export default function TableMenu() {
             <AlertCircle className="mx-auto text-orange-600" size={44} />
             <h1 className="mt-4 font-serif italic text-3xl">Table not found</h1>
             <p className="mt-3 text-sm leading-6 text-amber-950/65">Table not found. Please scan the QR code again.</p>
+          </div>
+        </main>
+      </>
+    );
+  }
+
+  if (awaitingConfirmation && menu.table) {
+    return (
+      <>
+        <TableMenuMeta />
+        <main className="min-h-screen bg-amber-50 flex items-center justify-center px-6 text-amber-950">
+          <div className="w-full max-w-sm rounded-[2rem] bg-white p-8 text-center shadow-xl border border-orange-100">
+            <CheckCircle2 className="mx-auto text-green-600" size={52} />
+            <p className="mt-5 text-xs font-black uppercase tracking-[0.25em] text-orange-700">QR verified</p>
+            <h1 className="mt-3 font-serif italic text-5xl">{tableLabel}</h1>
+            <p className="mt-3 text-base leading-7 text-amber-950/70">Confirm this is your table before opening the live menu.</p>
+            {error && (
+              <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+                {error}
+              </p>
+            )}
+            <button
+              onClick={confirmTable}
+              className="mt-6 inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-full bg-orange-700 px-5 text-sm font-black uppercase tracking-widest text-white shadow-lg"
+            >
+              Open table menu
+              <ArrowRight size={18} />
+            </button>
           </div>
         </main>
       </>
