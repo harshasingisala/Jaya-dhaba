@@ -19,6 +19,12 @@ function normalizeApiBaseUrl(value) {
   }
 
   if (import.meta.env.PROD) {
+    if (
+      (window.location.hostname === 'jayadhaba.online' || window.location.hostname === 'www.jayadhaba.online') &&
+      parsed.hostname === 'jaya-dhaba-dwwd.onrender.com'
+    ) {
+      return 'https://api.jayadhaba.online';
+    }
     if (parsed.protocol !== 'https:') {
       throw new Error('Production VITE_API_URL must use HTTPS.');
     }
