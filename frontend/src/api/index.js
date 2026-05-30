@@ -3,6 +3,7 @@ import { API_BASE_URL, USE_DEV_CUSTOMER_FALLBACKS } from './config.js';
 import { supabase } from '../supabaseClient.js';
 import { pickFields } from '../utils/sanitize.js';
 import { fetchWithRetry } from '../utils/retry.js';
+import { clearAuthSession, getAccessToken, setAuthSession } from '../utils/authSession.js';
 
 const BASE_URL = API_BASE_URL;
 const SESSION_KEY = 'user';
@@ -105,12 +106,7 @@ function getCsrfToken() {
 }
 
 function getAuthToken() {
-  try {
-    const user = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null');
-    return user?.access_token || user?.token || localStorage.getItem('adminToken') || '';
-  } catch (err) {
-    return localStorage.getItem('adminToken') || '';
-  }
+  return getAccessToken();
 }
 
 const getToken = getAuthToken;
@@ -137,9 +133,7 @@ function handleExpiredSession() {
   if (!sessionStorage.getItem(SESSION_KEY)) return;
 
   redirectingToLogin = true;
-  localStorage.removeItem(SESSION_KEY);
-  localStorage.removeItem('admin_token');
-  sessionStorage.removeItem(SESSION_KEY);
+  clearAuthSession();
   window.location.href = '/admin/login';
 }
 
@@ -165,7 +159,30 @@ async function ensureCsrfToken(forceRefresh = false) {
   return data?.data?.csrfToken || data?.csrfToken || getCsrfToken();
 }
 
-async function request(path, options = {}) {
+export async function refreshSession() {
+  const csrfToken = await ensureCsrfToken(true);
+  const res = await fetchWithRetry(`${BASE_URL}/api/auth/refresh`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
+    },
+  });
+  const payload = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    clearAuthSession();
+    return null;
+  }
+  const data = payload?.data || payload;
+  if (!data?.user || !data?.access_token) return null;
+  return {
+    user: setAuthSession(data.user, data.access_token),
+    accessToken: data.access_token,
+  };
+}
+
+export async function request(path, options = {}) {
   const { rawResponse = false, ...fetchOptions } = options;
   const method = (fetchOptions.method || 'GET').toUpperCase();
   const headers = {
@@ -367,6 +384,7 @@ function normalizeReservationPayload(payload = {}) {
 
 const api = {
   request,
+  refreshSession,
 
   getMenu: async (tableParam = '') => {
     if (USE_DEV_CUSTOMER_FALLBACKS && !tableParam) return DEV_MENU_ITEMS.map(normalizeMenuItem);

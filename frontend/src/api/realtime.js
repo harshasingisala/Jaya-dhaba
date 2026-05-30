@@ -1,3 +1,6 @@
+import { apiUrl } from './config.js';
+import { request } from './index.js';
+
 const DEFAULT_REFRESH_MS = 1500;
 
 export function createManagedEventSource(url, options = {}) {
@@ -38,9 +41,20 @@ export function createManagedEventSource(url, options = {}) {
     }, delay);
   };
 
-  const connect = () => {
+  const resolveSourceUrl = async () => (typeof url === 'function' ? url() : url);
+
+  const connect = async () => {
     if (closed || source) return;
-    source = new EventSource(url, { withCredentials });
+    let sourceUrl;
+    try {
+      sourceUrl = await resolveSourceUrl();
+    } catch {
+      onStatus?.('reconnecting');
+      scheduleReconnect();
+      return;
+    }
+    if (closed || source) return;
+    source = new EventSource(sourceUrl, { withCredentials });
     source.addEventListener('open', () => {
       retryDelay = 2000;
       onStatus?.('connected');
@@ -95,4 +109,14 @@ export function createManagedEventSource(url, options = {}) {
       source = null;
     },
   };
+}
+
+export function createTicketedEventSource(path, options = {}) {
+  return createManagedEventSource(async () => {
+    const payload = await request('/api/stream/ticket', { method: 'POST' });
+    const ticket = payload?.ticket || payload?.data?.ticket;
+    if (!ticket) throw new Error('Unable to prepare stream.');
+    const separator = path.includes('?') ? '&' : '?';
+    return apiUrl(`${path}${separator}ticket=${encodeURIComponent(ticket)}`);
+  }, options);
 }

@@ -1,4 +1,5 @@
 import uuid
+import os
 from datetime import datetime, timedelta, timezone
 
 from locust import HttpUser, between, events, task
@@ -52,6 +53,33 @@ class RestaurantUser(HttpUser):
             "guest_phone": "9876543210",
         }
         self.client.post("/api/reservations", json=payload, headers={"X-CSRF-Token": self.csrf, "Idempotency-Key": f"locust-res-{uuid.uuid4()}"}, name="/api/reservations")
+
+
+class AdminDashboardUser(HttpUser):
+    wait_time = between(1.0, 4.0)
+    weight = 1
+
+    def on_start(self):
+        self.token = os.getenv("ADMIN_LOAD_TOKEN", "")
+        self.headers = {"Authorization": f"Bearer {self.token}"} if self.token else {}
+
+    @task(6)
+    def live_orders_page(self):
+        if not self.token:
+            return
+        self.client.get("/api/admin/orders?per_page=50&page=1", headers=self.headers, name="/api/admin/orders")
+
+    @task(6)
+    def order_stats(self):
+        if not self.token:
+            return
+        self.client.get("/api/admin/orders/stats", headers=self.headers, name="/api/admin/orders/stats")
+
+    @task(2)
+    def archive_page(self):
+        if not self.token:
+            return
+        self.client.get("/api/admin/orders/archive?per_page=50&page=1", headers=self.headers, name="/api/admin/orders/archive")
 
 
 @events.quitting.add_listener

@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Type, TypeVar, Union
 
 from flask import request
-from pydantic import BaseModel, EmailStr, Field, ValidationError as PydanticValidationError, validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, ValidationError as PydanticValidationError, field_validator, model_validator
 
 
 T = TypeVar("T", bound=BaseModel)
@@ -39,21 +39,63 @@ def validate_schema(schema: Type[T], data: Optional[Dict[str, Any]] = None) -> T
 # Common Schemas
 
 class LoginSchema(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     login: str = Field(..., min_length=1, max_length=255)
-    password: str = Field(..., min_length=8)
+    password: str = Field(..., min_length=8, max_length=128)
     mfa_code: Optional[str] = Field(None, min_length=6, max_length=6)
+
+    @field_validator("login")
+    @classmethod
+    def normalize_login(cls, value: str) -> str:
+        value = value.strip().lower()
+        if "\x00" in value:
+            raise ValueError("Invalid characters")
+        return value
+
+    @field_validator("password")
+    @classmethod
+    def reject_password_nulls(cls, value: str) -> str:
+        if "\x00" in value:
+            raise ValueError("Invalid characters")
+        return value
 
 
 class RegisterSchema(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     email: Optional[EmailStr] = None
-    phone: Optional[str] = Field(None, pattern=r"^\+?[0-9][0-9\s-]{7,14}$")
+    phone: Optional[str] = Field(None, pattern=r"^(?:\+91)?[6-9][0-9]{9}$")
     password: str = Field(..., min_length=10)
-    
-    @validator("phone")
-    def validate_one_of(cls, v, values):
-        if not v and not values.get("email"):
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, value: str | None) -> str | None:
+        return value.lower().strip() if value else value
+
+    @field_validator("phone")
+    @classmethod
+    def normalize_phone(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        return re.sub(r"[\s-]", "", value.strip())
+
+    @field_validator("password")
+    @classmethod
+    def validate_password_strength(cls, value: str) -> str:
+        if not re.search(r"[A-Z]", value):
+            raise ValueError("Password must include an uppercase letter")
+        if not re.search(r"[a-z]", value):
+            raise ValueError("Password must include a lowercase letter")
+        if not re.search(r"\d", value):
+            raise ValueError("Password must include a number")
+        return value
+
+    @model_validator(mode="after")
+    def validate_one_of(self):
+        if not self.email and not self.phone:
             raise ValueError("Either email or phone must be provided")
-        return v
+        return self
 
 
 def sanitize_html(text: str) -> str:

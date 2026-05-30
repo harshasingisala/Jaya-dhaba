@@ -1,17 +1,18 @@
 import { useEffect, useRef } from 'react';
 import { getSocket } from '../lib/socket';
 
-export function usePollingFallback(fetchFn, intervalMs = 5000) {
+export function usePollingFallback(fetchFn, intervalMs = 15000) {
   const timer = useRef(null);
   const fetchRef = useRef(fetchFn);
   fetchRef.current = fetchFn;
 
   useEffect(() => {
     const socket = getSocket();
+    const jitter = () => Math.floor(Math.random() * Math.min(5000, Math.max(1000, intervalMs / 3)));
     const getPollingInterval = () => {
-      if (document.hidden) return Math.max(30000, intervalMs);
-      if (document.hasFocus()) return intervalMs;
-      return Math.max(15000, intervalMs);
+      if (document.hidden) return Math.max(60000, intervalMs * 3) + jitter();
+      if (document.hasFocus()) return intervalMs + jitter();
+      return Math.max(30000, intervalMs * 2) + jitter();
     };
     const stop = () => {
       window.clearInterval(timer.current);
@@ -19,7 +20,7 @@ export function usePollingFallback(fetchFn, intervalMs = 5000) {
     };
     const start = () => {
       stop();
-      fetchRef.current();
+      window.setTimeout(() => fetchRef.current(), jitter());
       timer.current = window.setInterval(() => fetchRef.current(), getPollingInterval());
     };
     const restart = () => {

@@ -88,8 +88,9 @@ NUL.css
 
 # -- Runtime caches --------------------------------------------------------
 .cache/
-.parcel-cache/
 .npm-cache/
+.pip-cache/
+.parcel-cache/
 .coverage
 htmlcov/
 

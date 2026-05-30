@@ -48,7 +48,7 @@ export default function KitchenDisplay() {
     return () => window.removeEventListener('rt:orders', handler);
   }, []);
 
-  usePollingFallback(fetchOrders, 5000);
+  usePollingFallback(fetchOrders, 15000);
 
   const visible = useMemo(() => orders.filter((order) => {
     const status = String(order.status || '').toLowerCase();

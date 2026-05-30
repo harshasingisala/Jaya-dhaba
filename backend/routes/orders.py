@@ -5,6 +5,8 @@ import hashlib
 import hmac
 import json
 import secrets
+import threading
+import time as time_module
 import uuid
 from datetime import datetime, time, timedelta, timezone
 from typing import List
@@ -14,6 +16,7 @@ from sqlalchemy import func, select, text
 from sqlalchemy.orm import joinedload, object_session
 
 import db
+from cache import orders_cache, stats_cache
 from models import Order, OrderItem, MenuItem, MenuCategory, RestaurantTable, User
 from auth import require_role, log_audit
 from auth import request_ip
@@ -30,6 +33,14 @@ from order_queue import enqueue_order, finish_order
 
 bp = Blueprint("orders", __name__, url_prefix="/api")
 audit = log_audit
+_ADVANCE_LOCK = threading.Lock()
+_LAST_ADVANCE_AT = 0.0
+_ADVANCE_INTERVAL_SECONDS = 5.0
+
+
+def _invalidate_admin_order_caches() -> None:
+    orders_cache.invalidate("admin_orders:")
+    stats_cache.invalidate("orders:")
 
 def allocate_order_number(session):
     row = session.execute(
@@ -198,6 +209,7 @@ def _as_utc(value: datetime | None) -> datetime | None:
 def _publish_order_lifecycle(payloads: list[dict], *, action: str, status: str | None = None, timestamp: str | None = None) -> None:
     if not payloads:
         return
+    _invalidate_admin_order_caches()
     for payload in payloads:
         broker.publish("kitchen", "order.updated", payload)
         broker.publish(f"order:{order_topic_id(payload['id'])}", "order.updated", payload)
@@ -208,12 +220,28 @@ def _publish_order_lifecycle(payloads: list[dict], *, action: str, status: str |
         "order_ids": [payload["id"] for payload in payloads],
         "status": status,
         "timestamp": timestamp,
-        "orders": payloads,
     })
     broadcast("analytics_update", {"action": "orders_changed"})
 
 
 def advance_order_timers() -> None:
+    global _LAST_ADVANCE_AT
+    monotonic_now = time_module.monotonic()
+    if monotonic_now - _LAST_ADVANCE_AT < _ADVANCE_INTERVAL_SECONDS:
+        return
+    if not _ADVANCE_LOCK.acquire(blocking=False):
+        return
+    try:
+        monotonic_now = time_module.monotonic()
+        if monotonic_now - _LAST_ADVANCE_AT < _ADVANCE_INTERVAL_SECONDS:
+            return
+        _LAST_ADVANCE_AT = monotonic_now
+        _advance_order_timers_now()
+    finally:
+        _ADVANCE_LOCK.release()
+
+
+def _advance_order_timers_now() -> None:
     now = datetime.now(timezone.utc)
     ready_payloads: list[dict] = []
     served_payloads: list[dict] = []
@@ -510,6 +538,7 @@ def create_order():
         broadcast("new_order", {"order": serialized})
         broadcast("orders_update", {"action": "new_order", "order": serialized})
         broadcast("analytics_update", {"action": "orders_changed"})
+        _invalidate_admin_order_caches()
         
         return jsonify({
             "success": True,
@@ -558,14 +587,24 @@ def list_admin_orders():
     allowed_statuses = {"pending", "preparing", "ready", "served", "all"}
     if status not in allowed_statuses:
         return jsonify({"success": False, "message": "Invalid status"}), 400
+    cache_key = f"admin_orders:list:{status}:{page}:{per_page}"
+    cached = orders_cache.get(cache_key)
+    if cached is not None:
+        return jsonify(cached)
     with db.get_db() as session:
-        query = select(Order).options(joinedload(Order.table)).where(Order.is_archived.is_(False))
+        query = (
+            select(Order)
+            .options(joinedload(Order.table), joinedload(Order.items).joinedload(OrderItem.menu_item))
+            .where(Order.is_archived.is_(False))
+        )
         if status != "all":
             query = query.where(Order.status == status)
         total = session.execute(select(func.count()).select_from(query.subquery())).scalar_one()
-        rows = session.execute(query.order_by(Order.created_at.desc()).limit(per_page).offset(offset)).scalars().all()
+        rows = session.execute(
+            query.order_by(Order.created_at.desc()).limit(per_page).offset(offset)
+        ).unique().scalars().all()
         orders = [serialize_order(order) for order in rows]
-        return jsonify({
+        payload = {
             "success": True,
             "orders": orders,
             "data": orders,
@@ -573,7 +612,9 @@ def list_admin_orders():
             "per_page": per_page,
             "total": int(total or 0),
             "pages": ((int(total or 0) + per_page - 1) // per_page),
-        })
+        }
+        orders_cache.set(cache_key, payload)
+        return jsonify(payload)
 
 
 @bp.patch("/admin/orders/bulk-status")
@@ -615,9 +656,9 @@ def bulk_order_status():
         "order_ids": id_payload,
         "status": status,
         "timestamp": now.isoformat(),
-        "orders": updated_payloads,
     })
     broadcast("analytics_update", {"action": "orders_changed"})
+    _invalidate_admin_order_caches()
     return jsonify({"success": True, "updated": len(orders), "status": status})
 
 
@@ -655,6 +696,7 @@ def bulk_archive_orders():
     id_payload = [str(order_id) for order_id in order_ids]
     broadcast("orders_update", {"action": "archived", "order_ids": id_payload})
     broadcast("analytics_update", {"action": "orders_changed"})
+    _invalidate_admin_order_caches()
     return jsonify({"success": True, "archived": len(orders)})
 
 
@@ -676,6 +718,7 @@ def clear_served_orders():
 
     broadcast("orders_update", {"action": "cleared", "count": cleared_count, "order_ids": order_ids})
     broadcast("analytics_update", {"action": "orders_changed"})
+    _invalidate_admin_order_caches()
     return jsonify({"success": True, "cleared": cleared_count})
 
 
@@ -697,6 +740,7 @@ def archive_all_orders():
 
     broadcast("orders_update", {"action": "cleared", "count": archived_count, "order_ids": order_ids})
     broadcast("analytics_update", {"action": "orders_changed"})
+    _invalidate_admin_order_caches()
     return jsonify({"success": True, "archived": archived_count})
 
 
@@ -704,50 +748,81 @@ def archive_all_orders():
 @require_role("staff")
 def archived_orders():
     archived_date = request.args.get("date")
+    page = max(1, int(request.args.get("page", 1)))
+    per_page = min(max(1, int(request.args.get("per_page", 50))), 200)
+    offset = (page - 1) * per_page
+    cache_key = f"admin_orders:archive:{archived_date or 'all'}:{page}:{per_page}"
+    cached = orders_cache.get(cache_key)
+    if cached is not None:
+        return jsonify(cached)
     with db.get_db() as session:
-        query = select(Order).where(Order.is_archived.is_(True))
+        query = (
+            select(Order)
+            .options(joinedload(Order.table), joinedload(Order.items).joinedload(OrderItem.menu_item))
+            .where(Order.is_archived.is_(True))
+        )
         if archived_date:
             day = datetime.strptime(archived_date, "%Y-%m-%d").date()
             start_utc = datetime.combine(day, time.min, tzinfo=IST).astimezone(timezone.utc)
             end_utc = start_utc + timedelta(days=1)
             query = query.where(Order.archived_at >= start_utc, Order.archived_at < end_utc)
+        total = session.execute(select(func.count()).select_from(query.subquery())).scalar_one()
         rows = session.execute(
-            query.order_by(Order.archived_at.desc()).limit(200)
-        ).scalars().all()
-        return jsonify({"success": True, "data": [serialize_order(order) for order in rows]})
+            query.order_by(Order.archived_at.desc()).limit(per_page).offset(offset)
+        ).unique().scalars().all()
+        payload = {
+            "success": True,
+            "data": [serialize_order(order) for order in rows],
+            "page": page,
+            "per_page": per_page,
+            "total": int(total or 0),
+            "pages": ((int(total or 0) + per_page - 1) // per_page),
+        }
+        orders_cache.set(cache_key, payload)
+        return jsonify(payload)
 
 
 @bp.get("/admin/orders/stats")
 @require_role("staff")
 def order_stats():
     advance_order_timers()
+    cached = stats_cache.get("orders:stats")
+    if cached is not None:
+        return jsonify(cached)
     today_ist = datetime.now(IST).date()
     start_utc = datetime.combine(today_ist, time.min, tzinfo=IST).astimezone(timezone.utc)
     end_utc = start_utc + timedelta(days=1)
     with db.get_db() as session:
-        active_orders = session.execute(
-            select(Order).where(Order.is_archived.is_(False))
-        ).scalars().all()
-        today_orders = session.execute(
-            select(Order).where(Order.created_at >= start_utc, Order.created_at < end_utc)
-        ).scalars().all()
+        status_rows = session.execute(
+            select(Order.status, func.count(Order.id))
+            .where(Order.is_archived.is_(False), Order.status.in_(["pending", "preparing", "ready", "served"]))
+            .group_by(Order.status)
+        ).all()
+        today_row = session.execute(
+            select(func.coalesce(func.sum(Order.total), 0), func.count(Order.id))
+            .where(Order.created_at >= start_utc, Order.created_at < end_utc)
+        ).one()
 
     counts = {"pending": 0, "preparing": 0, "ready": 0, "served": 0}
-    for order in active_orders:
-        if order.status in counts:
-            counts[order.status] += 1
-    today_revenue = sum(int(order.total or 0) for order in today_orders)
-    return jsonify({
+    for status, count in status_rows:
+        if status in counts:
+            counts[status] = int(count or 0)
+    total_active = sum(counts.values())
+    today_revenue = int(today_row[0] or 0)
+    today_orders = int(today_row[1] or 0)
+    payload = {
         "success": True,
         **counts,
-        "total_active": len(active_orders),
+        "total_active": total_active,
         "today_revenue": today_revenue,
-        "today_orders": len(today_orders),
+        "today_orders": today_orders,
         "revenue_today": today_revenue,
-        "total_orders_today": len(today_orders),
+        "total_orders_today": today_orders,
         "pending_count": counts["pending"],
         "preparing_count": counts["preparing"],
-    })
+    }
+    stats_cache.set("orders:stats", payload)
+    return jsonify(payload)
 
 
 @bp.patch("/admin/orders/<uuid:order_id>/status")
@@ -795,6 +870,7 @@ def update_order_status(order_id: uuid.UUID):
             "orders": [serialized],
         })
         broadcast("analytics_update", {"action": "orders_changed"})
+        _invalidate_admin_order_caches()
         
         return jsonify({
             "success": True,
@@ -865,6 +941,7 @@ def add_order_items(order_id: uuid.UUID):
         serialized = serialize_order(order)
         broker.publish("kitchen", "order.updated", serialized)
         broker.publish(f"order:{order_topic_id(order.id)}", "order.updated", serialized)
+        _invalidate_admin_order_caches()
         
         return jsonify({
             "success": True,

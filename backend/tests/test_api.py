@@ -35,8 +35,10 @@ def test_sql_injection_rejected(client, app):
 
 
 def test_idor_blocked(client):
-    customer_a = client.post("/api/auth/register", json={"email": "a@example.com", "password": "CustomerPass123!"}, headers=csrf_headers(client)).get_json()
-    customer_b = client.post("/api/auth/register", json={"email": "b@example.com", "password": "CustomerPass123!"}, headers=csrf_headers(client)).get_json()
+    client.post("/api/auth/register", json={"email": "a@example.com", "password": "CustomerPass123!"}, headers=csrf_headers(client))
+    client.post("/api/auth/register", json={"email": "b@example.com", "password": "CustomerPass123!"}, headers=csrf_headers(client))
+    customer_a = client.post("/api/auth/login", json={"email": "a@example.com", "password": "CustomerPass123!"}, headers=csrf_headers(client)).get_json()
+    customer_b = client.post("/api/auth/login", json={"email": "b@example.com", "password": "CustomerPass123!"}, headers=csrf_headers(client)).get_json()
     response = client.post(
         "/api/orders",
         json=order_payload(client),

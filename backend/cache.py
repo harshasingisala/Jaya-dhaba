@@ -46,3 +46,4 @@ class TTLCache:
 menu_cache = TTLCache(max_items=64, ttl_seconds=30)
 status_cache = TTLCache(max_items=8, ttl_seconds=3)
 stats_cache = TTLCache(max_items=16, ttl_seconds=5)
+orders_cache = TTLCache(max_items=128, ttl_seconds=2)

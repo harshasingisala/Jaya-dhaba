@@ -6,11 +6,11 @@ import uuid
 from flask import g, request
 
 import db
+from request_context import get_real_ip
 
 
 def client_ip() -> str:
-    forwarded = request.headers.get("X-Forwarded-For", "").split(",")[0].strip()
-    return forwarded or request.remote_addr or "0.0.0.0"
+    return get_real_ip()
 
 
 def audit(conn, action: str, entity_type: str, entity_id, payload: dict | None = None, user_id: int | None = None) -> None:

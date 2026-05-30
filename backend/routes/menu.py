@@ -169,7 +169,7 @@ def load_menu(table_token: str | None = None, table_number: str | None = None, i
                 raise ValidationError("Table QR token was not found", "qr_token", 404)
         categories = conn.execute("SELECT * FROM menu_categories WHERE active = true ORDER BY display_order, name").fetchall()
         availability_filter = "" if include_unavailable else "AND i.available = true"
-        items = conn.execute(
+        items = conn.execute(  # nosec B608
             """
             SELECT i.*, c.name AS category_name
             FROM menu_items i
@@ -213,10 +213,10 @@ def get_pairings():
     item_ids = item_ids[:50]
     with db.connect(current_app.config["DATABASE_URL"]) as conn:
         placeholders = ",".join("?" * len(item_ids))
-        cart_items = conn.execute(f"SELECT id, category_id FROM menu_items WHERE id IN ({placeholders})", item_ids).fetchall()
+        cart_items = conn.execute(f"SELECT id, category_id FROM menu_items WHERE id IN ({placeholders})", item_ids).fetchall()  # nosec B608
         category_ids = [row["category_id"] for row in cart_items]
         cats_clause = ",".join("?" * len(category_ids)) if category_ids else "NULL"
-        rules = conn.execute(
+        rules = conn.execute(  # nosec B608
             f"""
             SELECT suggested_item_ids FROM pairing_rules
             WHERE active = true
@@ -242,7 +242,7 @@ def get_pairings():
             return jsonify({"suggestions": []})
         top3 = suggested_ids[:3]
         ph = ",".join("?" * len(top3))
-        rows = conn.execute(
+        rows = conn.execute(  # nosec B608
             f"""
             SELECT i.*, c.name AS category_name
             FROM menu_items i JOIN menu_categories c ON c.id = i.category_id

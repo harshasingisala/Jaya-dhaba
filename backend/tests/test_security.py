@@ -1,4 +1,5 @@
 import pytest
+import rate_limits
 
 def test_csrf_protection(client):
     # Try POST without CSRF token
@@ -25,13 +26,43 @@ def test_security_headers(client):
     assert resp.headers["X-Frame-Options"] == "DENY"
     assert "max-age=31536000" in resp.headers["Strict-Transport-Security"]
     assert "default-src 'self'" in resp.headers["Content-Security-Policy"]
+    assert resp.headers["X-Permitted-Cross-Domain-Policies"] == "none"
+
+
+def test_api_mutations_reject_form_content_type(client):
+    resp = client.post(
+        "/api/auth/login",
+        data='{"email":"admin@example.com","password":"AdminPass123!"}',
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+    )
+
+    assert resp.status_code == 415
+    assert "Content-Type" in resp.get_json()["message"]
+
+
+def test_route_specific_rate_limits_include_retry_after(app):
+    rate_limits._BUCKETS.clear()
+    with app.test_request_context("/api/contact", method="POST"):
+        max_requests, window_seconds = rate_limits.request_limit()
+        assert (max_requests, window_seconds) == (10, 300)
+
+        for _ in range(max_requests):
+            assert rate_limits.enforce_limit("test:contact", max_requests, window_seconds) is None
+
+        blocked = rate_limits.enforce_limit("test:contact", max_requests, window_seconds)
+
+    assert blocked.status_code == 429
+    assert blocked.headers["Retry-After"] == str(window_seconds)
 
 
 def test_health_response_is_minimal(client):
     resp = client.get("/api/health")
 
     assert resp.status_code == 200
-    assert resp.get_json() == {"status": "ok"}
+    payload = resp.get_json()
+    assert payload["status"] == "ok"
+    assert payload["db"] == "ok"
+    assert "timestamp" in payload
 
 
 def test_seed_does_not_create_known_admin_without_bootstrap_variables(app, monkeypatch):
@@ -64,6 +95,71 @@ def test_public_user_cannot_forge_manual_order(client):
     )
 
     assert response.status_code == 403
+
+
+def test_real_ip_ignores_x_forwarded_for_without_cloudflare(app):
+    from request_context import get_real_ip
+
+    with app.test_request_context(
+        "/api/health",
+        headers={"X-Forwarded-For": "203.0.113.10"},
+        environ_base={"REMOTE_ADDR": "10.0.0.7"},
+    ):
+        assert get_real_ip() == "10.0.0.7"
+
+    with app.test_request_context(
+        "/api/health",
+        headers={"X-Forwarded-For": "203.0.113.10", "CF-Connecting-IP": "198.51.100.4"},
+        environ_base={"REMOTE_ADDR": "10.0.0.7"},
+    ):
+        assert get_real_ip() == "198.51.100.4"
+
+
+def test_jwt_payload_excludes_email_and_phone(client, app):
+    from flask_jwt_extended import decode_token
+    from conftest import csrf_headers
+
+    response = client.post(
+        "/api/auth/login",
+        json={"email": "admin@example.com", "password": "AdminPass123!"},
+        headers=csrf_headers(client),
+    )
+
+    with app.app_context():
+        claims = decode_token(response.get_json()["access_token"])
+
+    assert claims["role"] == "owner"
+    assert "email" not in claims
+    assert "phone" not in claims
+
+
+def test_register_duplicate_uses_same_generic_response(client):
+    from conftest import csrf_headers
+
+    payload = {"email": "new@example.com", "password": "CustomerPass123!"}
+    first = client.post("/api/auth/register", json=payload, headers=csrf_headers(client))
+    duplicate = client.post("/api/auth/register", json=payload, headers=csrf_headers(client))
+
+    assert first.status_code == 200
+    assert duplicate.status_code == 200
+    assert first.get_json() == duplicate.get_json()
+    assert "access_token" not in first.get_json()
+
+
+def test_stream_ticket_is_required_and_one_time(client, admin_headers):
+    missing = client.get("/api/kitchen/stream")
+    assert missing.status_code == 401
+
+    ticket_response = client.post("/api/stream/ticket", json={}, headers=admin_headers)
+    assert ticket_response.status_code == 200
+    ticket = ticket_response.get_json()["ticket"]
+
+    opened = client.get(f"/api/kitchen/stream?ticket={ticket}", buffered=False)
+    assert opened.status_code == 200
+    opened.close()
+
+    replay = client.get(f"/api/kitchen/stream?ticket={ticket}")
+    assert replay.status_code == 401
 
 
 def test_order_addons_require_order_access(client):

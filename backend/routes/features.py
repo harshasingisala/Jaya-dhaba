@@ -179,7 +179,7 @@ def public_settings():
         return jsonify(_settings_cache["data"])
     keys = ["google_rating", "google_review_count", "google_place_id", "google_review_url", "restaurant_name", "restaurant_address", "restaurant_phone"]
     with db.connect(current_app.config["DATABASE_URL"]) as conn:
-        rows = conn.execute(f"SELECT key, value FROM site_settings WHERE key IN ({','.join('?' * len(keys))})", keys).fetchall()
+        rows = conn.execute(f"SELECT key, value FROM site_settings WHERE key IN ({','.join('?' * len(keys))})", keys).fetchall()  # nosec B608
     data = {r["key"]: r["value"] for r in rows}
     _settings_cache.update({"ts": now, "data": data})
     return jsonify(data)
@@ -569,7 +569,7 @@ def daily_briefing():
             _hr_expr = "to_char(created_at AT TIME ZONE 'Asia/Kolkata', 'HH24')"
             _yesterday = "created_at::date = (NOW() AT TIME ZONE 'Asia/Kolkata')::date - INTERVAL '1 day'"
         busiest = conn.execute(
-            f"SELECT {_hr_expr} AS hr, COUNT(*) AS cnt FROM orders WHERE {_yesterday} GROUP BY hr ORDER BY cnt DESC LIMIT 1"
+            f"SELECT {_hr_expr} AS hr, COUNT(*) AS cnt FROM orders WHERE {_yesterday} GROUP BY hr ORDER BY cnt DESC LIMIT 1"  # nosec B608
         ).fetchone()
         stats = {
             "yesterday_revenue": round(y_rev["rev"], 2),
@@ -606,7 +606,7 @@ def customers():
         where += " AND (u.email LIKE ? OR u.phone LIKE ?)"
         params += [f"%{q}%", f"%{q}%"]
     with db.connect(current_app.config["DATABASE_URL"]) as conn:
-        rows = conn.execute(
+        rows = conn.execute(  # nosec B608
             f"""
             SELECT u.id,u.email,u.phone,u.created_at,u.loyalty_points,
                    COUNT(DISTINCT o.id) AS visit_count, COALESCE(SUM(o.total),0) AS total_spend,

@@ -54,7 +54,7 @@ export default function ReservationsManager() {
     return () => window.removeEventListener('rt:reservations', handler);
   }, []);
 
-  usePollingFallback(fetchReservations, 5000);
+  usePollingFallback(fetchReservations, 15000);
 
   const filteredReservations = (reservations || []).filter(r => {
     const matchesFilter = activeTab === 'All' || (r.status || 'New') === activeTab;

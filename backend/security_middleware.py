@@ -1,42 +1,69 @@
 import secrets
 import os
 from flask import Flask, request, jsonify, make_response, current_app
-from rate_limits import enforce_limit
+from rate_limits import enforce_limit, request_limit, request_rule
+from request_context import get_real_ip
 
 CSRF_COOKIE = "csrf_token"
 CSRF_HEADER = "X-CSRF-Token"
 
 
 def request_ip() -> str:
-    forwarded = request.headers.get("X-Forwarded-For", "")
-    if forwarded:
-        return forwarded.split(",")[-1].strip()
-    return forwarded or request.remote_addr or "0.0.0.0"
+    return get_real_ip()
 
 
 def init_security_middleware(app: Flask):
     
     @app.before_request
     def security_checks():
+        runtime_env = (os.getenv("APP_ENV") or os.getenv("FLASK_ENV") or "").lower()
+        if not current_app.config.get("TESTING") and runtime_env == "production":
+            expected = current_app.config.get("CLOUDFLARE_TUNNEL_SECRET")
+            if not expected or not secrets.compare_digest(request.headers.get("X-Cloudflare-Secret", ""), expected):
+                return jsonify({"success": False, "message": "Forbidden"}), 403
+
         # 1. Rate Limiting (Global & Auth)
         if not current_app.config.get("TESTING"):
             if request.method == "OPTIONS" or request.path.startswith("/socket.io"):
                 return None
-            runtime_env = (os.getenv("APP_ENV") or os.getenv("FLASK_ENV") or "").lower()
             if runtime_env == "development":
                 return None
             ip = request_ip()
             if request.path.startswith("/api/auth/"):
-                limit = enforce_limit(f"rate:auth:{ip}", 20, 60)
-                if limit: return limit
-            else:
-                limit = enforce_limit(f"rate:global:{ip}", 500, 60)
-                if limit: return limit
+                burst = enforce_limit(f"rate:auth-burst:{ip}", 3, 10)
+                if burst:
+                    return burst
+                limit = enforce_limit(f"rate:auth:{ip}", 8, 60)
+                if limit:
+                    return limit
+
+            route_max, route_window = request_limit()
+            route_limit = enforce_limit(
+                f"rate:route:{ip}:{request.method}:{request_rule()}",
+                route_max,
+                route_window,
+            )
+            if route_limit:
+                return route_limit
+
+            global_limit = enforce_limit(f"rate:global:{ip}", 500, 60)
+            if global_limit:
+                return global_limit
+
+        # Reject non-JSON API mutations with a body before route code parses it.
+        if (
+            request.method not in ("GET", "HEAD", "OPTIONS", "TRACE")
+            and request.path.startswith("/api/")
+            and request.path not in ("/api/payments/webhook", "/api/csp-report")
+            and (request.content_length or 0) > 0
+            and request.mimetype not in {"application/json", "text/json"}
+        ):
+            return jsonify({"success": False, "message": "Content-Type must be application/json"}), 415
 
         # 2. CSRF Protection (Double Submit Cookie)
         if request.method not in ("GET", "HEAD", "OPTIONS", "TRACE"):
             # Webhooks are authenticated by provider signatures; chat remains public but rate limited.
-            if request.path not in ("/api/payments/webhook", "/api/jaya-concierge", "/api/chat", "/api/chat/"):
+            if request.path not in ("/api/payments/webhook", "/api/csp-report", "/api/jaya-concierge", "/api/chat", "/api/chat/"):
                 cookie_token = request.cookies.get(CSRF_COOKIE)
                 header_token = request.headers.get(CSRF_HEADER)
                 
@@ -55,11 +82,14 @@ def init_security_middleware(app: Flask):
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
             "font-src 'self' https://fonts.gstatic.com; "
             "img-src 'self' data: blob: https:; "
-            "connect-src 'self' https://api.razorpay.com; "
-            "frame-src 'self' https://api.razorpay.com; "
+            "connect-src 'self' https://api.jayadhaba.online https://*.supabase.co https://api.razorpay.com https://checkout.razorpay.com wss:; "
+            "frame-src https://*.razorpay.com; "
             "frame-ancestors 'none'; "
             "object-src 'none'; "
-            "base-uri 'self';"
+            "base-uri 'self'; "
+            "form-action 'self'; "
+            "upgrade-insecure-requests; "
+            "report-uri https://api.jayadhaba.online/api/csp-report;"
         )
         response.headers["Content-Security-Policy"] = csp
         
@@ -67,7 +97,12 @@ def init_security_middleware(app: Flask):
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), payment=(), usb=(), bluetooth=(), accelerometer=(), gyroscope=(), magnetometer=()"
+        response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
+        response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+        response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
+        response.headers["X-Permitted-Cross-Domain-Policies"] = "none"
+        response.headers["X-Download-Options"] = "noopen"
         if request.path.startswith("/api/auth/") or request.path.startswith("/api/admin/"):
             response.headers["Cache-Control"] = "no-store, max-age=0"
             response.headers["Pragma"] = "no-cache"
