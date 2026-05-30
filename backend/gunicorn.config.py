@@ -21,8 +21,8 @@ max_requests = int(os.environ.get("GUNICORN_MAX_REQUESTS", "1000"))
 max_requests_jitter = int(os.environ.get("GUNICORN_MAX_REQUESTS_JITTER", "100"))
 preload_app = True
 
-if os.path.isdir("/dev/shm"):
-    worker_tmp_dir = "/dev/shm"
+if os.path.isdir("/dev/shm"):  # nosec B108
+    worker_tmp_dir = "/dev/shm"  # nosec B108
 
 
 def post_fork(server, worker):

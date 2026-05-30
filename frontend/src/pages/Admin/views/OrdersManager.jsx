@@ -194,7 +194,7 @@ export default function OrdersManager() {
     fetchOrders();
     fetchStats();
     if (activeTab === 'archive') fetchArchive();
-  }, 5000);
+  }, 15000);
 
   const visibleOrders = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();

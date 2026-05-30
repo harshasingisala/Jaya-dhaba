@@ -20,7 +20,7 @@ Required frontend variables:
 
 Deploy the `backend` folder to a Python host that supports Flask/Gunicorn. Start command should use the existing app entrypoint, for example `gunicorn run:app`.
 
-Required backend variables: `DATABASE_URL`, `FLASK_SECRET_KEY`, `JWT_SECRET_KEY`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`, `CORS_ORIGINS`, `DOMAIN`.
+Required backend variables: `DATABASE_URL`, `FLASK_SECRET_KEY`, `JWT_SECRET_KEY`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`, `REDIS_URL`, `DB_ENCRYPTION_KEY`, `CLOUDFLARE_TUNNEL_SECRET`, `CORS_ORIGINS`, `DOMAIN`.
 
 Health check: `GET /api/health`.
 
@@ -31,4 +31,5 @@ Webhook URL: `https://<backend-domain>/api/payments/webhook`
 Enable events: `payment.captured`, `payment.failed`.
 
 The Razorpay webhook secret must exactly match `RAZORPAY_WEBHOOK_SECRET`.
-
+Cloudflare must add `X-Cloudflare-Secret` with the value stored in `CLOUDFLARE_TUNNEL_SECRET` on every origin request.
+For high-concurrency admin dashboards, keep `REDIS_URL` enabled so Socket.IO can fan out events across workers, and size `DB_POOL_SIZE` / `DB_MAX_OVERFLOW` to match the Render instance and Supabase pooler limits.

@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import hashlib
 import os
+import secrets
 import time
+import threading
 import uuid
 from functools import wraps
 from datetime import datetime, timedelta, timezone
@@ -11,7 +13,6 @@ from flask import current_app, g, jsonify, request
 from flask_jwt_extended import (
     create_access_token,
     create_refresh_token,
-    decode_token,
     get_jwt,
     get_jwt_identity,
     verify_jwt_in_request,
@@ -23,10 +24,60 @@ from models import User, Session as UserSession, AuditLog
 from utils.crypto import verify_password, hash_password, verify_totp
 
 from security_middleware import CSRF_COOKIE, CSRF_HEADER, generate_csrf_token
+from request_context import get_real_ip
 
 # Cookie names
 REFRESH_COOKIE = "refresh_token"
 BLACKLISTED_JTIS: set[str] = set()
+_REDIS_CLIENT = None
+_REDIS_DISABLED = False
+_STREAM_TICKET_TTL_SECONDS = 45
+_STREAM_TICKETS: dict[str, tuple[str, float]] = {}
+_STREAM_TICKETS_LOCK = threading.Lock()
+
+
+def redis_client():
+    global _REDIS_CLIENT, _REDIS_DISABLED
+    if _REDIS_DISABLED:
+        return None
+    redis_url = os.getenv("REDIS_URL", "").strip()
+    if not redis_url:
+        return None
+    if _REDIS_CLIENT is not None:
+        return _REDIS_CLIENT
+    try:
+        import redis
+
+        _REDIS_CLIENT = redis.from_url(redis_url, socket_connect_timeout=1, socket_timeout=1)
+        _REDIS_CLIENT.ping()
+        return _REDIS_CLIENT
+    except Exception:
+        _REDIS_DISABLED = True
+        return None
+
+
+def is_jti_blacklisted(jti: str | None) -> bool:
+    if not jti:
+        return False
+    client = redis_client()
+    if client is not None:
+        try:
+            return bool(client.exists(f"jwt:blacklist:{jti}"))
+        except Exception:
+            pass
+    return jti in BLACKLISTED_JTIS
+
+
+def blacklist_jti(jti: str | None, ttl_seconds: int | None = None) -> None:
+    if not jti:
+        return
+    BLACKLISTED_JTIS.add(jti)
+    client = redis_client()
+    if client is not None:
+        try:
+            client.setex(f"jwt:blacklist:{jti}", max(1, int(ttl_seconds or 15 * 60)), "1")
+        except Exception:
+            pass
 
 
 def cookie_samesite() -> str:
@@ -42,13 +93,57 @@ ROLE_RANK = {
     "owner": 4,
     "admin": 4
 }
+DUMMY_PASSWORD_HASH = "$argon2id$v=19$m=65536,t=3,p=4$RzV03OqeQBeh8Vac3iQ1sA$1dDYkGwMniyRCrsHO43GVjUAckkgWtenBinaThoYMcE"
 
 
 def request_ip() -> str:
-    forwarded = request.headers.get("X-Forwarded-For", "")
-    if forwarded:
-        return forwarded.split(",")[-1].strip()
-    return request.remote_addr or "0.0.0.0"
+    return get_real_ip()
+
+
+def _production_requires_redis() -> bool:
+    runtime_env = (os.getenv("APP_ENV") or os.getenv("FLASK_ENV") or "").lower()
+    return runtime_env == "production"
+
+
+def create_stream_ticket(user_id: str, ttl_seconds: int = _STREAM_TICKET_TTL_SECONDS) -> str:
+    ticket = secrets.token_urlsafe(32)
+    client = redis_client()
+    if client is not None:
+        client.setex(f"stream_ticket:{ticket}", max(1, int(ttl_seconds)), str(user_id))
+        return ticket
+    if _production_requires_redis():
+        raise AuthError("Stream ticket service unavailable", 503)
+
+    expires_at = time.time() + max(1, int(ttl_seconds))
+    with _STREAM_TICKETS_LOCK:
+        now = time.time()
+        for key, (_, expiry) in list(_STREAM_TICKETS.items()):
+            if expiry <= now:
+                _STREAM_TICKETS.pop(key, None)
+        _STREAM_TICKETS[ticket] = (str(user_id), expires_at)
+    return ticket
+
+
+def consume_stream_ticket(ticket: str | None) -> str | None:
+    if not ticket:
+        return None
+    client = redis_client()
+    if client is not None:
+        value = client.execute_command("GETDEL", f"stream_ticket:{ticket}")
+        if isinstance(value, bytes):
+            return value.decode("utf-8")
+        return str(value) if value else None
+    if _production_requires_redis():
+        return None
+
+    with _STREAM_TICKETS_LOCK:
+        value = _STREAM_TICKETS.pop(ticket, None)
+    if not value:
+        return None
+    user_id, expires_at = value
+    if expires_at <= time.time():
+        return None
+    return user_id
 
 
 def get_fingerprint() -> str:
@@ -76,7 +171,7 @@ def optional_user():
         return None
     
     claims = get_jwt()
-    if claims.get("jti") in BLACKLISTED_JTIS:
+    if is_jti_blacklisted(claims.get("jti")):
         g.current_user = None
         return None
     user = _active_user(identity)
@@ -107,22 +202,17 @@ def active_user(identity: str):
 _active_user = active_user
 
 
-def require_min_role(min_role: str, missing_status: int = 401, allow_query_token: bool = False):
+def require_min_role(min_role: str, missing_status: int = 401):
     required_rank = ROLE_RANK.get(min_role, 0)
 
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
             try:
-                if allow_query_token and request.args.get("access_token"):
-                    decoded = decode_token(request.args["access_token"])
-                    identity = decoded["sub"]
-                    claims = decoded
-                else:
-                    verify_jwt_in_request()
-                    identity = get_jwt_identity()
-                    claims = get_jwt()
-                if claims.get("jti") in BLACKLISTED_JTIS:
+                verify_jwt_in_request()
+                identity = get_jwt_identity()
+                claims = get_jwt()
+                if is_jti_blacklisted(claims.get("jti")):
                     return jsonify({"success": False, "message": "Unauthorized"}), missing_status
             except Exception:
                 return jsonify({"success": False, "message": "Unauthorized"}), missing_status
@@ -154,7 +244,7 @@ require_role = require_min_role
 
 def issue_tokens(session_db, user: User):
     identity = str(user.id)
-    claims = {"role": user.role, "email": user.email, "phone": user.phone}
+    claims = {"role": user.role}
     
     access_token = create_access_token(identity=identity, additional_claims=claims)
     refresh_token = create_refresh_token(identity=identity, additional_claims=claims)
@@ -191,6 +281,7 @@ def authenticate_login(session_db, login: str, password: str, mfa_code: str | No
     ).scalar_one_or_none()
     
     if not user or user.deleted_at:
+        verify_password(password, DUMMY_PASSWORD_HASH)
         raise AuthError("Invalid credentials", 401)
     
     # Check lockout

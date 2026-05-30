@@ -3,6 +3,7 @@ import { API_BASE_URL, USE_DEV_CUSTOMER_FALLBACKS } from './config.js';
 import { supabase } from '../supabaseClient.js';
 import { pickFields } from '../utils/sanitize.js';
 import { fetchWithRetry } from '../utils/retry.js';
+import { clearAuthSession, getAccessToken, setAuthSession } from '../utils/authSession.js';
 
 const BASE_URL = API_BASE_URL;
 const SESSION_KEY = 'user';
@@ -105,12 +106,7 @@ function getCsrfToken() {
 }
 
 function getAuthToken() {
-  try {
-    const user = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null');
-    return user?.access_token || user?.token || localStorage.getItem('adminToken') || '';
-  } catch (err) {
-    return localStorage.getItem('adminToken') || '';
-  }
+  return getAccessToken();
 }
 
 const getToken = getAuthToken;
@@ -137,9 +133,7 @@ function handleExpiredSession() {
   if (!sessionStorage.getItem(SESSION_KEY)) return;
 
   redirectingToLogin = true;
-  localStorage.removeItem(SESSION_KEY);
-  localStorage.removeItem('admin_token');
-  sessionStorage.removeItem(SESSION_KEY);
+  clearAuthSession();
   window.location.href = '/admin/login';
 }
 
@@ -165,7 +159,30 @@ async function ensureCsrfToken(forceRefresh = false) {
   return data?.data?.csrfToken || data?.csrfToken || getCsrfToken();
 }
 
-async function request(path, options = {}) {
+export async function refreshSession() {
+  const csrfToken = await ensureCsrfToken(true);
+  const res = await fetchWithRetry(`${BASE_URL}/api/auth/refresh`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
+    },
+  });
+  const payload = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    clearAuthSession();
+    return null;
+  }
+  const data = payload?.data || payload;
+  if (!data?.user || !data?.access_token) return null;
+  return {
+    user: setAuthSession(data.user, data.access_token),
+    accessToken: data.access_token,
+  };
+}
+
+export async function request(path, options = {}) {
   const { rawResponse = false, ...fetchOptions } = options;
   const method = (fetchOptions.method || 'GET').toUpperCase();
   const headers = {
@@ -367,6 +384,7 @@ function normalizeReservationPayload(payload = {}) {
 
 const api = {
   request,
+  refreshSession,
 
   getMenu: async (tableParam = '') => {
     if (USE_DEV_CUSTOMER_FALLBACKS && !tableParam) return DEV_MENU_ITEMS.map(normalizeMenuItem);
@@ -388,6 +406,54 @@ const api = {
     }
     if (data.items && Array.isArray(data.items)) return data.items.map(normalizeMenuItem);
     return [];
+  },
+
+  verifyQrToken: async (token) => {
+    const data = await request('/api/qr/verify', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    });
+    return data?.data || data;
+  },
+
+  getTableSessionMenu: async (tableSession) => {
+    const data = await request(`/api/menu?table_session=${encodeURIComponent(tableSession)}`);
+    return {
+      ...data,
+      table: data.table || null,
+      categories: Array.isArray(data.categories) ? data.categories : [],
+      items: Array.isArray(data.items) ? data.items.map(normalizeMenuItem) : [],
+    };
+  },
+
+  getGroupCart: async (tableSession) => {
+    const data = await request(`/api/session/cart?table_session=${encodeURIComponent(tableSession)}`);
+    return Array.isArray(data?.cart) ? data.cart : [];
+  },
+
+  addGroupCartItem: async ({ tableSession, itemId, quantity = 1, addedBy = 'Guest' }) => {
+    const data = await request('/api/session/cart/add', {
+      method: 'POST',
+      body: JSON.stringify({
+        table_session: tableSession,
+        item_id: itemId,
+        quantity,
+        added_by: addedBy,
+      }),
+    });
+    return Array.isArray(data?.cart) ? data.cart : [];
+  },
+
+  removeGroupCartItem: async ({ tableSession, itemId, addedBy = 'Guest' }) => {
+    const data = await request('/api/session/cart/remove', {
+      method: 'POST',
+      body: JSON.stringify({
+        table_session: tableSession,
+        item_id: itemId,
+        added_by: addedBy,
+      }),
+    });
+    return Array.isArray(data?.cart) ? data.cart : [];
   },
 
   resolveTable: async (tableNumber) => {
@@ -495,6 +561,12 @@ const api = {
     return api.getOrders();
   },
 
+  getKitchenOrders: async () => {
+    const data = await request('/api/kitchen/orders');
+    const rows = Array.isArray(data) ? data : data.data || [];
+    return rows.map(normalizeOrder);
+  },
+
   getOrderStats: async () => {
     return request('/api/admin/orders/stats');
   },
@@ -522,6 +594,32 @@ const api = {
 
   clearTable: async (tableId) => {
     return request(`/api/admin/tables/${tableId}/clear`, { method: 'PATCH' });
+  },
+
+  rotateTableQr: async (tableId) => {
+    const data = await request(`/api/admin/tables/${tableId}/rotate-qr`, { method: 'POST' });
+    return data.table || data;
+  },
+
+  callWaiter: async ({ tableSession, reason }) => {
+    return request('/api/waiter/call', {
+      method: 'POST',
+      body: JSON.stringify({ table_session: tableSession, reason }),
+    });
+  },
+
+  getWaiterCalls: async () => {
+    const data = await request('/api/waiter/calls');
+    return Array.isArray(data) ? data : data.calls || [];
+  },
+
+  getWaiterCallHistory: async () => {
+    const data = await request('/api/waiter/calls?include_resolved=true');
+    return Array.isArray(data) ? data : data.calls || [];
+  },
+
+  resolveWaiterCall: async (callId) => {
+    return request(`/api/waiter/calls/${encodeURIComponent(callId)}/resolve`, { method: 'PATCH' });
   },
 
   updateTable: async (tableId, updates) => {
@@ -559,6 +657,8 @@ const api = {
     };
     if (orderPayload.table_id) payload.table_id = orderPayload.table_id;
     if (orderPayload.table_token) payload.table_token = orderPayload.table_token;
+    if (orderPayload.table_session) payload.table_session = orderPayload.table_session;
+    if (orderPayload.group_cart) payload.group_cart = true;
     const idempotencyKey = orderPayload.idempotency_key || crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`;
     const data = await request('/api/orders', {
       method: 'POST',
@@ -582,6 +682,8 @@ const api = {
     };
     if (orderPayload.table_id) intentPayload.table_id = orderPayload.table_id;
     if (orderPayload.table_token) intentPayload.table_token = orderPayload.table_token;
+    if (orderPayload.table_session) intentPayload.table_session = orderPayload.table_session;
+    if (orderPayload.group_cart) intentPayload.group_cart = true;
     const intent = await request('/api/orders', {
       method: 'POST',
       headers: { 'Idempotency-Key': intentPayload.idempotency_key },
@@ -610,6 +712,31 @@ const api = {
       body: JSON.stringify({ status: UI_TO_API_STATUS[status] || status }),
     });
     return normalizeOrder(data);
+  },
+
+  updateKitchenItemStatus: async (orderId, itemId, status) => {
+    return request(`/api/kitchen/orders/${orderId}/items/${itemId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+  },
+
+  bulkUpdateKitchenItemStatus: async (orderId, itemIds, status) => {
+    return request(`/api/kitchen/orders/${orderId}/items/bulk-status`, {
+      method: 'POST',
+      body: JSON.stringify({ item_ids: itemIds, status }),
+    });
+  },
+
+  createSplit: async (orderId, tableSession, mode, splits) => {
+    return request(`/api/orders/${orderId}/split`, {
+      method: 'POST',
+      body: JSON.stringify({ table_session: tableSession, mode, splits }),
+    });
+  },
+
+  getSplitStatus: async (orderId, tableSession) => {
+    return request(`/api/orders/${orderId}/split?table_session=${encodeURIComponent(tableSession)}`);
   },
 
   bulkUpdateOrderStatus: async (orderIds, status) => {

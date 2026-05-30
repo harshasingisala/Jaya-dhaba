@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import re
+import secrets
 import uuid
 import zipfile
 from datetime import datetime, time, timedelta, timezone
@@ -11,6 +12,8 @@ from flask import Blueprint, current_app, jsonify, request, send_file
 import db
 from audit import audit
 from auth import require_role
+from qr_sessions import create_table_session, generate_qr_token, verify_qr_token
+from rate_limits import enforce_limit
 from realtime import broadcast
 from validators import ValidationError, body, boolean, integer, raw_text, reject_unknown
 
@@ -27,10 +30,8 @@ def _table_number_from_label(label: str) -> int | None:
 def _table_url(table) -> str:
     base_url = current_app.config.get("QR_BASE_URL") or "https://jayadhaba.online"
     base_url = str(base_url).rstrip("/")
-    table_number = _table_number_from_label(table["label"])
-    if table_number:
-        return f"{base_url}/menu?table={table_number}"
-    return f"{base_url}/menu?table_token={table['qr_token']}"
+    token = generate_qr_token(str(table["id"]), table_version=str(table["qr_token"]))
+    return f"{base_url}/menu?t={token}"
 
 
 def _table_id_variants(table_id: str) -> tuple[str, str]:
@@ -51,16 +52,28 @@ def _table_dict(row) -> dict:
     payload["id"] = str(payload["id"])
     payload["active"] = bool(payload.get("active"))
     payload["table_number"] = _table_number_from_label(payload.get("label")) or payload.get("label")
+    payload["qr_url"] = _table_url(payload)
     payload["active_order"] = None
     if payload.get("active_order_id"):
         payload["active_order"] = {
             "id": str(payload["active_order_id"]),
+            "order_number": payload.get("active_order_number"),
             "status": payload.get("active_order_status"),
             "total": int(payload.get("active_order_total") or 0),
+            "guest_name": payload.get("active_order_guest_name") or "Guest",
+            "item_count": int(payload.get("active_order_item_count") or 0),
             "created_at": payload.get("active_order_created_at"),
         }
     payload["is_free"] = payload["active_order"] is None
-    for key in ("active_order_id", "active_order_status", "active_order_total", "active_order_created_at"):
+    for key in (
+        "active_order_id",
+        "active_order_number",
+        "active_order_status",
+        "active_order_total",
+        "active_order_guest_name",
+        "active_order_item_count",
+        "active_order_created_at",
+    ):
         payload.pop(key, None)
     return payload
 
@@ -88,6 +101,15 @@ def _table_select_sql(where_clause: str = "") -> str:
                 LIMIT 1
             ) AS active_order_status,
             (
+                SELECT o.order_number
+                FROM orders o
+                WHERE o.table_id = t.id
+                  AND COALESCE(o.is_archived, false) = false
+                  AND o.status NOT IN ('served', 'cancelled')
+                ORDER BY o.created_at DESC
+                LIMIT 1
+            ) AS active_order_number,
+            (
                 SELECT o.total
                 FROM orders o
                 WHERE o.table_id = t.id
@@ -96,6 +118,32 @@ def _table_select_sql(where_clause: str = "") -> str:
                 ORDER BY o.created_at DESC
                 LIMIT 1
             ) AS active_order_total,
+            (
+                SELECT o.guest_name
+                FROM orders o
+                WHERE o.table_id = t.id
+                  AND COALESCE(o.is_archived, false) = false
+                  AND o.status NOT IN ('served', 'cancelled')
+                ORDER BY o.created_at DESC
+                LIMIT 1
+            ) AS active_order_guest_name,
+            (
+                SELECT COALESCE(SUM(oi.qty), 0)
+                FROM orders o
+                JOIN order_items oi ON oi.order_id = o.id
+                WHERE o.table_id = t.id
+                  AND COALESCE(o.is_archived, false) = false
+                  AND o.status NOT IN ('served', 'cancelled')
+                  AND o.id = (
+                    SELECT latest.id
+                    FROM orders latest
+                    WHERE latest.table_id = t.id
+                      AND COALESCE(latest.is_archived, false) = false
+                      AND latest.status NOT IN ('served', 'cancelled')
+                    ORDER BY latest.created_at DESC
+                    LIMIT 1
+                  )
+            ) AS active_order_item_count,
             (
                 SELECT o.created_at
                 FROM orders o
@@ -146,6 +194,43 @@ def resolve_table():
         return jsonify({"success": False, "message": "Table not found"}), 404
     table = _table_dict(row)
     return jsonify({"success": True, "table": table, "data": table})
+
+
+@bp.post("/qr/verify")
+def verify_qr():
+    data = request.get_json(silent=True) or {}
+    token = raw_text(data.get("token") or data.get("t"), "token", 2048)
+    payload = verify_qr_token(token)
+    if not payload:
+        return jsonify({"success": False, "message": "Invalid or expired QR code"}), 403
+
+    table_id = str(payload["table"])
+    rate_limited = enforce_limit(f"qr_scan:{table_id}", 20, 60)
+    if rate_limited is not None:
+        return rate_limited
+
+    id_variants = _table_id_variants(table_id)
+    with db.transaction(current_app.config["DATABASE_URL"]) as conn:
+        row = conn.execute(
+            _table_select_sql("WHERE t.id IN (?, ?) AND t.active = true"),
+            id_variants,
+        ).fetchone()
+        if not row:
+            return jsonify({"success": False, "message": "Table not found"}), 404
+        table = _table_dict(row)
+        if not secrets.compare_digest(str(table.get("qr_token") or ""), str(payload.get("v") or "")):
+            audit(conn, "qr.scan_rejected", "table", table["id"], {"reason": "version_mismatch"})
+            return jsonify({"success": False, "message": "This QR code has been replaced. Please ask staff for a fresh QR."}), 403
+        session_id = create_table_session(table["id"], restaurant_id=str(payload["restaurant"]))
+        audit(conn, "qr.scan", "table", table["id"], {"restaurant_id": payload["restaurant"]})
+
+    return jsonify({
+        "success": True,
+        "session_id": session_id,
+        "table_session": session_id,
+        "table": table,
+        "data": {"session_id": session_id, "table_session": session_id, "table": table},
+    })
 
 
 @bp.get("/admin/tables")
@@ -203,6 +288,27 @@ def table_qr_code(table_id: str):
         as_attachment=False,
         download_name=f"jaya-dhaba-{str(table['label']).lower().replace(' ', '-')}-qr.png",
     )
+
+
+@bp.post("/admin/tables/<table_id>/rotate-qr")
+@require_role("admin")
+def rotate_table_qr(table_id: str):
+    id_variants = _table_id_variants(table_id)
+    now = datetime.now(timezone.utc)
+    new_token = str(uuid.uuid4())
+    with db.transaction(current_app.config["DATABASE_URL"]) as conn:
+        table = conn.execute("SELECT * FROM tables WHERE id IN (?, ?)", id_variants).fetchone()
+        if not table:
+            return jsonify({"success": False, "message": "Table not found"}), 404
+        conn.execute(
+            "UPDATE tables SET qr_token = ?, qr_rotated_at = ? WHERE id = ?",
+            (new_token, now, table["id"]),
+        )
+        audit(conn, "table.qr_rotate", "table", table["id"])
+        row = conn.execute(_table_select_sql("WHERE t.id = ?"), (table["id"],)).fetchone()
+    table_payload = _table_dict(row)
+    broadcast("tables_update", {"action": "qr_rotated", "table": table_payload})
+    return jsonify({"success": True, "table": table_payload, "data": table_payload})
 
 
 @bp.post("/admin/tables/qr-codes")

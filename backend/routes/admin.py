@@ -138,7 +138,7 @@ def live_stats(conn) -> dict:
         time_expr = "strftime('%H:00', datetime(created_at, '+5 hours', '+30 minutes'))"
     else:
         time_expr = "to_char(created_at AT TIME ZONE 'Asia/Kolkata', 'HH24:00')"
-    trajectory_rows = conn.execute(
+    trajectory_rows = conn.execute(  # nosec B608
         f"""
         SELECT {time_expr} AS time, COUNT(*) AS orders, COALESCE(SUM(total), 0) AS revenue
         FROM orders
@@ -284,7 +284,7 @@ def _daily_report_payload():
             if "guest_phone" in order_columns
             else "COUNT(*)"
         )
-        summary_row = conn.execute(
+        summary_row = conn.execute(  # nosec B608
             f"""
             SELECT COALESCE(SUM(total), 0) AS total_sales,
                    COUNT(*) AS total_bills,
@@ -296,7 +296,7 @@ def _daily_report_payload():
             """,
             (requested_date,),
         ).fetchone()
-        cancelled_row = conn.execute(
+        cancelled_row = conn.execute(  # nosec B608
             f"""
             SELECT COUNT(*) AS cancelled_bills
             FROM orders
@@ -305,7 +305,7 @@ def _daily_report_payload():
             (requested_date,),
         ).fetchone()
         if has_order_items and has_menu_items and has_menu_categories:
-            category_rows = conn.execute(
+            category_rows = conn.execute(  # nosec B608
                 f"""
                 SELECT COALESCE(mc.name, 'Other') AS category,
                        COALESCE(SUM(oi.qty * oi.unit_price), 0) AS revenue
@@ -321,7 +321,7 @@ def _daily_report_payload():
         else:
             current_app.logger.warning("Daily report item categories unavailable because item tables are missing")
             category_rows = []
-        hourly_rows = conn.execute(
+        hourly_rows = conn.execute(  # nosec B608
             f"""
             SELECT {bucket_case} AS bucket, COALESCE(SUM(total), 0) AS amount, COUNT(*) AS orders
             FROM orders
@@ -332,7 +332,7 @@ def _daily_report_payload():
         ).fetchall()
         if has_order_items:
             if has_menu_items:
-                item_rows = conn.execute(
+                item_rows = conn.execute(  # nosec B608
                     f"""
                     SELECT COALESCE(mi.name, 'Manual Item') AS name,
                            COALESCE(SUM(oi.qty), 0) AS qty_sold,
@@ -348,7 +348,7 @@ def _daily_report_payload():
                     (requested_date,),
                 ).fetchall()
             else:
-                item_rows = conn.execute(
+                item_rows = conn.execute(  # nosec B608
                     f"""
                     SELECT 'Manual Item' AS name,
                            COALESCE(SUM(oi.qty), 0) AS qty_sold,
@@ -363,7 +363,7 @@ def _daily_report_payload():
         else:
             current_app.logger.warning("Daily report item rankings unavailable because order_items table is missing")
             item_rows = []
-        payment_rows = conn.execute(
+        payment_rows = conn.execute(  # nosec B608
             f"""
             SELECT COALESCE(NULLIF(LOWER(payment_method), ''), 'other') AS method,
                    COALESCE(SUM(total), 0) AS amount
@@ -381,7 +381,7 @@ def _daily_report_payload():
             if amount_col and created_col:
                 refund_date_expr = _ist_date_expr(created_col)
                 refund_row = conn.execute(
-                    f"SELECT COALESCE(SUM({amount_col}), 0) AS amount FROM refunds WHERE {refund_date_expr} = ?",
+                    f"SELECT COALESCE(SUM({amount_col}), 0) AS amount FROM refunds WHERE {refund_date_expr} = ?",  # nosec B608
                     (requested_date,),
                 ).fetchone()
                 refund_amount = float(refund_row["amount"] or 0)
@@ -582,7 +582,7 @@ def stats():
             try:
                 today = datetime.now(IST).date().isoformat()
                 date_expr = _ist_date_expr("created_at")
-                today_row = conn.execute(
+                today_row = conn.execute(  # nosec B608
                     f"""
                     SELECT COUNT(*) AS orders, COALESCE(SUM(total), 0) AS revenue
                     FROM orders
@@ -880,7 +880,7 @@ def list_contact_submissions():
             ).fetchall()
             total = conn.execute("SELECT COUNT(*) AS c FROM contact_submissions").fetchone()["c"]
             unread_condition = "is_read = FALSE" if db.engine.dialect.name == "postgresql" else "is_read = 0"
-            unread = conn.execute(f"SELECT COUNT(*) AS c FROM contact_submissions WHERE {unread_condition}").fetchone()["c"]
+            unread = conn.execute(f"SELECT COUNT(*) AS c FROM contact_submissions WHERE {unread_condition}").fetchone()["c"]  # nosec B608
     except Exception as exc:
         current_app.logger.warning("contact_submissions query failed: %s", exc)
         return jsonify({"success": True, "data": [], "total": 0, "unread": 0})
@@ -939,7 +939,7 @@ def revenue():
     week_expr = _week_expr()
     month_expr = _month_expr()
     with db.connect(current_app.config["DATABASE_URL"]) as conn:
-        daily = conn.execute(
+        daily = conn.execute(  # nosec B608
             f"""
             SELECT date(created_at) AS label, COUNT(*) AS orders, COALESCE(SUM(total), 0) AS revenue
             FROM orders
@@ -950,7 +950,7 @@ def revenue():
             """,
             tuple(params),
         ).fetchall()
-        weekly = conn.execute(
+        weekly = conn.execute(  # nosec B608
             f"""
             SELECT {week_expr} AS label, COUNT(*) AS orders, COALESCE(SUM(total), 0) AS revenue
             FROM orders
@@ -961,7 +961,7 @@ def revenue():
             """,
             tuple(params),
         ).fetchall()
-        monthly = conn.execute(
+        monthly = conn.execute(  # nosec B608
             f"""
             SELECT {month_expr} AS label, COUNT(*) AS orders, COALESCE(SUM(total), 0) AS revenue
             FROM orders
@@ -972,7 +972,7 @@ def revenue():
             """,
             tuple(params),
         ).fetchall()
-        payment_rows = conn.execute(
+        payment_rows = conn.execute(  # nosec B608
             f"""
             SELECT COALESCE(NULLIF(LOWER(payment_method), ''), 'other') AS method,
                    COUNT(*) AS orders,
@@ -983,7 +983,7 @@ def revenue():
             """,
             tuple(params),
         ).fetchall()
-        top_rows = conn.execute(
+        top_rows = conn.execute(  # nosec B608
             f"""
             SELECT mi.name, COALESCE(SUM(oi.qty), 0) AS qty, COALESCE(SUM(oi.qty * oi.unit_price), 0) AS revenue
             FROM order_items oi

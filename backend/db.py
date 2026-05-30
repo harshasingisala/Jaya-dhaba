@@ -104,6 +104,7 @@ def get_db() -> Generator[Session, None, None]:
 def init_db(seed: bool = True):
     Base.metadata.create_all(bind=engine)
     _ensure_sqlite_compatibility()
+    _ensure_table_qr_schema()
     _ensure_settings_schema()
     _ensure_order_lifecycle_schema()
     _ensure_contact_submissions_schema()
@@ -185,6 +186,16 @@ def _ensure_settings_schema():
             conn.execute(text("ALTER TABLE settings ADD COLUMN upi_id VARCHAR(120) NOT NULL DEFAULT ''"))
 
 
+def _ensure_table_qr_schema():
+    with engine.begin() as conn:
+        if engine.dialect.name == "postgresql":
+            conn.execute(text("ALTER TABLE tables ADD COLUMN IF NOT EXISTS qr_rotated_at TIMESTAMPTZ"))
+            return
+        columns = [row[1] for row in conn.execute(text("PRAGMA table_info(tables)")).fetchall()]
+        if "qr_rotated_at" not in columns:
+            conn.execute(text("ALTER TABLE tables ADD COLUMN qr_rotated_at DATETIME"))
+
+
 def _ensure_order_lifecycle_schema():
     with engine.begin() as conn:
         if engine.dialect.name == "postgresql":
@@ -195,6 +206,7 @@ def _ensure_order_lifecycle_schema():
             conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS served_at TIMESTAMPTZ"))
             conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS source VARCHAR(20) NOT NULL DEFAULT 'customer'"))
             conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_method VARCHAR(20) NOT NULL DEFAULT ''"))
+            conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_status VARCHAR(20) NOT NULL DEFAULT 'unpaid'"))
             conn.execute(text("UPDATE orders SET status = 'pending' WHERE status IS NULL"))
             return
 
@@ -213,6 +225,8 @@ def _ensure_order_lifecycle_schema():
             conn.execute(text("ALTER TABLE orders ADD COLUMN source VARCHAR(20) NOT NULL DEFAULT 'customer'"))
         if "payment_method" not in columns:
             conn.execute(text("ALTER TABLE orders ADD COLUMN payment_method VARCHAR(20) NOT NULL DEFAULT ''"))
+        if "payment_status" not in columns:
+            conn.execute(text("ALTER TABLE orders ADD COLUMN payment_status VARCHAR(20) NOT NULL DEFAULT 'unpaid'"))
         conn.execute(text("UPDATE orders SET status = 'pending' WHERE status IS NULL"))
 
 
@@ -345,6 +359,33 @@ def _ensure_sqlite_compatibility():
             "CREATE UNIQUE INDEX IF NOT EXISTS idx_payments_razorpay_order_id "
             "ON payments (razorpay_order_id) WHERE razorpay_order_id IS NOT NULL"
         ))
+        for statement in (
+            "ALTER TABLE order_items ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'pending'",
+            "ALTER TABLE order_items ADD COLUMN started_at DATETIME",
+            "ALTER TABLE order_items ADD COLUMN ready_at DATETIME",
+        ):
+            try:
+                conn.execute(text(statement))
+            except Exception:
+                pass
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_order_items_status ON order_items(status)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_order_items_order_status ON order_items(order_id, status)"))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS split_charges (
+                id CHAR(32) NOT NULL PRIMARY KEY,
+                order_id CHAR(32) NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+                name VARCHAR(100) NOT NULL,
+                phone VARCHAR(20),
+                amount INTEGER NOT NULL,
+                razorpay_link_id VARCHAR(120) UNIQUE NOT NULL,
+                short_url VARCHAR(500) NOT NULL,
+                status VARCHAR(20) NOT NULL DEFAULT 'pending',
+                expires_at DATETIME NOT NULL,
+                created_at DATETIME NOT NULL
+            )
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_split_charges_order_id ON split_charges(order_id)"))
+        conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS idx_split_charges_link_id ON split_charges(razorpay_link_id)"))
 
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS settings (

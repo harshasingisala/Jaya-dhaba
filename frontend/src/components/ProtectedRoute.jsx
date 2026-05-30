@@ -1,26 +1,16 @@
 import { Navigate, useLocation } from "react-router-dom";
-import { isTokenExpired } from "../api";
+import { useAuth } from "../context/AuthContext";
 
 export default function ProtectedRoute({ children, allowedRoles = [] }) {
   const location = useLocation();
-  const userStr = sessionStorage.getItem("user");
+  const { user, accessToken, isRestoring, logout, sessionExpired } = useAuth();
 
-  let user = null;
-  try {
-    user = userStr ? JSON.parse(userStr) : null;
-  } catch {
-    user = null;
+  if (isRestoring) {
+    return null;
   }
 
-  const token = user?.access_token || user?.token;
-  const isExpired = Boolean(token && isTokenExpired(token));
-
-  if (!token || isExpired) {
-    if (isExpired) {
-      localStorage.removeItem("user");
-      localStorage.removeItem("admin_token");
-      sessionStorage.removeItem("user");
-    }
+  if (!accessToken || sessionExpired) {
+    if (sessionExpired) logout();
     return <Navigate to="/admin/login" state={{ from: location }} replace={true} />;
   }
 

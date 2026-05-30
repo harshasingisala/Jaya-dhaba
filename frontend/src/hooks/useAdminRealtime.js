@@ -1,18 +1,10 @@
 import { useEffect } from 'react';
 import { connectAdminSocket, disconnectAdminSocket } from '../lib/socket';
-
-function getAdminToken() {
-  try {
-    const user = JSON.parse(sessionStorage.getItem('user') || 'null');
-    return user?.access_token || user?.token || localStorage.getItem('adminToken') || '';
-  } catch {
-    return localStorage.getItem('adminToken') || '';
-  }
-}
+import { getAccessToken } from '../utils/authSession';
 
 export function useAdminRealtime(handlers = {}) {
   useEffect(() => {
-    const token = getAdminToken();
+    const token = getAccessToken();
     if (!token) return undefined;
 
     const socket = connectAdminSocket(token);

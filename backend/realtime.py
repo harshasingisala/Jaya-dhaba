@@ -36,6 +36,7 @@ def _async_mode() -> str:
 socketio = SocketIO(
     cors_allowed_origins=_cors_allowed_origins(),
     async_mode=_async_mode(),
+    message_queue=os.getenv("REDIS_URL") or None,
     manage_session=False,
     ping_timeout=60,
     ping_interval=25,

@@ -15,5 +15,6 @@ app = create_app()
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     debug = os.environ.get("FLASK_ENV") == "development"
+    host = os.environ.get("HOST", "127.0.0.1")
     print(f"Jaya Dhaba backend starting on port {port}")
-    socketio.run(app, debug=debug, port=port, host="0.0.0.0")
+    socketio.run(app, debug=debug, port=port, host=host)

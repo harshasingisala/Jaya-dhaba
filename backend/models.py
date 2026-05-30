@@ -119,6 +119,7 @@ class RestaurantTable(Base):
     label: Mapped[str] = mapped_column(String(50))
     capacity: Mapped[int] = mapped_column(Integer, default=4)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
+    qr_rotated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
 
     @property
     def table_number(self) -> str:
@@ -157,6 +158,7 @@ class Order(Base):
     order_type: Mapped[str] = mapped_column(String(20), default="dine_in")  # dine_in, pickup, delivery
     source: Mapped[str] = mapped_column(String(20), default="customer")
     payment_method: Mapped[str] = mapped_column(String(20), default="")
+    payment_status: Mapped[str] = mapped_column(String(20), default="unpaid")
     pickup_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
     
     status_history: Mapped[list] = mapped_column(JSON, default=list)
@@ -173,6 +175,7 @@ class Order(Base):
     table = relationship("RestaurantTable")
     items: Mapped[List["OrderItem"]] = relationship(back_populates="order", cascade="all, delete-orphan")
     payment = relationship("Payment", back_populates="order")
+    split_charges: Mapped[List["SplitCharge"]] = relationship(back_populates="order", cascade="all, delete-orphan")
 
     def to_dict(self):
         return {
@@ -199,6 +202,7 @@ class Order(Base):
             "order_type": self.order_type,
             "source": self.source,
             "payment_method": self.payment_method,
+            "payment_status": self.payment_status,
             "table_id": str(self.table_id) if self.table_id else None,
             "table_label": self.table.label if self.table else None,
             "table": self.table.label if self.table else None,
@@ -228,6 +232,9 @@ class OrderItem(Base):
     special_note: Mapped[str] = mapped_column(Text, default="")
     is_addon: Mapped[bool] = mapped_column(Boolean, default=False)
     addon_added_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="pending", nullable=False)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    ready_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
 
     order = relationship("Order", back_populates="items")
     menu_item = relationship("MenuItem")
@@ -251,6 +258,23 @@ class Payment(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     order: Mapped["Order"] = relationship(back_populates="payment")
+
+
+class SplitCharge(Base):
+    __tablename__ = "split_charges"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    order_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("orders.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(100))
+    phone: Mapped[str] = mapped_column(String(20), nullable=True)
+    amount: Mapped[int] = mapped_column(Integer)
+    razorpay_link_id: Mapped[str] = mapped_column(String(120), unique=True, index=True)
+    short_url: Mapped[str] = mapped_column(String(500))
+    status: Mapped[str] = mapped_column(String(20), default="pending")
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+    order: Mapped["Order"] = relationship(back_populates="split_charges")
 
 
 class LoyaltyLedger(Base):

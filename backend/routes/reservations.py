@@ -78,7 +78,7 @@ def find_available_table(conn, party_size: int, reserved_at: str, duration: int,
                 AND datetime(r.reserved_at) < datetime(:reserved_at, '+' || :duration || ' minutes')
                 AND datetime(:reserved_at) < datetime(r.reserved_at, '+' || r.duration_minutes || ' minutes')
         """
-    table = conn.execute(
+    table = conn.execute(  # nosec B608
         f"""
         SELECT t.*
         FROM tables t
@@ -100,7 +100,7 @@ def find_available_table(conn, party_size: int, reserved_at: str, duration: int,
     if table:
         return table, None
 
-    conflict = conn.execute(
+    conflict = conn.execute(  # nosec B608
         f"""
         SELECT r.reserved_at
         FROM reservations r

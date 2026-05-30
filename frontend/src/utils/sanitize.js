@@ -1,3 +1,5 @@
+import DOMPurify from 'dompurify';
+
 const BLOCKED_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
 
 export function pickFields(input, allowedFields) {
@@ -15,4 +17,11 @@ export function pickFields(input, allowedFields) {
 
 export function sanitizeObject(input, allowedFields) {
   return pickFields(input, allowedFields);
+}
+
+export function sanitizeHtml(input) {
+  return DOMPurify.sanitize(String(input ?? ''), {
+    ALLOWED_TAGS: ['b', 'strong', 'i', 'em', 'br', 'p', 'ul', 'ol', 'li', 'span'],
+    ALLOWED_ATTR: [],
+  });
 }

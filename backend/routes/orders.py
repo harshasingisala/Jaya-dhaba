@@ -5,6 +5,8 @@ import hashlib
 import hmac
 import json
 import secrets
+import threading
+import time as time_module
 import uuid
 from datetime import datetime, time, timedelta, timezone
 from typing import List
@@ -14,6 +16,7 @@ from sqlalchemy import func, select, text
 from sqlalchemy.orm import joinedload, object_session
 
 import db
+from cache import orders_cache, stats_cache
 from models import Order, OrderItem, MenuItem, MenuCategory, RestaurantTable, User
 from auth import require_role, log_audit
 from auth import request_ip
@@ -27,9 +30,18 @@ from realtime import broadcast, notify_order_update
 from security_log import log_security_event
 from utils.validation import extract_fields
 from order_queue import enqueue_order, finish_order
+from qr_sessions import clear_group_cart, get_group_cart, get_table_session, remember_table_order
 
 bp = Blueprint("orders", __name__, url_prefix="/api")
 audit = log_audit
+_ADVANCE_LOCK = threading.Lock()
+_LAST_ADVANCE_AT = 0.0
+_ADVANCE_INTERVAL_SECONDS = 5.0
+
+
+def _invalidate_admin_order_caches() -> None:
+    orders_cache.invalidate("admin_orders:")
+    stats_cache.invalidate("orders:")
 
 def allocate_order_number(session):
     row = session.execute(
@@ -79,15 +91,44 @@ def _order_table_label(order: Order) -> str | None:
 
 def serialize_order(order: Order, *, include_public_token: bool = False) -> dict:
     items = []
+    all_items_ready = True
     for item in order.items:
+        item_status = getattr(item, "status", "pending") or "pending"
+        if item_status != "ready":
+            all_items_ready = False
         items.append({
+            "id": str(item.id),
+            "item_id": str(item.id),
+            "menu_item_id": str(item.menu_item_id),
             "name": item.menu_item.name,
             "qty": item.qty,
             "quantity": item.qty,
             "unit_price": item.unit_price,
+            "price": item.unit_price,
             "special_note": item.special_note,
+            "status": item_status,
+            "started_at": item.started_at.isoformat() if getattr(item, "started_at", None) else None,
+            "ready_at": item.ready_at.isoformat() if getattr(item, "ready_at", None) else None,
+            "is_addon": bool(getattr(item, "is_addon", False)),
         })
     table_label = _order_table_label(order)
+    split_charges = []
+    for charge in getattr(order, "split_charges", []) or []:
+        split_charges.append({
+            "id": str(charge.id),
+            "name": charge.name,
+            "phone": charge.phone,
+            "amount": round((int(charge.amount or 0) / 100), 2),
+            "amount_paise": int(charge.amount or 0),
+            "short_url": charge.short_url,
+            "status": charge.status,
+            "expires_at": charge.expires_at.isoformat() if charge.expires_at else None,
+            "created_at": charge.created_at.isoformat() if charge.created_at else None,
+        })
+    now = datetime.now(timezone.utc)
+    created_at = order.created_at
+    if created_at and created_at.tzinfo is None:
+        created_at = created_at.replace(tzinfo=timezone.utc)
     payload = {
         "id": str(order.id),
         "order_ref": f"JD-{str(order.id).replace('-', '')[:8].upper()}",
@@ -104,11 +145,17 @@ def serialize_order(order: Order, *, include_public_token: bool = False) -> dict
         "order_type": order.order_type,
         "source": getattr(order, "source", "customer"),
         "payment_method": getattr(order, "payment_method", "") or "",
+        "payment_status": getattr(order, "payment_status", "unpaid") or "unpaid",
         "table_id": str(order.table_id) if order.table_id else None,
         "table_label": table_label,
         "table": table_label,
         "table_number": table_label,
         "created_at": order.created_at.isoformat(),
+        "elapsed_seconds": int((now - created_at).total_seconds()) if created_at else 0,
+        "all_items_ready": bool(items) and all_items_ready,
+        "is_addon": any(item.get("is_addon") for item in items),
+        "parent_order_number": None,
+        "split_charges": split_charges,
         "updated_at": order.updated_at.isoformat() if order.updated_at else None,
         "preparing_at": order.preparing_at.isoformat() if getattr(order, "preparing_at", None) else None,
         "served_at": order.served_at.isoformat() if getattr(order, "served_at", None) else None,
@@ -198,6 +245,7 @@ def _as_utc(value: datetime | None) -> datetime | None:
 def _publish_order_lifecycle(payloads: list[dict], *, action: str, status: str | None = None, timestamp: str | None = None) -> None:
     if not payloads:
         return
+    _invalidate_admin_order_caches()
     for payload in payloads:
         broker.publish("kitchen", "order.updated", payload)
         broker.publish(f"order:{order_topic_id(payload['id'])}", "order.updated", payload)
@@ -208,12 +256,28 @@ def _publish_order_lifecycle(payloads: list[dict], *, action: str, status: str |
         "order_ids": [payload["id"] for payload in payloads],
         "status": status,
         "timestamp": timestamp,
-        "orders": payloads,
     })
     broadcast("analytics_update", {"action": "orders_changed"})
 
 
 def advance_order_timers() -> None:
+    global _LAST_ADVANCE_AT
+    monotonic_now = time_module.monotonic()
+    if monotonic_now - _LAST_ADVANCE_AT < _ADVANCE_INTERVAL_SECONDS:
+        return
+    if not _ADVANCE_LOCK.acquire(blocking=False):
+        return
+    try:
+        monotonic_now = time_module.monotonic()
+        if monotonic_now - _LAST_ADVANCE_AT < _ADVANCE_INTERVAL_SECONDS:
+            return
+        _LAST_ADVANCE_AT = monotonic_now
+        _advance_order_timers_now()
+    finally:
+        _ADVANCE_LOCK.release()
+
+
+def _advance_order_timers_now() -> None:
     now = datetime.now(timezone.utc)
     ready_payloads: list[dict] = []
     served_payloads: list[dict] = []
@@ -319,6 +383,8 @@ def create_order():
     raw = extract_fields(raw, {
         "table_id",
         "table_token",
+        "table_session",
+        "group_cart",
         "guest_name",
         "guest_phone",
         "customer_name",
@@ -348,6 +414,20 @@ def create_order():
             paused_row = conn.execute("SELECT value FROM site_settings WHERE key = 'orders_paused'").fetchone()
         if paused_row and paused_row["value"] == "true":
             return jsonify({"success": False, "message": "Orders are paused right now"}), 409
+    table_session_id = raw.get("table_session")
+    use_group_cart = bool(raw.get("group_cart"))
+    if use_group_cart:
+        if not table_session_id:
+            return jsonify({"success": False, "message": "Table session is required for group cart checkout"}), 400
+        group_cart = get_group_cart(table_session_id)
+        if group_cart is None:
+            return jsonify({"success": False, "message": "Table session expired. Please scan the QR code again."}), 403
+        group_items = [
+            {"menu_item_id": str(line.get("item_id") or ""), "qty": max(1, int(line.get("quantity") or 1))}
+            for line in group_cart
+            if line.get("item_id")
+        ]
+        raw["items"] = group_items + list(raw.get("items") or [])
     items_raw = raw.get("items", [])
     for it in items_raw:
         mid = it.get("menu_item_id")
@@ -358,6 +438,11 @@ def create_order():
                 it["menu_item_id"] = candidate
             except Exception:
                 pass
+    if table_session_id and not raw.get("table_id"):
+        session_payload = get_table_session(table_session_id)
+        if not session_payload:
+            return jsonify({"success": False, "message": "Table session expired. Please scan the QR code again."}), 403
+        raw["table_id"] = str(session_payload.get("table_id") or "")
     if raw.get("table_token") and not raw.get("table_id"):
         with db.get_db() as session:
             table = session.execute(
@@ -366,6 +451,8 @@ def create_order():
             if not table:
                 return jsonify({"success": False, "message": "Table not found"}), 404
             raw["table_id"] = str(table.id)
+    raw.pop("table_session", None)
+    raw.pop("group_cart", None)
     schema = validate_schema(OrderCreate, data=raw)
     user_id = uuid.UUID(g.current_user["id"]) if hasattr(g, "current_user") and g.current_user else None
     
@@ -388,6 +475,7 @@ def create_order():
         existing = session.execute(select(Order).filter_by(idempotency_key=idempotency_key)).scalar_one_or_none()
         if existing:
             serialized = serialize_order(existing, include_public_token=True)
+            remember_table_order(table_session_id, str(existing.id))
             return jsonify({"success": True, "data": serialized, **serialized}), 200
 
         resolved_table = None
@@ -504,12 +592,16 @@ def create_order():
         session.commit()
         session.refresh(new_order)
         serialized = serialize_order(new_order, include_public_token=True)
+        remember_table_order(table_session_id, str(new_order.id))
+        if use_group_cart:
+            clear_group_cart(table_session_id)
 
         broker.publish("kitchen", "order.created", serialized)
         broker.publish(f"order:{order_topic_id(new_order.id)}", "order.created", serialized)
         broadcast("new_order", {"order": serialized})
         broadcast("orders_update", {"action": "new_order", "order": serialized})
         broadcast("analytics_update", {"action": "orders_changed"})
+        _invalidate_admin_order_caches()
         
         return jsonify({
             "success": True,
@@ -558,14 +650,24 @@ def list_admin_orders():
     allowed_statuses = {"pending", "preparing", "ready", "served", "all"}
     if status not in allowed_statuses:
         return jsonify({"success": False, "message": "Invalid status"}), 400
+    cache_key = f"admin_orders:list:{status}:{page}:{per_page}"
+    cached = orders_cache.get(cache_key)
+    if cached is not None:
+        return jsonify(cached)
     with db.get_db() as session:
-        query = select(Order).options(joinedload(Order.table)).where(Order.is_archived.is_(False))
+        query = (
+            select(Order)
+            .options(joinedload(Order.table), joinedload(Order.items).joinedload(OrderItem.menu_item))
+            .where(Order.is_archived.is_(False))
+        )
         if status != "all":
             query = query.where(Order.status == status)
         total = session.execute(select(func.count()).select_from(query.subquery())).scalar_one()
-        rows = session.execute(query.order_by(Order.created_at.desc()).limit(per_page).offset(offset)).scalars().all()
+        rows = session.execute(
+            query.order_by(Order.created_at.desc()).limit(per_page).offset(offset)
+        ).unique().scalars().all()
         orders = [serialize_order(order) for order in rows]
-        return jsonify({
+        payload = {
             "success": True,
             "orders": orders,
             "data": orders,
@@ -573,7 +675,9 @@ def list_admin_orders():
             "per_page": per_page,
             "total": int(total or 0),
             "pages": ((int(total or 0) + per_page - 1) // per_page),
-        })
+        }
+        orders_cache.set(cache_key, payload)
+        return jsonify(payload)
 
 
 @bp.patch("/admin/orders/bulk-status")
@@ -615,9 +719,9 @@ def bulk_order_status():
         "order_ids": id_payload,
         "status": status,
         "timestamp": now.isoformat(),
-        "orders": updated_payloads,
     })
     broadcast("analytics_update", {"action": "orders_changed"})
+    _invalidate_admin_order_caches()
     return jsonify({"success": True, "updated": len(orders), "status": status})
 
 
@@ -655,6 +759,7 @@ def bulk_archive_orders():
     id_payload = [str(order_id) for order_id in order_ids]
     broadcast("orders_update", {"action": "archived", "order_ids": id_payload})
     broadcast("analytics_update", {"action": "orders_changed"})
+    _invalidate_admin_order_caches()
     return jsonify({"success": True, "archived": len(orders)})
 
 
@@ -676,6 +781,7 @@ def clear_served_orders():
 
     broadcast("orders_update", {"action": "cleared", "count": cleared_count, "order_ids": order_ids})
     broadcast("analytics_update", {"action": "orders_changed"})
+    _invalidate_admin_order_caches()
     return jsonify({"success": True, "cleared": cleared_count})
 
 
@@ -697,6 +803,7 @@ def archive_all_orders():
 
     broadcast("orders_update", {"action": "cleared", "count": archived_count, "order_ids": order_ids})
     broadcast("analytics_update", {"action": "orders_changed"})
+    _invalidate_admin_order_caches()
     return jsonify({"success": True, "archived": archived_count})
 
 
@@ -704,50 +811,81 @@ def archive_all_orders():
 @require_role("staff")
 def archived_orders():
     archived_date = request.args.get("date")
+    page = max(1, int(request.args.get("page", 1)))
+    per_page = min(max(1, int(request.args.get("per_page", 50))), 200)
+    offset = (page - 1) * per_page
+    cache_key = f"admin_orders:archive:{archived_date or 'all'}:{page}:{per_page}"
+    cached = orders_cache.get(cache_key)
+    if cached is not None:
+        return jsonify(cached)
     with db.get_db() as session:
-        query = select(Order).where(Order.is_archived.is_(True))
+        query = (
+            select(Order)
+            .options(joinedload(Order.table), joinedload(Order.items).joinedload(OrderItem.menu_item))
+            .where(Order.is_archived.is_(True))
+        )
         if archived_date:
             day = datetime.strptime(archived_date, "%Y-%m-%d").date()
             start_utc = datetime.combine(day, time.min, tzinfo=IST).astimezone(timezone.utc)
             end_utc = start_utc + timedelta(days=1)
             query = query.where(Order.archived_at >= start_utc, Order.archived_at < end_utc)
+        total = session.execute(select(func.count()).select_from(query.subquery())).scalar_one()
         rows = session.execute(
-            query.order_by(Order.archived_at.desc()).limit(200)
-        ).scalars().all()
-        return jsonify({"success": True, "data": [serialize_order(order) for order in rows]})
+            query.order_by(Order.archived_at.desc()).limit(per_page).offset(offset)
+        ).unique().scalars().all()
+        payload = {
+            "success": True,
+            "data": [serialize_order(order) for order in rows],
+            "page": page,
+            "per_page": per_page,
+            "total": int(total or 0),
+            "pages": ((int(total or 0) + per_page - 1) // per_page),
+        }
+        orders_cache.set(cache_key, payload)
+        return jsonify(payload)
 
 
 @bp.get("/admin/orders/stats")
 @require_role("staff")
 def order_stats():
     advance_order_timers()
+    cached = stats_cache.get("orders:stats")
+    if cached is not None:
+        return jsonify(cached)
     today_ist = datetime.now(IST).date()
     start_utc = datetime.combine(today_ist, time.min, tzinfo=IST).astimezone(timezone.utc)
     end_utc = start_utc + timedelta(days=1)
     with db.get_db() as session:
-        active_orders = session.execute(
-            select(Order).where(Order.is_archived.is_(False))
-        ).scalars().all()
-        today_orders = session.execute(
-            select(Order).where(Order.created_at >= start_utc, Order.created_at < end_utc)
-        ).scalars().all()
+        status_rows = session.execute(
+            select(Order.status, func.count(Order.id))
+            .where(Order.is_archived.is_(False), Order.status.in_(["pending", "preparing", "ready", "served"]))
+            .group_by(Order.status)
+        ).all()
+        today_row = session.execute(
+            select(func.coalesce(func.sum(Order.total), 0), func.count(Order.id))
+            .where(Order.created_at >= start_utc, Order.created_at < end_utc)
+        ).one()
 
     counts = {"pending": 0, "preparing": 0, "ready": 0, "served": 0}
-    for order in active_orders:
-        if order.status in counts:
-            counts[order.status] += 1
-    today_revenue = sum(int(order.total or 0) for order in today_orders)
-    return jsonify({
+    for status, count in status_rows:
+        if status in counts:
+            counts[status] = int(count or 0)
+    total_active = sum(counts.values())
+    today_revenue = int(today_row[0] or 0)
+    today_orders = int(today_row[1] or 0)
+    payload = {
         "success": True,
         **counts,
-        "total_active": len(active_orders),
+        "total_active": total_active,
         "today_revenue": today_revenue,
-        "today_orders": len(today_orders),
+        "today_orders": today_orders,
         "revenue_today": today_revenue,
-        "total_orders_today": len(today_orders),
+        "total_orders_today": today_orders,
         "pending_count": counts["pending"],
         "preparing_count": counts["preparing"],
-    })
+    }
+    stats_cache.set("orders:stats", payload)
+    return jsonify(payload)
 
 
 @bp.patch("/admin/orders/<uuid:order_id>/status")
@@ -795,6 +933,7 @@ def update_order_status(order_id: uuid.UUID):
             "orders": [serialized],
         })
         broadcast("analytics_update", {"action": "orders_changed"})
+        _invalidate_admin_order_caches()
         
         return jsonify({
             "success": True,
@@ -833,6 +972,7 @@ def add_order_items(order_id: uuid.UUID):
         order.version += 1
 
         # Add new items
+        addon_items = []
         for item_req in items_req:
             # Normalize addon menu_item_id if UI-suffixed (strip last suffix only)
             mid_raw = item_req.get("menu_item_id")
@@ -858,13 +998,27 @@ def add_order_items(order_id: uuid.UUID):
                 addon_added_at=db.utc_now()
             )
             session.add(addon)
+            addon_items.append(addon)
 
         audit(session, "order.addon", "order", order.id, {"added_total": new_totals["total"]})
+        session.flush()
+        addon_item_ids = {str(item.id) for item in addon_items}
         session.commit()
         session.refresh(order)
         serialized = serialize_order(order)
+        addon_payload = {
+            "type": "order_addon",
+            "order_id": serialized["id"],
+            "table_id": serialized.get("table_id"),
+            "table_name": serialized.get("table_label"),
+            "parent_order_number": serialized.get("order_number"),
+            "new_items": [item for item in serialized.get("items", []) if str(item.get("item_id") or item.get("id")) in addon_item_ids],
+            "addon_order_id": serialized["id"],
+        }
         broker.publish("kitchen", "order.updated", serialized)
+        broker.publish("kitchen", "order_addon", addon_payload)
         broker.publish(f"order:{order_topic_id(order.id)}", "order.updated", serialized)
+        _invalidate_admin_order_caches()
         
         return jsonify({
             "success": True,

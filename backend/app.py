@@ -1,4 +1,5 @@
 import os
+import json
 
 if (os.getenv("APP_ENV") or os.getenv("FLASK_ENV") or "").lower() == "production" or os.getenv("SOCKETIO_ASYNC_MODE") == "eventlet":
     import eventlet
@@ -21,12 +22,13 @@ if os.getenv("FLASK_ENV") != "testing":
     load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
 
 import db
-from auth import BLACKLISTED_JTIS, optional_user
+from auth import is_jti_blacklisted, optional_user
 from circuit_breaker import db_breaker
 from realtime import init_realtime
 from security_middleware import init_security_middleware
 from routes import register_blueprints
 from security_log import log_security_event
+from request_context import get_real_ip
 from utils.validation import contains_forbidden_nosql_operator, validate_lengths
 from validators import ValidationError
 
@@ -34,14 +36,45 @@ from validators import ValidationError
 _ip_request_count = defaultdict(list)
 _ip_blocked_until = {}
 
+SENSITIVE_EVENT_KEYS = {
+    "authorization",
+    "cookie",
+    "password",
+    "token",
+    "access_token",
+    "refresh_token",
+    "secret",
+    "phone",
+    "email",
+    "card",
+}
+
+
+def scrub_pii_from_sentry(event, _hint):
+    def scrub(value):
+        if isinstance(value, dict):
+            cleaned = {}
+            for key, item in value.items():
+                key_text = str(key).lower()
+                cleaned[key] = "[REDACTED]" if any(part in key_text for part in SENSITIVE_EVENT_KEYS) else scrub(item)
+            return cleaned
+        if isinstance(value, list):
+            return [scrub(item) for item in value]
+        return value
+
+    return scrub(event)
+
+
 # Sentry setup
 SENTRY_DSN = os.getenv("SENTRY_DSN")
 if SENTRY_DSN:
     sentry_sdk.init(
         dsn=SENTRY_DSN,
         integrations=[FlaskIntegration()],
-        traces_sample_rate=1.0,
-        profiles_sample_rate=1.0,
+        traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.1")),
+        profiles_sample_rate=float(os.getenv("SENTRY_PROFILES_SAMPLE_RATE", "0.0")),
+        environment=(os.getenv("APP_ENV") or os.getenv("FLASK_ENV") or "production"),
+        before_send=scrub_pii_from_sentry,
     )
 
 
@@ -62,12 +95,17 @@ def create_app(overrides: dict | None = None) -> Flask:
         TAX_BASIS_POINTS=int(os.getenv("TAX_BASIS_POINTS", "500")),
         DOMAIN=os.getenv("DOMAIN", "localhost"),
         UPLOAD_FOLDER=os.getenv("UPLOAD_FOLDER", str(Path(__file__).resolve().parent / "uploads")),
-        MAX_CONTENT_LENGTH=int(os.getenv("MAX_CONTENT_LENGTH_BYTES", str(20 * 1024 * 1024))),
+        MAX_CONTENT_LENGTH=int(os.getenv("MAX_CONTENT_LENGTH_BYTES", str(5 * 1024 * 1024))),
         JSON_MAX_CONTENT_LENGTH=int(os.getenv("JSON_MAX_CONTENT_LENGTH_BYTES", str(2 * 1024 * 1024))),
         STRICT_IMAGE_URL_ALLOWLIST=os.getenv("STRICT_IMAGE_URL_ALLOWLIST", "false").lower() == "true",
         RAZORPAY_KEY_ID=os.getenv("RAZORPAY_KEY_ID", ""),
         RAZORPAY_KEY_SECRET=os.getenv("RAZORPAY_KEY_SECRET", ""),
         RAZORPAY_WEBHOOK_SECRET=os.getenv("RAZORPAY_WEBHOOK_SECRET", ""),
+        QR_SESSION_SECRET=os.getenv("QR_SESSION_SECRET", ""),
+        REDIS_URL=os.getenv("REDIS_URL", ""),
+        DB_ENCRYPTION_KEY=os.getenv("DB_ENCRYPTION_KEY", ""),
+        ENCRYPTION_KEY=os.getenv("ENCRYPTION_KEY", ""),
+        CLOUDFLARE_TUNNEL_SECRET=os.getenv("CLOUDFLARE_TUNNEL_SECRET", ""),
         OPENAI_API_KEY=os.getenv("OPENAI_API_KEY", ""),
         GOOGLE_API_KEY=os.getenv("GOOGLE_API_KEY", ""),
         CHATBOT_ENABLED=os.getenv("CHATBOT_ENABLED", "false").lower() == "true",
@@ -84,7 +122,7 @@ def create_app(overrides: dict | None = None) -> Flask:
 
     configured_origins = [
         origin.strip()
-        for origin in os.getenv("CORS_ORIGINS", "").split(",")
+        for origin in (os.getenv("CORS_ORIGINS") or os.getenv("ALLOWED_ORIGINS") or "").split(",")
         if origin.strip()
     ]
     cors_origins = configured_origins or [
@@ -121,6 +159,8 @@ def create_app(overrides: dict | None = None) -> Flask:
                 "origins": cors_origins,
                 "methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
                 "allow_headers": ["Content-Type", "X-CSRF-Token", "Authorization", "Idempotency-Key"],
+                "expose_headers": ["X-RateLimit-Remaining", "Retry-After"],
+                "max_age": 3600,
             }
         },
         supports_credentials=True,
@@ -131,7 +171,7 @@ def create_app(overrides: dict | None = None) -> Flask:
 
     @jwt.token_in_blocklist_loader
     def token_in_blocklist(_jwt_header, jwt_payload):
-        return jwt_payload.get("jti") in BLACKLISTED_JTIS
+        return is_jti_blacklisted(jwt_payload.get("jti"))
 
     init_realtime(app)
     db.configure(app.config["DATABASE_URL"])
@@ -172,7 +212,7 @@ def create_app(overrides: dict | None = None) -> Flask:
         if "Permissions-Policy" not in response.headers:
             response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
         if response.status_code == 401 and request.path.startswith("/api/admin"):
-            log_security_event("unauthorized_admin", request.remote_addr, request.path)
+            log_security_event("unauthorized_admin", get_real_ip(), request.path)
         return response
 
     # Routes
@@ -189,16 +229,30 @@ def create_app(overrides: dict | None = None) -> Flask:
 
     @app.get("/api/health")
     def health():
-        status = "ok"
+        checks = {"status": "ok", "timestamp": datetime.utcnow().isoformat() + "Z"}
         try:
             db_breaker.call(db.check_health)
         except Exception:
-            status = "degraded"
-        return jsonify({"status": status}), 200 if status == "ok" else 503
+            checks["status"] = "degraded"
+            checks["db"] = "error"
+        else:
+            checks["db"] = "ok"
+        return jsonify(checks), 200 if checks["status"] == "ok" else 503
 
     @app.get("/health")
     def health_check():
         return jsonify({"status": "ok"}), 200
+
+    @app.post("/api/csp-report")
+    def csp_report():
+        payload = request.get_data(cache=False, as_text=True)[:8192]
+        parsed = request.get_json(silent=True)
+        log_security_event(
+            "csp_violation",
+            get_real_ip(),
+            json.dumps(parsed or {"raw": payload}, separators=(",", ":"))[:1000],
+        )
+        return ("", 204)
 
     @app.errorhandler(ValidationError)
     def handle_validation_error(error: ValidationError):
@@ -358,11 +412,23 @@ def _detect_abuse(app: Flask):
     if request.path in {"/api/health", "/health"}:
         return None
 
-    ip = request.headers.get("X-Forwarded-For", request.remote_addr or "unknown").split(",")[-1].strip()
+    if len(request.query_string or b"") > 2048:
+        log_security_event("oversized_query", get_real_ip(), request.path)
+        return jsonify({"error": "Request query is too large."}), 414
+
+    raw_path = request.environ.get("RAW_URI") or request.full_path or request.path
+    if any(token in raw_path.lower() for token in ("%2e%2e", "../", "..\\", "/etc/passwd")):
+        log_security_event("path_traversal_attempt", get_real_ip(), request.path)
+        return jsonify({"error": "Not found"}), 404
+
+    ip = get_real_ip()
     now = datetime.utcnow()
     blocked_until = _ip_blocked_until.get(ip)
     if blocked_until and blocked_until > now:
-        return jsonify({"error": "Slow down."}), 429
+        response = jsonify({"error": "Slow down."})
+        response.status_code = 429
+        response.headers["Retry-After"] = str(max(1, int((blocked_until - now).total_seconds())))
+        return response
 
     recent = [
         timestamp for timestamp in _ip_request_count[ip]
@@ -370,10 +436,15 @@ def _detect_abuse(app: Flask):
     ]
     recent.append(now)
     _ip_request_count[ip] = recent
-    if len(recent) > 100:
-        _ip_blocked_until[ip] = now + timedelta(minutes=5)
+    limit = 200 if request.path.startswith("/api/") else 2000
+    block_minutes = 10 if request.path.startswith("/api/") else 60
+    if len(recent) > limit:
+        _ip_blocked_until[ip] = now + timedelta(minutes=block_minutes)
         log_security_event("flood_detected", ip, f"{len(recent)} req/min")
-        return jsonify({"error": "Slow down."}), 429
+        response = jsonify({"error": "Slow down."})
+        response.status_code = 429
+        response.headers["Retry-After"] = str(block_minutes * 60)
+        return response
     return None
 
 
@@ -384,7 +455,7 @@ def _reject_forbidden_json_operators():
         return None
     payload = request.get_json(silent=True)
     if contains_forbidden_nosql_operator(payload):
-        log_security_event("injection_attempt", request.remote_addr, request.path)
+        log_security_event("injection_attempt", get_real_ip(), request.path)
         return jsonify({"error": "Invalid request payload"}), 400
     return None
 
@@ -434,8 +505,16 @@ def _validate_runtime_config(app: Flask, cors_origins: list[str], is_production:
         errors.append("WTF_CSRF_SSL_STRICT=true is required in production")
     if not app.config.get("RAZORPAY_KEY_ID") or not app.config.get("RAZORPAY_KEY_SECRET"):
         errors.append("RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET are required in production")
-    # Webhook verification is enforced at the webhook endpoint itself. Do not
-    # fail the entire API boot if the webhook secret is being added later.
+    if not app.config.get("RAZORPAY_WEBHOOK_SECRET"):
+        errors.append("RAZORPAY_WEBHOOK_SECRET is required in production")
+    if not app.config.get("QR_SESSION_SECRET"):
+        errors.append("QR_SESSION_SECRET is required in production")
+    if not app.config.get("REDIS_URL"):
+        errors.append("REDIS_URL is required in production")
+    if not app.config.get("DB_ENCRYPTION_KEY") and not app.config.get("ENCRYPTION_KEY"):
+        errors.append("DB_ENCRYPTION_KEY or ENCRYPTION_KEY is required in production")
+    if not app.config.get("CLOUDFLARE_TUNNEL_SECRET"):
+        errors.append("CLOUDFLARE_TUNNEL_SECRET is required in production")
     if not database_url:
         errors.append("DATABASE_URL must point to Supabase Postgres in production")
     elif database_url.startswith("sqlite"):
