@@ -91,15 +91,44 @@ def _order_table_label(order: Order) -> str | None:
 
 def serialize_order(order: Order, *, include_public_token: bool = False) -> dict:
     items = []
+    all_items_ready = True
     for item in order.items:
+        item_status = getattr(item, "status", "pending") or "pending"
+        if item_status != "ready":
+            all_items_ready = False
         items.append({
+            "id": str(item.id),
+            "item_id": str(item.id),
+            "menu_item_id": str(item.menu_item_id),
             "name": item.menu_item.name,
             "qty": item.qty,
             "quantity": item.qty,
             "unit_price": item.unit_price,
+            "price": item.unit_price,
             "special_note": item.special_note,
+            "status": item_status,
+            "started_at": item.started_at.isoformat() if getattr(item, "started_at", None) else None,
+            "ready_at": item.ready_at.isoformat() if getattr(item, "ready_at", None) else None,
+            "is_addon": bool(getattr(item, "is_addon", False)),
         })
     table_label = _order_table_label(order)
+    split_charges = []
+    for charge in getattr(order, "split_charges", []) or []:
+        split_charges.append({
+            "id": str(charge.id),
+            "name": charge.name,
+            "phone": charge.phone,
+            "amount": round((int(charge.amount or 0) / 100), 2),
+            "amount_paise": int(charge.amount or 0),
+            "short_url": charge.short_url,
+            "status": charge.status,
+            "expires_at": charge.expires_at.isoformat() if charge.expires_at else None,
+            "created_at": charge.created_at.isoformat() if charge.created_at else None,
+        })
+    now = datetime.now(timezone.utc)
+    created_at = order.created_at
+    if created_at and created_at.tzinfo is None:
+        created_at = created_at.replace(tzinfo=timezone.utc)
     payload = {
         "id": str(order.id),
         "order_ref": f"JD-{str(order.id).replace('-', '')[:8].upper()}",
@@ -116,11 +145,17 @@ def serialize_order(order: Order, *, include_public_token: bool = False) -> dict
         "order_type": order.order_type,
         "source": getattr(order, "source", "customer"),
         "payment_method": getattr(order, "payment_method", "") or "",
+        "payment_status": getattr(order, "payment_status", "unpaid") or "unpaid",
         "table_id": str(order.table_id) if order.table_id else None,
         "table_label": table_label,
         "table": table_label,
         "table_number": table_label,
         "created_at": order.created_at.isoformat(),
+        "elapsed_seconds": int((now - created_at).total_seconds()) if created_at else 0,
+        "all_items_ready": bool(items) and all_items_ready,
+        "is_addon": any(item.get("is_addon") for item in items),
+        "parent_order_number": None,
+        "split_charges": split_charges,
         "updated_at": order.updated_at.isoformat() if order.updated_at else None,
         "preparing_at": order.preparing_at.isoformat() if getattr(order, "preparing_at", None) else None,
         "served_at": order.served_at.isoformat() if getattr(order, "served_at", None) else None,
@@ -937,6 +972,7 @@ def add_order_items(order_id: uuid.UUID):
         order.version += 1
 
         # Add new items
+        addon_items = []
         for item_req in items_req:
             # Normalize addon menu_item_id if UI-suffixed (strip last suffix only)
             mid_raw = item_req.get("menu_item_id")
@@ -962,12 +998,25 @@ def add_order_items(order_id: uuid.UUID):
                 addon_added_at=db.utc_now()
             )
             session.add(addon)
+            addon_items.append(addon)
 
         audit(session, "order.addon", "order", order.id, {"added_total": new_totals["total"]})
+        session.flush()
+        addon_item_ids = {str(item.id) for item in addon_items}
         session.commit()
         session.refresh(order)
         serialized = serialize_order(order)
+        addon_payload = {
+            "type": "order_addon",
+            "order_id": serialized["id"],
+            "table_id": serialized.get("table_id"),
+            "table_name": serialized.get("table_label"),
+            "parent_order_number": serialized.get("order_number"),
+            "new_items": [item for item in serialized.get("items", []) if str(item.get("item_id") or item.get("id")) in addon_item_ids],
+            "addon_order_id": serialized["id"],
+        }
         broker.publish("kitchen", "order.updated", serialized)
+        broker.publish("kitchen", "order_addon", addon_payload)
         broker.publish(f"order:{order_topic_id(order.id)}", "order.updated", serialized)
         _invalidate_admin_order_caches()
         

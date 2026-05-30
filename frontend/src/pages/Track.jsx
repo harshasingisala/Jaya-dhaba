@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Package, ChefHat, CheckSquare, House, ArrowRight, Loader2, Sparkles, Info, ShoppingBag, PartyPopper, Star } from 'lucide-react';
+import { Search, Package, ChefHat, CheckSquare, CheckCircle, House, ArrowRight, Loader2, Sparkles, Info, ShoppingBag, PartyPopper, Star } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../api';
 import { apiUrl } from '../api/config';
@@ -13,6 +13,25 @@ const statusSteps = [
    { id: 'Ready', label: 'Quality Check', icon: <CheckSquare size={18} />, desc: 'Final verification before serving' },
    { id: 'Enjoying', label: 'Enjoying', icon: <House size={18} />, desc: 'Relax and enjoy your Jaya Dhaba moment' },
 ];
+
+const itemStatusMeta = {
+   pending: { label: 'Preparing soon', className: 'bg-slate-100 text-slate-700 border-slate-200' },
+   preparing: { label: 'Being prepared', className: 'bg-amber-100 text-amber-800 border-amber-300' },
+   ready: { label: 'Ready', className: 'bg-green-100 text-green-800 border-green-300' },
+};
+
+function normalizeItemStatus(status) {
+   const value = String(status || 'pending').toLowerCase();
+   return itemStatusMeta[value] ? value : 'pending';
+}
+
+function parseEventPayload(event) {
+   try {
+      return JSON.parse(event?.data || '{}');
+   } catch {
+      return {};
+   }
+}
 
 export default function Track() {
    const [orderIdInput, setOrderIdInput] = useState('');
@@ -44,8 +63,30 @@ export default function Track() {
       const token = params.get('token') || '';
       const streamUrl = apiUrl(`/api/orders/${order.id}/stream${token ? `?token=${encodeURIComponent(token)}` : ''}`);
       const stream = createManagedEventSource(streamUrl, {
-         events: ['order.created', 'order.updated'],
-         onRefresh: () => fetchOrder(order.id, token, { preserveCurrent: true }),
+         events: ['order.created', 'order.updated', 'item_status_update'],
+         minRefreshMs: 0,
+         onRefresh: (eventName, event) => {
+            if (eventName === 'item_status_update') {
+               const payload = parseEventPayload(event);
+               if (String(payload.order_id) === String(order.id) && payload.item_id) {
+                  setOrder((current) => {
+                     if (!current || String(current.id) !== String(payload.order_id)) return current;
+                     return {
+                        ...current,
+                        status: payload.all_ready ? 'Ready' : current.status,
+                        all_items_ready: Boolean(payload.all_ready),
+                        items: (current.items || []).map((item) => (
+                           String(item.item_id || item.id) === String(payload.item_id)
+                              ? { ...item, status: payload.status }
+                              : item
+                        )),
+                     };
+                  });
+                  return;
+               }
+            }
+            fetchOrder(order.id, token, { preserveCurrent: true });
+         },
       });
 
       return () => stream.close();
@@ -127,6 +168,8 @@ export default function Track() {
 
    const foundStepIndex = statusSteps.findIndex(s => s.id === order?.status);
    const currentStepIndex = foundStepIndex >= 0 ? foundStepIndex : 0;
+   const orderItems = order?.items || [];
+   const allItemsReady = Boolean(order?.all_items_ready || (orderItems.length && orderItems.every((item) => normalizeItemStatus(item.status) === 'ready')));
 
    return (
       <div className="min-h-screen heritage-stone-bg relative overflow-hidden py-20 px-6">
@@ -207,6 +250,41 @@ export default function Track() {
                            <div className="text-right">
                               <p className="text-[8px] font-black uppercase tracking-widest text-heritage-gold">Kitchen Intensity</p>
                               <p className="text-[10px] font-bold text-heritage-espresso">Stable (Optimal Flow)</p>
+                           </div>
+                        </div>
+                     )}
+
+                     {allItemsReady && (
+                        <div className="rounded-3xl border border-green-200 bg-green-50 p-5 text-center text-lg font-black text-green-800">
+                           Your order is ready! 🎉
+                        </div>
+                     )}
+
+                     {orderItems.length > 0 && (
+                        <div className="space-y-3">
+                           <p className="text-[10px] font-black uppercase tracking-widest text-heritage-espresso/30">Kitchen Item Status</p>
+                           <div className="grid gap-3">
+                              {orderItems.map((item) => {
+                                 const status = normalizeItemStatus(item.status);
+                                 const meta = itemStatusMeta[status];
+                                 const qty = item.qty || item.quantity || 1;
+                                 return (
+                                    <div key={item.item_id || item.id || item.name} className="flex items-center justify-between gap-4 rounded-3xl border border-heritage-espresso/5 bg-white/55 p-4">
+                                       <div className="min-w-0">
+                                          <p className="truncate text-sm font-black text-heritage-espresso">{qty}x {item.name}</p>
+                                       </div>
+                                       {allItemsReady ? (
+                                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700">
+                                             <CheckCircle size={18} />
+                                          </span>
+                                       ) : (
+                                          <span className={`shrink-0 rounded-full border px-4 py-2 text-[10px] font-black uppercase tracking-widest ${meta.className}`}>
+                                             {meta.label}
+                                          </span>
+                                       )}
+                                    </div>
+                                 );
+                              })}
                            </div>
                         </div>
                      )}

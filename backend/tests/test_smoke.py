@@ -229,6 +229,302 @@ def test_group_cart_checkout_uses_table_session(client, app):
     assert cart_resp.get_json()["cart"] == []
 
 
+def test_waiter_call_lifecycle(client, app, admin_headers):
+    from sqlalchemy import create_engine, text
+    from sqlalchemy.orm import sessionmaker
+
+    from qr_sessions import generate_qr_token
+
+    engine = create_engine(app.config["DATABASE_URL"])
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    table = session.execute(text("SELECT id, qr_token FROM tables LIMIT 1")).fetchone()
+    session.close()
+    assert table
+
+    with app.app_context():
+        token = generate_qr_token(str(table[0]), table_version=str(table[1]))
+
+    csrf = get_csrf(client)
+    verify_resp = client.post("/api/qr/verify", json={"token": token}, headers={"X-CSRF-Token": csrf})
+    assert verify_resp.status_code == 200, f"QR verify failed: {verify_resp.data}"
+    table_session = verify_resp.get_json()["table_session"]
+
+    call_resp = client.post(
+        "/api/waiter/call",
+        json={"table_session": table_session, "reason": "need_water"},
+        headers={"X-CSRF-Token": csrf},
+    )
+    assert call_resp.status_code == 200, f"Waiter call failed: {call_resp.data}"
+    call_id = call_resp.get_json()["call_id"]
+
+    list_resp = client.get("/api/waiter/calls", headers=admin_headers)
+    assert list_resp.status_code == 200, f"Waiter calls list failed: {list_resp.data}"
+    assert any(call["id"] == call_id for call in list_resp.get_json()["calls"])
+
+    resolve_headers = {**admin_headers, "X-CSRF-Token": csrf}
+    resolve_resp = client.patch(f"/api/waiter/calls/{call_id}/resolve", headers=resolve_headers)
+    assert resolve_resp.status_code == 200, f"Waiter call resolve failed: {resolve_resp.data}"
+
+
+def test_item_level_status_auto_readies_order(client, app, admin_headers):
+    from sqlalchemy import create_engine, text
+    from sqlalchemy.orm import sessionmaker
+
+    from qr_sessions import generate_qr_token
+
+    engine = create_engine(app.config["DATABASE_URL"])
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    table = session.execute(text("SELECT id, qr_token FROM tables LIMIT 1")).fetchone()
+    item = session.execute(text("SELECT id FROM menu_items WHERE available = 1 LIMIT 1")).fetchone()
+    session.close()
+    assert table and item
+
+    with app.app_context():
+        token = generate_qr_token(str(table[0]), table_version=str(table[1]))
+
+    csrf = get_csrf(client)
+    verify_resp = client.post("/api/qr/verify", json={"token": token}, headers={"X-CSRF-Token": csrf})
+    assert verify_resp.status_code == 200, f"QR verify failed: {verify_resp.data}"
+    table_session = verify_resp.get_json()["table_session"]
+
+    order_resp = client.post(
+        "/api/orders",
+        json={
+            "table_session": table_session,
+            "items": [
+                {"menu_item_id": str(item[0]), "qty": 1},
+                {"menu_item_id": str(item[0]), "qty": 1},
+            ],
+            "idempotency_key": uuid.uuid4().hex,
+        },
+        headers={"X-CSRF-Token": csrf},
+    )
+    assert order_resp.status_code == 201, f"Order failed: {order_resp.data}"
+    order = order_resp.get_json()["data"]
+    order_id = order["id"]
+    public_token = order["public_token"]
+    order_items = order["items"]
+    assert len(order_items) == 2
+
+    patch_headers = {**admin_headers, "X-CSRF-Token": get_csrf(client)}
+    first_item_id = order_items[0]["item_id"]
+    second_item_id = order_items[1]["item_id"]
+
+    preparing_resp = client.patch(
+        f"/api/kitchen/orders/{order_id}/items/{first_item_id}/status",
+        json={"status": "preparing"},
+        headers=patch_headers,
+    )
+    assert preparing_resp.status_code == 200, f"Preparing status failed: {preparing_resp.data}"
+    assert preparing_resp.get_json()["all_ready"] is False
+
+    first_ready_resp = client.patch(
+        f"/api/kitchen/orders/{order_id}/items/{first_item_id}/status",
+        json={"status": "ready"},
+        headers=patch_headers,
+    )
+    assert first_ready_resp.status_code == 200, f"First ready failed: {first_ready_resp.data}"
+    assert first_ready_resp.get_json()["all_ready"] is False
+
+    second_ready_resp = client.patch(
+        f"/api/kitchen/orders/{order_id}/items/{second_item_id}/status",
+        json={"status": "ready"},
+        headers=patch_headers,
+    )
+    assert second_ready_resp.status_code == 200, f"Second ready failed: {second_ready_resp.data}"
+    assert second_ready_resp.get_json()["all_ready"] is True
+
+    track_resp = client.get(f"/api/orders/{order_id}?token={public_token}")
+    assert track_resp.status_code == 200, f"Tracking fetch failed: {track_resp.data}"
+    track_order = track_resp.get_json()["data"]
+    assert track_order["status"] == "ready"
+    assert track_order["all_items_ready"] is True
+
+    kitchen_resp = client.get("/api/kitchen/orders", headers=admin_headers)
+    assert kitchen_resp.status_code == 200, f"Kitchen orders failed: {kitchen_resp.data}"
+    kitchen_orders = kitchen_resp.get_json()["data"]
+    kitchen_order = next((row for row in kitchen_orders if row["id"] == order_id), None)
+    assert kitchen_order, f"Order {order_id} missing from kitchen list"
+    statuses = {line["item_id"]: line["status"] for line in kitchen_order["items"]}
+    assert statuses[first_item_id] == "ready"
+    assert statuses[second_item_id] == "ready"
+
+
+def test_bill_split_equal_and_by_item(client, app):
+    from sqlalchemy import create_engine, text
+    from sqlalchemy.orm import sessionmaker
+
+    from qr_sessions import generate_qr_token
+
+    engine = create_engine(app.config["DATABASE_URL"])
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    table = session.execute(text("SELECT id, qr_token FROM tables LIMIT 1")).fetchone()
+    item = session.execute(text("SELECT id FROM menu_items WHERE available = 1 LIMIT 1")).fetchone()
+    session.close()
+    assert table and item
+
+    with app.app_context():
+        token = generate_qr_token(str(table[0]), table_version=str(table[1]))
+
+    csrf = get_csrf(client)
+    verify_resp = client.post("/api/qr/verify", json={"token": token}, headers={"X-CSRF-Token": csrf})
+    assert verify_resp.status_code == 200, f"QR verify failed: {verify_resp.data}"
+    table_session = verify_resp.get_json()["table_session"]
+
+    order_resp = client.post(
+        "/api/orders",
+        json={
+            "table_session": table_session,
+            "items": [
+                {"menu_item_id": str(item[0]), "qty": 1},
+                {"menu_item_id": str(item[0]), "qty": 1},
+            ],
+            "idempotency_key": uuid.uuid4().hex,
+        },
+        headers={"X-CSRF-Token": csrf},
+    )
+    assert order_resp.status_code == 201, f"Order failed: {order_resp.data}"
+    order = order_resp.get_json()["data"]
+    order_id = order["id"]
+
+    equal_resp = client.post(
+        f"/api/orders/{order_id}/split",
+        json={
+            "table_session": table_session,
+            "mode": "equal",
+            "splits": [{"name": "Asha"}, {"name": "Ravi"}],
+        },
+        headers={"X-CSRF-Token": csrf},
+    )
+    assert equal_resp.status_code == 200, f"Equal split failed: {equal_resp.data}"
+    equal_splits = equal_resp.get_json()["splits"]
+    assert len(equal_splits) == 2
+    assert all(split["short_url"] for split in equal_splits)
+    assert sum(split["amount_paise"] for split in equal_splits) == order["total"] * 100
+    assert equal_splits[0]["amount"] == order["total"] / 2
+
+    item_lines = order["items"]
+    by_item_resp = client.post(
+        f"/api/orders/{order_id}/split",
+        json={
+            "table_session": table_session,
+            "mode": "by_item",
+            "splits": [
+                {"name": "Asha", "item_ids": [item_lines[0]["item_id"]]},
+                {"name": "Ravi", "item_ids": [item_lines[1]["item_id"]]},
+            ],
+        },
+        headers={"X-CSRF-Token": csrf},
+    )
+    assert by_item_resp.status_code == 200, f"By-item split failed: {by_item_resp.data}"
+    by_item_splits = by_item_resp.get_json()["splits"]
+    expected = {
+        "Asha": item_lines[0]["unit_price"] * item_lines[0]["qty"],
+        "Ravi": item_lines[1]["unit_price"] * item_lines[1]["qty"],
+    }
+    assert {split["name"]: split["amount"] for split in by_item_splits} == expected
+
+    status_resp = client.get(f"/api/orders/{order_id}/split?table_session={table_session}")
+    assert status_resp.status_code == 200, f"Split status failed: {status_resp.data}"
+    assert len(status_resp.get_json()["splits"]) == 2
+
+
+def test_bulk_item_status_update(client, app, admin_headers):
+    from sqlalchemy import create_engine, text
+    from sqlalchemy.orm import sessionmaker
+
+    from qr_sessions import generate_qr_token
+
+    engine = create_engine(app.config["DATABASE_URL"])
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    table = session.execute(text("SELECT id, qr_token FROM tables LIMIT 1")).fetchone()
+    item = session.execute(text("SELECT id FROM menu_items WHERE available = 1 LIMIT 1")).fetchone()
+    session.close()
+    assert table and item
+
+    with app.app_context():
+        token = generate_qr_token(str(table[0]), table_version=str(table[1]))
+
+    csrf = get_csrf(client)
+    verify_resp = client.post("/api/qr/verify", json={"token": token}, headers={"X-CSRF-Token": csrf})
+    assert verify_resp.status_code == 200
+    table_session = verify_resp.get_json()["table_session"]
+    order_resp = client.post(
+        "/api/orders",
+        json={
+            "table_session": table_session,
+            "items": [{"menu_item_id": str(item[0]), "qty": 1} for _ in range(3)],
+            "idempotency_key": uuid.uuid4().hex,
+        },
+        headers={"X-CSRF-Token": csrf},
+    )
+    assert order_resp.status_code == 201, f"Order failed: {order_resp.data}"
+    order = order_resp.get_json()["data"]
+    item_ids = [line["item_id"] for line in order["items"]]
+    headers = {**admin_headers, "X-CSRF-Token": get_csrf(client)}
+
+    preparing_resp = client.post(
+        f"/api/kitchen/orders/{order['id']}/items/bulk-status",
+        json={"status": "preparing", "item_ids": item_ids},
+        headers=headers,
+    )
+    assert preparing_resp.status_code == 200, f"Bulk preparing failed: {preparing_resp.data}"
+    assert preparing_resp.get_json()["updated"] == 3
+    assert all(item["status"] == "preparing" for item in preparing_resp.get_json()["items"])
+
+    ready_resp = client.post(
+        f"/api/kitchen/orders/{order['id']}/items/bulk-status",
+        json={"status": "ready", "item_ids": item_ids},
+        headers=headers,
+    )
+    assert ready_resp.status_code == 200, f"Bulk ready failed: {ready_resp.data}"
+    assert ready_resp.get_json()["updated"] == 3
+    assert ready_resp.get_json()["all_ready"] is True
+
+
+def test_waiter_include_resolved_history(client, app, admin_headers):
+    from sqlalchemy import create_engine, text
+    from sqlalchemy.orm import sessionmaker
+
+    from qr_sessions import generate_qr_token
+
+    engine = create_engine(app.config["DATABASE_URL"])
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    table = session.execute(text("SELECT id, qr_token FROM tables LIMIT 1")).fetchone()
+    session.close()
+    assert table
+
+    with app.app_context():
+        token = generate_qr_token(str(table[0]), table_version=str(table[1]))
+
+    csrf = get_csrf(client)
+    verify_resp = client.post("/api/qr/verify", json={"token": token}, headers={"X-CSRF-Token": csrf})
+    assert verify_resp.status_code == 200
+    table_session = verify_resp.get_json()["table_session"]
+    call_resp = client.post(
+        "/api/waiter/call",
+        json={"table_session": table_session, "reason": "have_question"},
+        headers={"X-CSRF-Token": csrf},
+    )
+    assert call_resp.status_code == 200
+    call_id = call_resp.get_json()["call_id"]
+    resolve_resp = client.patch(f"/api/waiter/calls/{call_id}/resolve", headers={**admin_headers, "X-CSRF-Token": get_csrf(client)})
+    assert resolve_resp.status_code == 200
+
+    history_resp = client.get("/api/waiter/calls?include_resolved=true", headers=admin_headers)
+    assert history_resp.status_code == 200
+    assert any(call["id"] == call_id and call["status"] == "resolved" for call in history_resp.get_json()["calls"])
+
+    pending_resp = client.get("/api/waiter/calls", headers=admin_headers)
+    assert pending_resp.status_code == 200
+    assert not any(call["id"] == call_id for call in pending_resp.get_json()["calls"])
+
+
 def test_contact_enquiry_submission_succeeds(client):
     csrf = get_csrf(client)
     resp = client.post(

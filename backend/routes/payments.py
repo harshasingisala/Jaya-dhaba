@@ -13,6 +13,7 @@ from flask import Blueprint, current_app, g, jsonify, request
 from razorpay.errors import BadRequestError, GatewayError, ServerError
 from sqlalchemy.exc import IntegrityError as SAIntegrityError
 from sqlalchemy import select
+from sqlalchemy.orm import joinedload
 
 import db
 from audit import audit as legacy_audit
@@ -22,7 +23,8 @@ from realtime import broadcast
 from rate_limits import enforce_limit
 from security_log import log_security_event
 from validators import ValidationError, body, integer, raw_text, reject_unknown
-from models import Order, OrderItem, MenuItem, User, Payment
+from models import Order, OrderItem, MenuItem, User, Payment, SplitCharge
+from qr_sessions import get_table_session
 from routes.orders import allocate_order_number, serialize_order
 from services.billing import calculate_order_totals
 
@@ -78,6 +80,86 @@ def _safe_int(value, default: int = 0) -> int:
         return int(value)
     except (TypeError, ValueError):
         return default
+
+
+def _rupees(amount_paise: int) -> int | float:
+    value = int(amount_paise or 0)
+    if value % 100 == 0:
+        return value // 100
+    return round(value / 100, 2)
+
+
+def _serialize_split_charge(charge: SplitCharge) -> dict:
+    return {
+        "id": str(charge.id),
+        "name": charge.name,
+        "phone": charge.phone,
+        "amount": _rupees(charge.amount),
+        "amount_paise": int(charge.amount or 0),
+        "short_url": charge.short_url,
+        "status": charge.status,
+        "expires_at": charge.expires_at.isoformat() if charge.expires_at else None,
+        "created_at": charge.created_at.isoformat() if charge.created_at else None,
+    }
+
+
+def _split_uuid() -> uuid.UUID | str:
+    return uuid.uuid4()
+
+
+def _table_session_owns_order(session_id: str | None, order: Order) -> bool:
+    payload = get_table_session(session_id)
+    if not payload:
+        return False
+    known_orders = {str(value).replace("-", "") for value in payload.get("orders") or []}
+    if str(order.id).replace("-", "") in known_orders:
+        return True
+    return str(order.table_id or "").replace("-", "") == str(payload.get("table_id") or "").replace("-", "")
+
+
+def _create_split_payment_link(order: Order, charge_id: str, name: str, phone: str | None, amount_paise: int, expires_at: datetime) -> dict:
+    description = f"Jaya Dhaba - {order.table.label if order.table else 'Table'} - {name}"
+    if current_app.config.get("TESTING") or _is_development():
+        link_id = f"plink_dev_{uuid.uuid4().hex[:24]}"
+        return {
+            "id": link_id,
+            "short_url": f"https://rzp.io/i/{link_id}",
+            "status": "created",
+        }
+    return razorpay_client().payment_link.create({
+        "amount": amount_paise,
+        "currency": "INR",
+        "description": description,
+        "reference_id": charge_id,
+        "expire_by": int(expires_at.timestamp()),
+        "notify": {"sms": bool(phone), "email": False},
+        "customer": {"name": name, "contact": phone or ""},
+        "notes": {
+            "order_id": str(order.id),
+            "order_number": str(order.order_number),
+            "split_charge_id": charge_id,
+        },
+    })
+
+
+def _refresh_order_payment_status(session, order: Order) -> tuple[int, bool]:
+    charges = list(order.split_charges or [])
+    paid_count = sum(1 for charge in charges if charge.status == "paid")
+    if charges and paid_count == len(charges):
+        order.payment_status = "paid"
+    elif paid_count > 0:
+        order.payment_status = "partial"
+    else:
+        order.payment_status = "unpaid"
+    return paid_count, bool(charges and paid_count == len(charges))
+
+
+def _as_utc(value: datetime | None) -> datetime | None:
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
 
 
 def _sign_pending_intent(payload: dict) -> str:
@@ -475,6 +557,146 @@ def _publish_payment_update(order_id, event_status: str = "confirmed") -> None:
     broker.publish(f"order:{normalized_order_id}", "order.updated", payload)
 
 
+@bp.post("/orders/<uuid:order_id>/split")
+def create_order_split(order_id: uuid.UUID):
+    data = request.get_json(silent=True) or {}
+    table_session = raw_text(data.get("table_session"), "table_session", 200)
+    mode = raw_text(data.get("mode"), "mode", 20)
+    splits = data.get("splits") or []
+    if mode not in {"equal", "by_item"}:
+        return jsonify({"success": False, "message": "Invalid split mode"}), 400
+    if not isinstance(splits, list) or not splits:
+        return jsonify({"success": False, "message": "At least one split is required"}), 400
+
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=30)
+    with db.get_db() as session:
+        order = session.execute(
+            select(Order)
+            .options(joinedload(Order.table), joinedload(Order.items).joinedload(OrderItem.menu_item), joinedload(Order.split_charges))
+            .where(Order.id == order_id)
+        ).unique().scalar_one_or_none()
+        if not order:
+            return jsonify({"success": False, "message": "Order not found"}), 404
+        if not _table_session_owns_order(table_session, order):
+            return jsonify({"success": False, "message": "Table session does not match this order"}), 403
+        if order.status == "cancelled" or getattr(order, "payment_status", "unpaid") == "paid":
+            return jsonify({"success": False, "message": "Order is not splittable"}), 409
+        if any(charge.status == "paid" for charge in order.split_charges):
+            return jsonify({"success": False, "message": "A split has already been paid"}), 409
+
+        for existing in list(order.split_charges):
+            session.delete(existing)
+        session.flush()
+
+        charge_specs = []
+        if mode == "equal":
+            count = len(splits)
+            if count < 2 or count > 10:
+                return jsonify({"success": False, "message": "Equal split requires 2 to 10 people"}), 400
+            total_paise = int(order.total or 0) * 100
+            base = total_paise // count
+            remainder = total_paise % count
+            for index, split in enumerate(splits):
+                name = raw_text((split or {}).get("name"), "name", 100)
+                phone = raw_text((split or {}).get("phone"), "phone", 20, required=False, allow_empty=True) or None
+                charge_specs.append({"name": name, "phone": phone, "amount": base + (1 if index < remainder else 0)})
+        else:
+            order_items = {str(item.id): item for item in order.items}
+            covered = []
+            for split in splits:
+                name = raw_text((split or {}).get("name"), "name", 100)
+                phone = raw_text((split or {}).get("phone"), "phone", 20, required=False, allow_empty=True) or None
+                item_ids = [str(value) for value in ((split or {}).get("item_ids") or [])]
+                if not item_ids:
+                    return jsonify({"success": False, "message": "Each person needs at least one item"}), 400
+                amount = 0
+                for item_id in item_ids:
+                    item = order_items.get(item_id)
+                    if not item:
+                        return jsonify({"success": False, "message": "Split contains an invalid item"}), 400
+                    amount += int(item.unit_price or 0) * int(item.qty or 1) * 100
+                    covered.append(item_id)
+                charge_specs.append({"name": name, "phone": phone, "amount": amount})
+            if sorted(covered) != sorted(order_items.keys()) or len(covered) != len(set(covered)):
+                return jsonify({"success": False, "message": "All order items must be assigned exactly once"}), 400
+
+        created_charges = []
+        for spec in charge_specs:
+            charge_uuid = _split_uuid()
+            charge_id = str(charge_uuid)
+            link = _create_split_payment_link(order, charge_id, spec["name"], spec["phone"], spec["amount"], expires_at)
+            charge = SplitCharge(
+                id=charge_uuid,
+                order_id=order.id,
+                name=spec["name"],
+                phone=spec["phone"],
+                amount=spec["amount"],
+                razorpay_link_id=str(link.get("id") or ""),
+                short_url=str(link.get("short_url") or ""),
+                status="pending",
+                expires_at=expires_at,
+            )
+            session.add(charge)
+            created_charges.append(charge)
+        order.payment_status = "unpaid"
+        session.commit()
+        for charge in created_charges:
+            session.refresh(charge)
+        payload = [_serialize_split_charge(charge) for charge in created_charges]
+
+    broker.publish("kitchen", "split_updated", {"order_id": str(order_id), "splits": payload, "payment_status": "unpaid"})
+    return jsonify({"success": True, "mode": mode, "splits": payload, "data": {"mode": mode, "splits": payload}})
+
+
+@bp.get("/orders/<uuid:order_id>/split")
+def get_order_split(order_id: uuid.UUID):
+    table_session = request.args.get("table_session")
+    with db.get_db() as session:
+        order = session.execute(
+            select(Order)
+            .options(joinedload(Order.split_charges))
+            .where(Order.id == order_id)
+        ).unique().scalar_one_or_none()
+        if not order:
+            return jsonify({"success": False, "message": "Order not found"}), 404
+        if not _table_session_owns_order(table_session, order):
+            return jsonify({"success": False, "message": "Table session does not match this order"}), 403
+
+        now = datetime.now(timezone.utc)
+        changed = False
+        for charge in order.split_charges:
+            expires_at = _as_utc(charge.expires_at)
+            if charge.status == "pending" and expires_at and expires_at < now:
+                charge.status = "expired"
+                changed = True
+            if not (current_app.config.get("TESTING") or _is_development()) and charge.status == "pending":
+                try:
+                    latest = razorpay_client().payment_link.fetch(charge.razorpay_link_id)
+                    latest_status = str(latest.get("status") or "").lower()
+                    if latest_status == "paid":
+                        charge.status = "paid"
+                        changed = True
+                    elif latest_status == "expired":
+                        charge.status = "expired"
+                        changed = True
+                except Exception:
+                    current_app.logger.warning("split_link_status_refresh_failed", extra={"split_charge_id": str(charge.id)})
+        paid_count, all_paid = _refresh_order_payment_status(session, order)
+        if changed:
+            session.commit()
+        payload = [_serialize_split_charge(charge) for charge in order.split_charges]
+        remaining = sum(int(charge.amount or 0) for charge in order.split_charges if charge.status != "paid")
+
+    return jsonify({
+        "success": True,
+        "splits": payload,
+        "data": payload,
+        "paid_count": paid_count,
+        "all_paid": all_paid,
+        "remaining": _rupees(remaining),
+    })
+
+
 @bp.post("/payments/create-order")
 def create_payment_order():
     try:
@@ -802,6 +1024,35 @@ def payments_webhook():
         return jsonify({"success": False, "status": "bad_payload"}), 400
 
     event_name = str(event.get("event", ""))
+    if event_name == "payment_link.paid":
+        link_entity = ((event.get("payload", {}) or {}).get("payment_link", {}) or {}).get("entity", {}) or {}
+        razorpay_link_id = str(link_entity.get("id") or "")
+        if not razorpay_link_id:
+            return jsonify({"success": False, "status": "bad_payload"}), 400
+        with db.get_db() as session:
+            charge = session.execute(
+                select(SplitCharge)
+                .options(joinedload(SplitCharge.order).joinedload(Order.split_charges))
+                .where(SplitCharge.razorpay_link_id == razorpay_link_id)
+            ).unique().scalar_one_or_none()
+            if not charge:
+                return jsonify({"success": True, "status": "split_missing"}), 200
+            charge.status = "paid"
+            paid_count, all_paid = _refresh_order_payment_status(session, charge.order)
+            order_id = str(charge.order_id)
+            payload_out = {
+                "order_id": order_id,
+                "name": charge.name,
+                "amount": _rupees(charge.amount),
+                "all_paid": all_paid,
+                "paid_count": paid_count,
+            }
+            session.commit()
+        broker.publish("kitchen", "split_paid", payload_out)
+        broker.publish(f"order:{order_topic_id(order_id)}", "split_paid", payload_out)
+        broadcast("orders_update", {"action": "split_paid", **payload_out})
+        return jsonify({"success": True, "status": "ok"}), 200
+
     entity = ((event.get("payload", {}) or {}).get("payment", {}) or {}).get("entity", {}) or {}
     payment_id = str(entity.get("id") or "")
     razorpay_order_id = str(entity.get("order_id") or "")
@@ -924,6 +1175,11 @@ def payments_webhook():
         event_status = "confirmed" if result["status"] in {"processed", "already_processed"} else "pending"
         _publish_payment_update(result["order_id"], event_status)
     return jsonify({"success": True, "status": "ok"}), 200
+
+
+@bp.post("/payments/razorpay/webhook")
+def razorpay_webhook_alias():
+    return payments_webhook()
 
 
 @bp.get("/admin/payments")

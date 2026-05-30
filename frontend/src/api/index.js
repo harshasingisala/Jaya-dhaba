@@ -561,6 +561,12 @@ const api = {
     return api.getOrders();
   },
 
+  getKitchenOrders: async () => {
+    const data = await request('/api/kitchen/orders');
+    const rows = Array.isArray(data) ? data : data.data || [];
+    return rows.map(normalizeOrder);
+  },
+
   getOrderStats: async () => {
     return request('/api/admin/orders/stats');
   },
@@ -588,6 +594,32 @@ const api = {
 
   clearTable: async (tableId) => {
     return request(`/api/admin/tables/${tableId}/clear`, { method: 'PATCH' });
+  },
+
+  rotateTableQr: async (tableId) => {
+    const data = await request(`/api/admin/tables/${tableId}/rotate-qr`, { method: 'POST' });
+    return data.table || data;
+  },
+
+  callWaiter: async ({ tableSession, reason }) => {
+    return request('/api/waiter/call', {
+      method: 'POST',
+      body: JSON.stringify({ table_session: tableSession, reason }),
+    });
+  },
+
+  getWaiterCalls: async () => {
+    const data = await request('/api/waiter/calls');
+    return Array.isArray(data) ? data : data.calls || [];
+  },
+
+  getWaiterCallHistory: async () => {
+    const data = await request('/api/waiter/calls?include_resolved=true');
+    return Array.isArray(data) ? data : data.calls || [];
+  },
+
+  resolveWaiterCall: async (callId) => {
+    return request(`/api/waiter/calls/${encodeURIComponent(callId)}/resolve`, { method: 'PATCH' });
   },
 
   updateTable: async (tableId, updates) => {
@@ -680,6 +712,31 @@ const api = {
       body: JSON.stringify({ status: UI_TO_API_STATUS[status] || status }),
     });
     return normalizeOrder(data);
+  },
+
+  updateKitchenItemStatus: async (orderId, itemId, status) => {
+    return request(`/api/kitchen/orders/${orderId}/items/${itemId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+  },
+
+  bulkUpdateKitchenItemStatus: async (orderId, itemIds, status) => {
+    return request(`/api/kitchen/orders/${orderId}/items/bulk-status`, {
+      method: 'POST',
+      body: JSON.stringify({ item_ids: itemIds, status }),
+    });
+  },
+
+  createSplit: async (orderId, tableSession, mode, splits) => {
+    return request(`/api/orders/${orderId}/split`, {
+      method: 'POST',
+      body: JSON.stringify({ table_session: tableSession, mode, splits }),
+    });
+  },
+
+  getSplitStatus: async (orderId, tableSession) => {
+    return request(`/api/orders/${orderId}/split?table_session=${encodeURIComponent(tableSession)}`);
   },
 
   bulkUpdateOrderStatus: async (orderIds, status) => {

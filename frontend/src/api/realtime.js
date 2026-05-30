@@ -19,7 +19,7 @@ export function createManagedEventSource(url, options = {}) {
   let reconnectTimer = null;
   let retryDelay = 2000;
 
-  const requestRefresh = (reason) => {
+  const requestRefresh = (reason, event = null) => {
     if (!onRefresh || closed) return;
     const now = Date.now();
     const delay = Math.max(0, minRefreshMs - (now - lastRefreshAt));
@@ -27,7 +27,7 @@ export function createManagedEventSource(url, options = {}) {
     refreshTimer = window.setTimeout(() => {
       if (closed) return;
       lastRefreshAt = Date.now();
-      onRefresh(reason);
+      onRefresh(reason, event);
     }, delay);
   };
 
@@ -68,7 +68,7 @@ export function createManagedEventSource(url, options = {}) {
       onStatus?.('connected');
     });
     events.forEach((eventName) => {
-      source.addEventListener(eventName, () => requestRefresh(eventName));
+      source.addEventListener(eventName, (event) => requestRefresh(eventName, event));
     });
     source.onerror = () => {
       onStatus?.('reconnecting');

@@ -6,8 +6,9 @@ from auth import AuthError, ROLE_RANK, active_user, consume_stream_ticket, creat
 from events import order_topic_id, stream_topic
 from routes.orders import order_access
 from routes.orders import serialize_order
-from models import Order
+from models import Order, OrderItem
 from sqlalchemy import select
+from sqlalchemy.orm import joinedload
 
 
 bp = Blueprint("sse", __name__, url_prefix="/api")
@@ -78,10 +79,11 @@ def kitchen_orders():
     with db.get_db() as session:
         rows = session.execute(
             select(Order)
+            .options(joinedload(Order.table), joinedload(Order.items).joinedload(OrderItem.menu_item))
             .where(Order.status.in_(["pending", "confirmed", "preparing", "ready"]))
             .order_by(Order.created_at.desc())
             .limit(250)
-        ).scalars().all()
+        ).unique().scalars().all()
         return jsonify({"success": True, "data": [serialize_order(order) for order in rows]})
 
 

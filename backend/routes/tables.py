@@ -290,6 +290,27 @@ def table_qr_code(table_id: str):
     )
 
 
+@bp.post("/admin/tables/<table_id>/rotate-qr")
+@require_role("admin")
+def rotate_table_qr(table_id: str):
+    id_variants = _table_id_variants(table_id)
+    now = datetime.now(timezone.utc)
+    new_token = str(uuid.uuid4())
+    with db.transaction(current_app.config["DATABASE_URL"]) as conn:
+        table = conn.execute("SELECT * FROM tables WHERE id IN (?, ?)", id_variants).fetchone()
+        if not table:
+            return jsonify({"success": False, "message": "Table not found"}), 404
+        conn.execute(
+            "UPDATE tables SET qr_token = ?, qr_rotated_at = ? WHERE id = ?",
+            (new_token, now, table["id"]),
+        )
+        audit(conn, "table.qr_rotate", "table", table["id"])
+        row = conn.execute(_table_select_sql("WHERE t.id = ?"), (table["id"],)).fetchone()
+    table_payload = _table_dict(row)
+    broadcast("tables_update", {"action": "qr_rotated", "table": table_payload})
+    return jsonify({"success": True, "table": table_payload, "data": table_payload})
+
+
 @bp.post("/admin/tables/qr-codes")
 @require_role("admin")
 def bulk_qr_codes():

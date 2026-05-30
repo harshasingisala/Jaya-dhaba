@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { AlertCircle, ArrowRight, CheckCircle2, Clock3, Loader2, Minus, Plus, ShoppingCart, X } from 'lucide-react';
+import { AlertCircle, ArrowRight, BellRing, CheckCircle2, Clock3, Copy, Loader2, Minus, Plus, QrCode, ShoppingCart, X } from 'lucide-react';
 import api from '../api';
 import PageMeta from '../components/SEO/PageMeta';
 
@@ -45,6 +45,13 @@ function itemImage(item) {
   return item.image_url || item.img || '/biryani.png';
 }
 
+const WAITER_REASONS = [
+  { value: 'need_assistance', label: 'Need assistance' },
+  { value: 'need_water', label: 'Need water' },
+  { value: 'have_question', label: 'Have a question' },
+  { value: 'requesting_bill', label: 'Request bill' },
+];
+
 export default function TableMenu() {
   const [searchParams] = useSearchParams();
   const qrToken = searchParams.get('t') || '';
@@ -63,6 +70,18 @@ export default function TableMenu() {
   const [guestName, setGuestName] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [order, setOrder] = useState(null);
+  const [waiterOpen, setWaiterOpen] = useState(false);
+  const [waiterBusy, setWaiterBusy] = useState(false);
+  const [waiterMessage, setWaiterMessage] = useState('');
+  const [waiterCooldownUntil, setWaiterCooldownUntil] = useState(0);
+  const [splitOpen, setSplitOpen] = useState(false);
+  const [splitMode, setSplitMode] = useState('equal');
+  const [splitPeople, setSplitPeople] = useState([{ name: 'Guest 1' }, { name: 'Guest 2' }]);
+  const [splitAssignments, setSplitAssignments] = useState({});
+  const [splitLinks, setSplitLinks] = useState([]);
+  const [splitBusy, setSplitBusy] = useState(false);
+  const [splitExpiresAt, setSplitExpiresAt] = useState('');
+  const [splitNow, setSplitNow] = useState(Date.now());
   const useGroupCart = Boolean(tableSession);
   const addedBy = guestName.trim() || 'Guest';
 
@@ -193,6 +212,50 @@ export default function TableMenu() {
     ? `/track?id=${encodeURIComponent(order.id)}&token=${encodeURIComponent(order.public_token)}`
     : '';
 
+  const splitPeopleWithNames = splitPeople.map((person, index) => ({
+    ...person,
+    name: String(person.name || `Guest ${index + 1}`).trim() || `Guest ${index + 1}`,
+  }));
+  const splitEqualAmount = splitPeople.length ? Number(order?.total || 0) / splitPeople.length : 0;
+  const splitItems = order?.items || [];
+  const splitSubtotals = splitPeopleWithNames.map((person) => splitItems.reduce((sum, item) => (
+    splitAssignments[item.item_id || item.id] === person.name
+      ? sum + Number(item.price || item.unit_price || 0) * Number(item.qty || item.quantity || 1)
+      : sum
+  ), 0));
+  const allSplitItemsAssigned = splitItems.length > 0 && splitItems.every((item) => splitAssignments[item.item_id || item.id]);
+  const splitAllPaid = splitLinks.length > 0 && splitLinks.every((link) => link.status === 'paid');
+  const splitRemainingSeconds = splitExpiresAt ? Math.max(0, Math.floor((new Date(splitExpiresAt).getTime() - splitNow) / 1000)) : 0;
+  const splitCountdown = `${String(Math.floor(splitRemainingSeconds / 60)).padStart(2, '0')}:${String(splitRemainingSeconds % 60).padStart(2, '0')}`;
+
+  useEffect(() => {
+    if (!order || !splitLinks.length || splitAllPaid) return undefined;
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const status = await api.getSplitStatus(order.id, tableSession);
+        const rows = status.splits || status.data || [];
+        if (!cancelled) {
+          setSplitLinks(rows);
+          setSplitExpiresAt(rows[0]?.expires_at || splitExpiresAt);
+        }
+      } catch {
+        // Split status must never interrupt the success screen.
+      }
+    };
+    const interval = window.setInterval(poll, 10000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [order, splitAllPaid, splitExpiresAt, splitLinks.length, tableSession]);
+
+  useEffect(() => {
+    if (!splitLinks.length) return undefined;
+    const timer = window.setInterval(() => setSplitNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [splitLinks.length]);
+
   const changeQty = async (item, delta, owner = addedBy) => {
     if (useGroupCart) {
       if (!tableSession) return;
@@ -278,6 +341,100 @@ export default function TableMenu() {
       setLoading(false);
     }
   };
+
+  const callWaiter = async (reason) => {
+    if (!tableSession || waiterBusy || Date.now() < waiterCooldownUntil) return;
+    setWaiterBusy(true);
+    setError('');
+    try {
+      await api.callWaiter({ tableSession, reason });
+      setWaiterOpen(false);
+      setWaiterMessage("Waiter called - we'll be right with you");
+      setWaiterCooldownUntil(Date.now() + 120000);
+      window.setTimeout(() => setWaiterMessage(''), 3000);
+      window.setTimeout(() => setWaiterCooldownUntil(0), 120000);
+    } catch (err) {
+      setError(err.message || 'Could not call waiter. Please ask nearby staff.');
+    } finally {
+      setWaiterBusy(false);
+    }
+  };
+
+  const updateSplitPersonCount = (count) => {
+    const safeCount = Math.min(10, Math.max(2, Number(count) || 2));
+    setSplitPeople((current) => Array.from({ length: safeCount }, (_, index) => current[index] || { name: `Guest ${index + 1}` }));
+  };
+
+  const updateSplitPersonName = (index, name) => {
+    setSplitPeople((current) => current.map((person, i) => (i === index ? { ...person, name } : person)));
+  };
+
+  const generateSplitLinks = async () => {
+    if (!order || !tableSession || splitBusy) return;
+    setSplitBusy(true);
+    setError('');
+    try {
+      const splits = splitMode === 'equal'
+        ? splitPeopleWithNames.map((person) => ({ name: person.name, phone: person.phone || '' }))
+        : splitPeopleWithNames.map((person) => ({
+            name: person.name,
+            phone: person.phone || '',
+            item_ids: splitItems
+              .filter((item) => splitAssignments[item.item_id || item.id] === person.name)
+              .map((item) => item.item_id || item.id),
+          }));
+      const result = await api.createSplit(order.id, tableSession, splitMode, splits);
+      const rows = result.splits || result.data?.splits || [];
+      setSplitLinks(rows);
+      setSplitExpiresAt(rows[0]?.expires_at || '');
+    } catch (err) {
+      setError(err.message || 'Split links could not be created.');
+    } finally {
+      setSplitBusy(false);
+    }
+  };
+
+  const copySplitLink = async (url) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setWaiterMessage('Payment link copied');
+      window.setTimeout(() => setWaiterMessage(''), 2000);
+    } catch {
+      setError('Copy failed. Open the link and copy it from the address bar.');
+    }
+  };
+
+  const waiterControl = tableSession && !awaitingConfirmation ? (
+    <div className="fixed bottom-24 right-4 z-30 flex w-[min(18rem,calc(100vw-2rem))] flex-col items-end gap-2">
+      {waiterMessage && (
+        <div className="rounded-2xl bg-green-600 px-4 py-3 text-sm font-bold text-white shadow-xl">
+          {waiterMessage}
+        </div>
+      )}
+      {waiterOpen && (
+        <div className="w-full rounded-2xl bg-white p-2 shadow-2xl ring-1 ring-orange-100">
+          {WAITER_REASONS.map((reason) => (
+            <button
+              key={reason.value}
+              onClick={() => callWaiter(reason.value)}
+              disabled={waiterBusy || Date.now() < waiterCooldownUntil}
+              className="block min-h-11 w-full rounded-xl px-3 text-left text-sm font-bold text-amber-950 hover:bg-amber-50 disabled:opacity-50"
+            >
+              {reason.label}
+            </button>
+          ))}
+        </div>
+      )}
+      <button
+        onClick={() => setWaiterOpen((value) => !value)}
+        disabled={waiterBusy || Date.now() < waiterCooldownUntil}
+        className="inline-flex min-h-12 items-center gap-2 rounded-full bg-amber-950 px-4 text-xs font-black uppercase tracking-widest text-white shadow-xl disabled:opacity-60"
+      >
+        {waiterBusy ? <Loader2 className="animate-spin" size={17} /> : <BellRing size={17} />}
+        Call waiter
+      </button>
+    </div>
+  ) : null;
 
   if (loading) {
     return (
@@ -367,6 +524,158 @@ export default function TableMenu() {
                 <ArrowRight size={18} />
               </a>
             )}
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setSplitOpen((value) => !value)}
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-amber-100 px-4 text-[10px] font-black uppercase tracking-widest text-amber-950"
+              >
+                Split bill
+              </button>
+              <button
+                onClick={() => {
+                  setOrder(null);
+                  setSplitOpen(false);
+                  setSplitLinks([]);
+                }}
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-orange-50 px-4 text-[10px] font-black uppercase tracking-widest text-orange-800"
+              >
+                Add more items
+              </button>
+            </div>
+            {splitOpen && (
+              <div className="mt-5 rounded-3xl border border-orange-100 bg-amber-50 p-4 text-left">
+                {!splitLinks.length ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        ['equal', 'Split equally'],
+                        ['by_item', 'Split by item'],
+                      ].map(([value, label]) => (
+                        <button
+                          key={value}
+                          onClick={() => setSplitMode(value)}
+                          className={`min-h-11 rounded-2xl text-xs font-black uppercase tracking-widest ${splitMode === value ? 'bg-orange-700 text-white' : 'bg-white text-amber-950'}`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {splitMode === 'equal' ? (
+                      <div className="space-y-3">
+                        <label className="block">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-amber-950/45">People</span>
+                          <input
+                            type="number"
+                            min="2"
+                            max="10"
+                            value={splitPeople.length}
+                            onChange={(event) => updateSplitPersonCount(event.target.value)}
+                            className="mt-2 min-h-11 w-full rounded-2xl border border-orange-100 bg-white px-4 font-black outline-none"
+                          />
+                        </label>
+                        {splitPeople.map((person, index) => (
+                          <input
+                            key={index}
+                            value={person.name}
+                            onChange={(event) => updateSplitPersonName(index, event.target.value)}
+                            placeholder={`Guest ${index + 1}`}
+                            className="min-h-11 w-full rounded-2xl border border-orange-100 bg-white px-4 text-sm font-bold outline-none"
+                          />
+                        ))}
+                        <p className="rounded-2xl bg-white px-4 py-3 text-sm font-black text-orange-800">
+                          Each person pays {formatMoney(splitEqualAmount)}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {splitPeople.map((person, index) => (
+                          <input
+                            key={index}
+                            value={person.name}
+                            onChange={(event) => updateSplitPersonName(index, event.target.value)}
+                            placeholder={`Guest ${index + 1}`}
+                            className="min-h-11 w-full rounded-2xl border border-orange-100 bg-white px-4 text-sm font-bold outline-none"
+                          />
+                        ))}
+                        {splitItems.map((item) => {
+                          const itemId = item.item_id || item.id;
+                          return (
+                            <div key={itemId} className="rounded-2xl bg-white p-3">
+                              <p className="text-sm font-black text-amber-950">{item.qty || item.quantity || 1}x {item.name}</p>
+                              <select
+                                value={splitAssignments[itemId] || ''}
+                                onChange={(event) => setSplitAssignments((current) => ({ ...current, [itemId]: event.target.value }))}
+                                className="mt-2 min-h-10 w-full rounded-xl border border-orange-100 px-3 text-sm font-bold outline-none"
+                              >
+                                <option value="">Assign to...</option>
+                                {splitPeopleWithNames.map((person) => (
+                                  <option key={person.name} value={person.name}>{person.name}</option>
+                                ))}
+                              </select>
+                            </div>
+                          );
+                        })}
+                        <div className="grid gap-2">
+                          {splitPeopleWithNames.map((person, index) => (
+                            <div key={person.name} className="flex justify-between rounded-xl bg-white px-3 py-2 text-sm font-bold">
+                              <span>{person.name}</span>
+                              <span>{formatMoney(splitSubtotals[index])}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <button
+                      onClick={generateSplitLinks}
+                      disabled={splitBusy || (splitMode === 'by_item' && !allSplitItemsAssigned)}
+                      className="flex min-h-12 w-full items-center justify-center rounded-full bg-orange-700 px-5 text-xs font-black uppercase tracking-widest text-white disabled:opacity-50"
+                    >
+                      {splitBusy ? <Loader2 className="animate-spin" size={18} /> : 'Generate payment links'}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="rounded-2xl bg-white px-4 py-3 text-center text-sm font-black text-amber-950">
+                      {splitAllPaid ? 'All paid - enjoy your meal!' : `Links expire in ${splitCountdown}`}
+                    </div>
+                    {splitLinks.map((link) => (
+                      <div key={link.id || link.short_url} className="rounded-2xl bg-white p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="font-black text-amber-950">{link.name}</p>
+                            <p className="font-serif italic text-2xl text-orange-700">{formatMoney(link.amount)}</p>
+                            <span className={`mt-2 inline-flex rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest ${link.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-800'}`}>
+                              {link.status || 'pending'}
+                            </span>
+                          </div>
+                          <img
+                            src={`https://api.qrserver.com/v1/create-qr-code/?size=96x96&data=${encodeURIComponent(link.short_url)}`}
+                            alt={`${link.name} payment QR`}
+                            className="h-24 w-24 rounded-xl bg-white p-1"
+                          />
+                        </div>
+                        <button
+                          onClick={() => copySplitLink(link.short_url)}
+                          className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-amber-100 text-[10px] font-black uppercase tracking-widest text-amber-950"
+                        >
+                          <Copy size={14} />
+                          Copy link
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      onClick={() => setSplitOpen(false)}
+                      className="min-h-11 w-full rounded-full bg-amber-950 text-xs font-black uppercase tracking-widest text-white"
+                    >
+                      Done
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+            {waiterControl}
           </div>
         </main>
       </>
@@ -556,6 +865,7 @@ export default function TableMenu() {
           </section>
         </div>
       )}
+      {waiterControl}
       </main>
     </>
   );
