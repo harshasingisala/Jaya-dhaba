@@ -51,16 +51,28 @@ def _table_dict(row) -> dict:
     payload["id"] = str(payload["id"])
     payload["active"] = bool(payload.get("active"))
     payload["table_number"] = _table_number_from_label(payload.get("label")) or payload.get("label")
+    payload["qr_url"] = _table_url(payload)
     payload["active_order"] = None
     if payload.get("active_order_id"):
         payload["active_order"] = {
             "id": str(payload["active_order_id"]),
+            "order_number": payload.get("active_order_number"),
             "status": payload.get("active_order_status"),
             "total": int(payload.get("active_order_total") or 0),
+            "guest_name": payload.get("active_order_guest_name") or "Guest",
+            "item_count": int(payload.get("active_order_item_count") or 0),
             "created_at": payload.get("active_order_created_at"),
         }
     payload["is_free"] = payload["active_order"] is None
-    for key in ("active_order_id", "active_order_status", "active_order_total", "active_order_created_at"):
+    for key in (
+        "active_order_id",
+        "active_order_number",
+        "active_order_status",
+        "active_order_total",
+        "active_order_guest_name",
+        "active_order_item_count",
+        "active_order_created_at",
+    ):
         payload.pop(key, None)
     return payload
 
@@ -88,6 +100,15 @@ def _table_select_sql(where_clause: str = "") -> str:
                 LIMIT 1
             ) AS active_order_status,
             (
+                SELECT o.order_number
+                FROM orders o
+                WHERE o.table_id = t.id
+                  AND COALESCE(o.is_archived, false) = false
+                  AND o.status NOT IN ('served', 'cancelled')
+                ORDER BY o.created_at DESC
+                LIMIT 1
+            ) AS active_order_number,
+            (
                 SELECT o.total
                 FROM orders o
                 WHERE o.table_id = t.id
@@ -96,6 +117,32 @@ def _table_select_sql(where_clause: str = "") -> str:
                 ORDER BY o.created_at DESC
                 LIMIT 1
             ) AS active_order_total,
+            (
+                SELECT o.guest_name
+                FROM orders o
+                WHERE o.table_id = t.id
+                  AND COALESCE(o.is_archived, false) = false
+                  AND o.status NOT IN ('served', 'cancelled')
+                ORDER BY o.created_at DESC
+                LIMIT 1
+            ) AS active_order_guest_name,
+            (
+                SELECT COALESCE(SUM(oi.qty), 0)
+                FROM orders o
+                JOIN order_items oi ON oi.order_id = o.id
+                WHERE o.table_id = t.id
+                  AND COALESCE(o.is_archived, false) = false
+                  AND o.status NOT IN ('served', 'cancelled')
+                  AND o.id = (
+                    SELECT latest.id
+                    FROM orders latest
+                    WHERE latest.table_id = t.id
+                      AND COALESCE(latest.is_archived, false) = false
+                      AND latest.status NOT IN ('served', 'cancelled')
+                    ORDER BY latest.created_at DESC
+                    LIMIT 1
+                  )
+            ) AS active_order_item_count,
             (
                 SELECT o.created_at
                 FROM orders o

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { AlertCircle, CheckCircle2, Loader2, Minus, Plus, ShoppingCart, X } from 'lucide-react';
+import { AlertCircle, ArrowRight, CheckCircle2, Clock3, Loader2, Minus, Plus, ShoppingCart, X } from 'lucide-react';
 import api from '../api';
 import PageMeta from '../components/SEO/PageMeta';
 
@@ -16,7 +16,7 @@ function TableMenuMeta() {
 }
 
 function formatMoney(value) {
-  return `₹${Number(value || 0).toLocaleString('en-IN')}`;
+  return `Rs ${Number(value || 0).toLocaleString('en-IN')}`;
 }
 
 function isVeg(item) {
@@ -123,6 +123,9 @@ export default function TableMenu() {
   const total = subtotal + tax;
   const itemCount = cartLines.reduce((sum, line) => sum + line.qty, 0);
   const tableLabel = menu.table?.label || (tableParam ? `Table ${tableParam}` : 'Table');
+  const trackingUrl = order?.public_token
+    ? `/track?id=${encodeURIComponent(order.id)}&token=${encodeURIComponent(order.public_token)}`
+    : '';
 
   const changeQty = (item, delta) => {
     setCart((prev) => {
@@ -204,13 +207,32 @@ export default function TableMenu() {
       <>
         <TableMenuMeta />
         <main className="min-h-screen bg-amber-50 flex items-center justify-center px-6 text-amber-950">
-          <div className="max-w-sm rounded-[2rem] bg-white p-8 text-center shadow-xl border border-green-100">
+          <div className="w-full max-w-sm rounded-[2rem] bg-white p-8 text-center shadow-xl border border-green-100">
             <CheckCircle2 className="mx-auto text-green-600" size={52} />
-            <h1 className="mt-5 font-serif italic text-4xl">Order Placed! 🎉</h1>
-            <p className="mt-3 text-base leading-7 text-amber-950/70">{tableLabel} - your order is being prepared</p>
+            <h1 className="mt-5 font-serif italic text-4xl">Order placed</h1>
+            <p className="mt-3 text-base leading-7 text-amber-950/70">{tableLabel} - your order is now on the kitchen screen.</p>
             <p className="mt-5 rounded-full bg-amber-100 px-4 py-3 text-xs font-black uppercase tracking-widest text-amber-900">
               Order #{order.order_number || String(order.id).slice(0, 8)}
             </p>
+            <div className="mt-5 grid gap-3 text-left">
+              <div className="rounded-2xl bg-green-50 px-4 py-3">
+                <p className="text-xs font-black uppercase tracking-widest text-green-700">Kitchen</p>
+                <p className="mt-1 text-sm font-semibold text-green-950/70">Staff can see your table and order instantly.</p>
+              </div>
+              <div className="rounded-2xl bg-orange-50 px-4 py-3">
+                <p className="text-xs font-black uppercase tracking-widest text-orange-700">Table</p>
+                <p className="mt-1 text-sm font-semibold text-orange-950/70">This table stays busy until the order is served or cleared.</p>
+              </div>
+            </div>
+            {trackingUrl && (
+              <a
+                href={trackingUrl}
+                className="mt-6 inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-full bg-orange-700 px-5 text-sm font-black uppercase tracking-widest text-white shadow-lg"
+              >
+                Track live order
+                <ArrowRight size={18} />
+              </a>
+            )}
           </div>
         </main>
       </>
@@ -225,11 +247,25 @@ export default function TableMenu() {
         <div className="mx-auto max-w-5xl">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h1 className="font-serif italic text-4xl leading-tight">Jaya Dhaba 🍛</h1>
+              <h1 className="font-serif italic text-4xl leading-tight">Jaya Dhaba</h1>
               <p className="mt-1 text-sm font-semibold text-white/85">Fresh from the kitchen, ordered from your table.</p>
             </div>
             <div className="shrink-0 rounded-full bg-white px-4 py-2 text-sm font-black uppercase tracking-widest text-orange-700 shadow">
               {tableLabel}
+            </div>
+          </div>
+          <div className="mt-4 grid gap-2 text-xs font-bold text-white/90 sm:grid-cols-3">
+            <div className="flex items-center gap-2 rounded-2xl bg-white/15 px-3 py-2">
+              <CheckCircle2 size={15} />
+              Table QR verified
+            </div>
+            <div className="flex items-center gap-2 rounded-2xl bg-white/15 px-3 py-2">
+              <ShoppingCart size={15} />
+              Sent to kitchen
+            </div>
+            <div className="flex items-center gap-2 rounded-2xl bg-white/15 px-3 py-2">
+              <Clock3 size={15} />
+              Live tracking after order
             </div>
           </div>
           <div className="mt-5 flex gap-2 overflow-x-auto pb-1">

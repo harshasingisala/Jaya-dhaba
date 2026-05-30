@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, Download, Loader2, Printer, QrCode, RefreshCw, ToggleLeft, ToggleRight, Trash2 } from 'lucide-react';
+import { CheckCircle2, Copy, Download, ExternalLink, Loader2, Printer, QrCode, RefreshCw, ToggleLeft, ToggleRight, Trash2, Utensils } from 'lucide-react';
 import api from '../../../api';
 import { useToast } from '../../../components/Toast';
 
@@ -21,9 +21,30 @@ function tableNumber(table) {
 }
 
 function tableQrUrl(table) {
+  if (table.qr_url) return table.qr_url;
   const number = typeof table.table_number === 'number' ? table.table_number : String(table.label || '').match(/\d+/)?.[0];
   if (number) return `https://jayadhaba.online/menu?table=${number}`;
   return `https://jayadhaba.online/menu?table_token=${encodeURIComponent(table.qr_token || '')}`;
+}
+
+function formatMoney(value) {
+  return `₹${Number(value || 0).toLocaleString('en-IN')}`;
+}
+
+function formatTime(value) {
+  if (!value) return 'Just now';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Just now';
+  return date.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' });
+}
+
+function orderNumber(order) {
+  return order?.order_number || String(order?.id || '').slice(0, 8);
+}
+
+function orderStatus(order) {
+  const raw = String(order?.status || 'pending').replace(/_/g, ' ');
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
 }
 
 export default function QRTableManager() {
@@ -38,6 +59,17 @@ export default function QRTableManager() {
   const sortedTables = useMemo(() => {
     return [...tables].sort((a, b) => tableNumber(a) - tableNumber(b));
   }, [tables]);
+
+  const impact = useMemo(() => {
+    const activeTables = sortedTables.filter((table) => table.active_order);
+    const activeRevenue = activeTables.reduce((sum, table) => sum + Number(table.active_order?.total || 0), 0);
+    return {
+      totalTables: sortedTables.length,
+      activeTables: activeTables.length,
+      freeTables: sortedTables.filter((table) => table.active && !table.active_order).length,
+      activeRevenue,
+    };
+  }, [sortedTables]);
 
   const loadTables = useCallback(async () => {
     setLoading(true);
@@ -144,6 +176,16 @@ export default function QRTableManager() {
     }
   };
 
+  const copyQrLink = async (table) => {
+    const link = tableQrUrl(table);
+    try {
+      await navigator.clipboard.writeText(link);
+      toast(`${table.label} QR link copied`, 'success');
+    } catch {
+      toast('Copy failed. Open the QR link and copy it from the address bar.', 'warning');
+    }
+  };
+
   const printOne = (table) => {
     const url = qrUrls[table.id];
     if (!url) {
@@ -221,6 +263,25 @@ export default function QRTableManager() {
         </div>
       </div>
 
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-heritage-espresso/5">
+          <p className="text-[10px] font-black uppercase tracking-widest text-heritage-espresso/35">QR Tables</p>
+          <p className="mt-2 text-3xl font-black text-heritage-espresso">{impact.totalTables}</p>
+        </div>
+        <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-heritage-espresso/5">
+          <p className="text-[10px] font-black uppercase tracking-widest text-heritage-espresso/35">Live Orders</p>
+          <p className="mt-2 text-3xl font-black text-red-700">{impact.activeTables}</p>
+        </div>
+        <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-heritage-espresso/5">
+          <p className="text-[10px] font-black uppercase tracking-widest text-heritage-espresso/35">Open Tables</p>
+          <p className="mt-2 text-3xl font-black text-green-700">{impact.freeTables}</p>
+        </div>
+        <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-heritage-espresso/5">
+          <p className="text-[10px] font-black uppercase tracking-widest text-heritage-espresso/35">Active Table Value</p>
+          <p className="mt-2 text-3xl font-black text-heritage-gold">{formatMoney(impact.activeRevenue)}</p>
+        </div>
+      </div>
+
       {loading ? (
         <div className="rounded-3xl bg-white py-24 text-center text-heritage-espresso/40 shadow-sm">
           <Loader2 className="mx-auto animate-spin" size={34} />
@@ -236,6 +297,7 @@ export default function QRTableManager() {
           {sortedTables.map((table) => {
             const isBusy = busyId === table.id;
             const hasOrder = Boolean(table.active_order);
+            const qrLink = tableQrUrl(table);
             return (
               <article key={table.id} className="rounded-3xl border border-heritage-espresso/5 bg-white p-5 shadow-sm">
                 <div className="flex items-start justify-between gap-4">
@@ -250,6 +312,41 @@ export default function QRTableManager() {
                   </div>
                 </div>
 
+                {hasOrder && (
+                  <div className="mt-5 rounded-2xl border border-red-100 bg-red-50 p-4 text-red-950">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-red-700/65">Current QR Order</p>
+                        <p className="mt-1 text-lg font-black">#{orderNumber(table.active_order)}</p>
+                      </div>
+                      <span className="rounded-full bg-white px-3 py-1 text-[10px] font-black uppercase tracking-widest text-red-700">
+                        {orderStatus(table.active_order)}
+                      </span>
+                    </div>
+                    <div className="mt-4 grid grid-cols-3 gap-2 text-xs font-bold text-red-950/70">
+                      <div>
+                        <p className="text-[10px] uppercase tracking-widest text-red-700/45">Guest</p>
+                        <p className="mt-1 truncate">{table.active_order.guest_name || 'Guest'}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase tracking-widest text-red-700/45">Items</p>
+                        <p className="mt-1">{table.active_order.item_count || 0}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase tracking-widest text-red-700/45">Since</p>
+                        <p className="mt-1">{formatTime(table.active_order.created_at)}</p>
+                      </div>
+                    </div>
+                    <div className="mt-4 flex items-center justify-between rounded-xl bg-white px-3 py-2">
+                      <span className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-red-700">
+                        <Utensils size={14} />
+                        Table total
+                      </span>
+                      <span className="font-serif italic text-2xl text-red-800">{formatMoney(table.active_order.total)}</span>
+                    </div>
+                  </div>
+                )}
+
                 <div className="mt-5 grid place-items-center rounded-3xl bg-heritage-stone/40 p-5">
                   {qrUrls[table.id] ? (
                     <img src={qrUrls[table.id]} alt={`${table.label} QR code`} className="h-48 w-48 rounded-xl bg-white object-contain p-2 shadow-sm" />
@@ -259,11 +356,27 @@ export default function QRTableManager() {
                     </div>
                   )}
                   <p className="mt-4 text-center text-xs font-bold text-heritage-espresso/50">
-                    {tableQrUrl(table)}
+                    {qrLink}
                   </p>
                 </div>
 
                 <div className="mt-5 grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => copyQrLink(table)}
+                    className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-heritage-stone text-[10px] font-black uppercase tracking-widest text-heritage-espresso"
+                  >
+                    <Copy size={15} />
+                    Copy Link
+                  </button>
+                  <a
+                    href={qrLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-heritage-stone text-[10px] font-black uppercase tracking-widest text-heritage-espresso"
+                  >
+                    <ExternalLink size={15} />
+                    Open Link
+                  </a>
                   <button
                     onClick={() => downloadOne(table)}
                     disabled={isBusy}
