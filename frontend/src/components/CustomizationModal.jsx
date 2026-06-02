@@ -9,11 +9,12 @@ export default function CustomizationModal({ item, isOpen, onClose, onAdd }) {
   const portionOptions = getPortionOptions(item);
   const selectedPortion = portionOptions.find((portion) => portion.id === selectedPortionId) || getDefaultPortion(item);
   const unitPrice = Number(selectedPortion?.price ?? item.price ?? 0);
+  const hasRateChoice = portionOptions.length > 1;
 
   useEffect(() => {
     if (!isOpen) return;
     setQty(1);
-    setSelectedPortionId(getDefaultPortion(item)?.id || '');
+    setSelectedPortionId(item._initialPortionId || getDefaultPortion(item)?.id || '');
   }, [isOpen, item]);
 
   useEffect(() => {
@@ -60,7 +61,9 @@ export default function CustomizationModal({ item, isOpen, onClose, onAdd }) {
                 <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-heritage-stone text-heritage-espresso shadow-sm">
                   <ChefHat size={20} />
                 </div>
-                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-heritage-espresso/30">Menu Rate</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-heritage-espresso/30">
+                  {hasRateChoice ? 'Menu Rate' : 'Quantity'}
+                </span>
               </div>
               <h2 className="text-4xl font-serif italic text-heritage-espresso">{item.name}</h2>
             </div>
@@ -70,7 +73,7 @@ export default function CustomizationModal({ item, isOpen, onClose, onAdd }) {
           </div>
 
           <div className="flex-1 space-y-10 overflow-y-auto p-8">
-            {portionOptions.length > 1 && (
+            {hasRateChoice && (
               <section className="space-y-5">
                 <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-heritage-espresso/40">Choose Rate</h3>
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -81,7 +84,7 @@ export default function CustomizationModal({ item, isOpen, onClose, onAdd }) {
                       className={`rounded-[1.75rem] border p-5 text-left transition-all ${selectedPortion?.id === portion.id ? 'border-heritage-espresso bg-heritage-espresso text-white shadow-xl' : 'border-heritage-espresso/5 bg-white hover:border-heritage-gold/40'}`}
                     >
                       <p className="text-[10px] font-black uppercase tracking-widest">{portion.label}</p>
-                      <p className={`mt-2 text-lg font-serif italic ${selectedPortion?.id === portion.id ? 'text-heritage-gold' : 'text-heritage-espresso'}`}>₹{portion.price}</p>
+                      <p className={`mt-2 text-lg font-serif italic ${selectedPortion?.id === portion.id ? 'text-heritage-gold' : 'text-heritage-espresso'}`}>Rs {portion.price}</p>
                     </button>
                   ))}
                 </div>
@@ -113,11 +116,13 @@ export default function CustomizationModal({ item, isOpen, onClose, onAdd }) {
             </section>
           </div>
 
-          <div className="flex items-center justify-between border-t border-heritage-espresso/5 p-8">
-            <div>
-              <p className="text-[9px] font-black uppercase tracking-[0.4em] text-heritage-espresso/20">Total</p>
-              <p className="text-3xl font-serif italic text-heritage-gold">₹{unitPrice * (parseInt(qty, 10) || 0)}</p>
-            </div>
+          <div className={`flex items-center border-t border-heritage-espresso/5 p-8 ${hasRateChoice ? 'justify-between' : 'justify-end'}`}>
+            {hasRateChoice && (
+              <div>
+                <p className="text-[9px] font-black uppercase tracking-[0.4em] text-heritage-espresso/20">Total</p>
+                <p className="text-3xl font-serif italic text-heritage-gold">Rs {unitPrice * (parseInt(qty, 10) || 0)}</p>
+              </div>
+            )}
             <button
               onClick={addItem}
               className="rounded-full bg-heritage-espresso px-10 py-5 text-[10px] font-black uppercase tracking-[0.35em] text-white shadow-xl transition-all hover:bg-heritage-gold"
