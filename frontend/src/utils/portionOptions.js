@@ -1,3 +1,5 @@
+import { PAPER_MENU_PORTIONS, normalizePaperMenuName } from "../data/paperMenuPortions";
+
 const PRICE_PORTIONS = [
   { key: "price_single", id: "single", label: "Single" },
   { key: "price_mini", id: "mini", label: "Mini" },
@@ -21,6 +23,16 @@ function toPrice(value) {
 }
 
 export function getPortionOptions(item = {}) {
+  const paperPrices = PAPER_MENU_PORTIONS[normalizePaperMenuName(item.name)];
+  if (paperPrices) {
+    return Object.entries(paperPrices).map(([id, price]) => ({
+      id,
+      label: id === "single" ? "Single" : id === "full" ? "Full" : id === "family" ? "Family" : id === "jumbo" ? "Jumbo" : id,
+      price,
+      priced: true,
+    }));
+  }
+
   const priced = PRICE_PORTIONS
     .map((portion) => {
       const price = toPrice(item[portion.key]);

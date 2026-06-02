@@ -1,6 +1,7 @@
 from sqlalchemy import select
 from models import MenuCategory, MenuItem, Order
 from db import get_db
+from services.portion_pricing import resolve_unit_price
 
 
 def calculate_order_totals(session, order_items_data):
@@ -36,7 +37,8 @@ def calculate_order_totals(session, order_items_data):
             continue
             
         qty = item_req["qty"]
-        line_subtotal = menu_item.price * qty
+        unit_price = resolve_unit_price(menu_item, item_req.get("special_note", ""))
+        line_subtotal = unit_price * qty
         
         # GST calculation
         cgst_amt = int(line_subtotal * (category.cgst_rate / 100))

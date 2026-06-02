@@ -4,6 +4,7 @@ import { supabase } from '../supabaseClient.js';
 import { pickFields } from '../utils/sanitize.js';
 import { fetchWithRetry } from '../utils/retry.js';
 import { clearAuthSession, getAccessToken, setAuthSession } from '../utils/authSession.js';
+import { PAPER_MENU_PORTIONS, normalizePaperMenuName } from '../data/paperMenuPortions.js';
 
 const BASE_URL = API_BASE_URL;
 const SESSION_KEY = 'user';
@@ -277,11 +278,15 @@ async function blobRequest(path, options = {}) {
 function normalizeMenuItem(item) {
   const price = item.price ?? item.price_full ?? item.price_half ?? 0;
   const isAvailable = item.is_available ?? item.available ?? true;
+  const paperPortions = PAPER_MENU_PORTIONS[normalizePaperMenuName(item.name)] || {};
 
   return {
     ...item,
     price,
-    price_full: item.price_full ?? price,
+    price_single: item.price_single ?? paperPortions.single,
+    price_full: item.price_full ?? paperPortions.full ?? price,
+    price_family: item.price_family ?? paperPortions.family,
+    price_jumbo: item.price_jumbo ?? paperPortions.jumbo,
     available: isAvailable,
     is_available: isAvailable,
     img: item.img || item.image_url || item.image || '/biryani.png',

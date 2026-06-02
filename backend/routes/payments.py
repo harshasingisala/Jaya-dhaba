@@ -27,6 +27,7 @@ from models import Order, OrderItem, MenuItem, User, Payment, SplitCharge
 from qr_sessions import get_table_session
 from routes.orders import allocate_order_number, serialize_order
 from services.billing import calculate_order_totals
+from services.portion_pricing import resolve_unit_price
 
 
 bp = Blueprint("payments", __name__, url_prefix="/api")
@@ -247,7 +248,7 @@ def _create_order_from_intent(session, intent: dict) -> Order:
             order_id=new_order.id,
             menu_item_id=menu_item.id,
             qty=item_req["qty"],
-            unit_price=menu_item.price,
+            unit_price=resolve_unit_price(menu_item, item_req.get("special_note", "")),
             special_note=item_req["special_note"],
         ))
 

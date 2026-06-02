@@ -25,6 +25,7 @@ from validators import validate_schema
 from schemas import OrderCreate, OrderStatusUpdate
 from services.billing import calculate_order_totals
 from services.inventory import deduct_stock_for_order
+from services.portion_pricing import resolve_unit_price
 from events import broker, order_topic_id
 from realtime import broadcast, notify_order_update
 from security_log import log_security_event
@@ -583,7 +584,7 @@ def create_order():
                 order_id=new_order.id,
                 menu_item_id=menu_item.id,
                 qty=item_req.qty,
-                unit_price=menu_item.price,
+                unit_price=resolve_unit_price(menu_item, item_req.special_note),
                 special_note=item_req.special_note
             )
             session.add(order_item)
@@ -992,7 +993,7 @@ def add_order_items(order_id: uuid.UUID):
                 order_id=order.id,
                 menu_item_id=menu_item.id,
                 qty=item_req["qty"],
-                unit_price=menu_item.price,
+                unit_price=resolve_unit_price(menu_item, item_req.get("special_note", "")),
                 special_note=item_req.get("special_note", ""),
                 is_addon=True,
                 addon_added_at=db.utc_now()
