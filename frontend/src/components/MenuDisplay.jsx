@@ -26,11 +26,13 @@ export default function MenuDisplay() {
         const data = await api.getMenu();
         if (isMounted) {
           setMenu(data || []);
-          if (!data || data.length === 0) setError("Using Heritage Backup Ledger.");
+          if (!data || data.length === 0) setError("Menu is currently unavailable.");
         }
       } catch (err) {
-        // Menu fetch failed; fallback will be used
-        if (isMounted) setError("Primary Ledger Offline. Emergency Menu Active.");
+        if (isMounted) {
+          setMenu([]);
+          setError("Menu is currently unavailable. Please try again shortly.");
+        }
       } finally {
         if (isMounted) setLoading(false);
       }

@@ -3,8 +3,6 @@ import { useApp } from "../context/AppContext";
 import useTilt from "../hooks/useTilt";
 import Reveal from "./Reveal";
 import CustomizationModal from "./CustomizationModal";
-import { useStore } from "../store/useStore";
-import MagneticButton from "./MagneticButton";
 import { motion } from "framer-motion";
 
 function MenuItem({ item, onAddClicked, disabled }) {
@@ -36,7 +34,6 @@ export function MenuSectionComponent() {
   const { menuItems, addToCart, ordersPaused, menuUnavailable } = useApp();
   const [activeTab, setActiveTab] = useState("All");
   const [customizingItem, setCustomizingItem] = useState(null);
-  const { menuExpanded, setMenuExpanded } = useStore();
   const containerRef = useRef(null);
 
   const handleMouseMove = (e) => {
@@ -50,8 +47,7 @@ export function MenuSectionComponent() {
 
   const filteredItems = menuItems.filter(i => activeTab === "All" || i.category === activeTab);
   const categories = ["All", ...Array.from(new Set(menuItems.map((item) => item.category).filter(Boolean)))];
-  const signatureItems = filteredItems.filter(i => i.isSignature || true).slice(0, 3); // Fallback if no isSignature
-  const itemsToShow = menuExpanded ? filteredItems : signatureItems;
+  const itemsToShow = filteredItems;
 
   return (
     <div 
@@ -105,7 +101,7 @@ export function MenuSectionComponent() {
             {categories.map(cat => (
               <button 
                 key={cat}
-                onClick={() => { setActiveTab(cat); setMenuExpanded(false); }}
+                onClick={() => setActiveTab(cat)}
                 className={`px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all whitespace-nowrap font-sans ${activeTab === cat ? "bg-heritage-espresso text-white border-heritage-espresso shadow-lg" : "border-heritage-espresso/10 text-heritage-espresso/40 hover:border-heritage-espresso/20"}`}
               >
                 {cat}
@@ -120,17 +116,6 @@ export function MenuSectionComponent() {
               <MenuItem key={item.id} item={item} onAddClicked={setCustomizingItem} disabled={ordersPaused} />
             ))}
           </div>
-
-          {!menuUnavailable && !menuExpanded && filteredItems.length > 3 && (
-            <div className="flex justify-center mt-8">
-               <MagneticButton 
-                 className="px-10 py-4 border border-heritage-espresso/20 text-heritage-espresso rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-heritage-espresso hover:text-white transition-colors"
-                 onClick={() => setMenuExpanded(true)}
-               >
-                 Unveil Full Ledger
-               </MagneticButton>
-            </div>
-          )}
         </div>
       </div>
     </div>

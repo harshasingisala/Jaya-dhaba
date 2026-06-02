@@ -1,10 +1,11 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { useLocation, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { languageMap } from "../data/menu";
 import { trackEvent } from "../api/client";
 import api from "../api/client";
 
 const AppContext = createContext(null);
+const TABLE_CONTEXT_KEY = "jd_table_context";
 
 const load = (key, fallback) => {
   try {
@@ -20,8 +21,19 @@ const load = (key, fallback) => {
   }
 };
 
+const loadSession = (key, fallback) => {
+  try {
+    const raw = sessionStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch {
+    sessionStorage.removeItem(key);
+    return fallback;
+  }
+};
+
 export function AppProvider({ children }) {
   const location = useLocation();
+  const navigate = useNavigate();
   const [params] = useSearchParams();
   const [restaurantId] = useState(params.get("restaurant") || "jaya-dhaba");
 
@@ -40,6 +52,7 @@ export function AppProvider({ children }) {
   const [menuError, setMenuError] = useState(null);
   const [menuUnavailable, setMenuUnavailable] = useState(false);
   const [ordersPaused, setOrdersPaused] = useState(false);
+  const [tableOrderContext, setTableOrderContext] = useState(() => loadSession(TABLE_CONTEXT_KEY, null));
 
   useEffect(() => localStorage.setItem("jd_cart", JSON.stringify(cart)), [cart]);
   useEffect(() => localStorage.setItem("jd_favorites", JSON.stringify(favorites)), [favorites]);
@@ -51,6 +64,67 @@ export function AppProvider({ children }) {
   }, [theme]);
   useEffect(() => localStorage.setItem("jd_points", String(points)), [points]);
   useEffect(() => localStorage.setItem("jd_sync_queue", JSON.stringify(syncQueue)), [syncQueue]);
+  useEffect(() => {
+    if (tableOrderContext) sessionStorage.setItem(TABLE_CONTEXT_KEY, JSON.stringify(tableOrderContext));
+    else sessionStorage.removeItem(TABLE_CONTEXT_KEY);
+  }, [tableOrderContext]);
+
+  useEffect(() => {
+    if (location.pathname !== "/menu") return;
+    const query = new URLSearchParams(location.search);
+    const qrToken = query.get("t");
+    const tableSession = query.get("table_session");
+    const tableToken = query.get("table_token");
+    const tableNumber = query.get("table");
+    if (!qrToken && !tableSession && !tableToken && !tableNumber) return;
+
+    let cancelled = false;
+    async function captureTableContext() {
+      try {
+        if (qrToken) {
+          const verified = await api.verifyQrToken(qrToken);
+          if (cancelled) return;
+          setTableOrderContext({
+            table_session: verified.table_session || verified.session_id || "",
+            table: verified.table || null,
+            source: "qr",
+          });
+        } else if (tableSession) {
+          const data = await api.getTableSessionMenu(tableSession);
+          if (cancelled) return;
+          setTableOrderContext({
+            table_session: tableSession,
+            table: data.table || null,
+            source: "table_session",
+          });
+        } else if (tableToken) {
+          setTableOrderContext({
+            table_token: tableToken,
+            source: "table_token",
+          });
+        } else {
+          const table = await api.resolveTable(tableNumber);
+          if (cancelled) return;
+          setTableOrderContext({
+            table_id: table?.id,
+            table: table || null,
+            table_number: tableNumber,
+            source: "table_number",
+          });
+        }
+      } catch (error) {
+        console.error("Failed to capture QR table context:", error);
+        if (!cancelled) setTableOrderContext(null);
+      } finally {
+        if (!cancelled) navigate("/menu", { replace: true });
+      }
+    }
+
+    captureTableContext();
+    return () => {
+      cancelled = true;
+    };
+  }, [location.pathname, location.search, navigate]);
 
   // Fetch menu items from backend
   useEffect(() => {
@@ -219,6 +293,8 @@ export function AppProvider({ children }) {
     menuError,
     menuUnavailable,
     ordersPaused,
+    tableOrderContext,
+    clearTableOrderContext: () => setTableOrderContext(null),
     setSyncQueue
   };
 

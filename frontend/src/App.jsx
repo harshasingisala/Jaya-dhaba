@@ -4,7 +4,6 @@ import SmoothScroll from "./components/SmoothScroll";
 import Preloader from "./components/Preloader";
 import FloatingBookBar from "./components/FloatingBookBar";
 import Home from "./pages/Home";
-import TableMenu from "./pages/TableMenu";
 import Admin from "./pages/Admin";
 import AdminLogin from "./pages/Admin/Login";
 import Checkout from "./pages/Checkout";
@@ -34,8 +33,6 @@ const pageTransition = { duration: 0.3, ease: "easeOut" };
 function AnimatedRoutes() {
   const location = useLocation();
   const isAdmin = location.pathname.startsWith("/admin");
-  const menuParams = new URLSearchParams(location.search);
-  const isTableMenu = location.pathname === "/menu" && (menuParams.has("table") || menuParams.has("table_token") || menuParams.has("t") || menuParams.has("table_session"));
 
   return (
     <AnimatePresence mode="wait">
@@ -48,7 +45,7 @@ function AnimatedRoutes() {
         transition={pageTransition}
         className={isAdmin ? "" : "min-h-screen"}
       >
-        {!isAdmin && !isTableMenu && <Navbar />}
+        {!isAdmin && <Navbar />}
 
         <Routes location={location}>
           <Route path="/" element={<Home />} />
@@ -67,7 +64,7 @@ function AnimatedRoutes() {
           <Route path="*" element={<NotFound />} />
         </Routes>
 
-        {!isAdmin && !isTableMenu && (
+        {!isAdmin && (
           <>
             <ChatBot />
             <FavoritesDrawer />
@@ -83,10 +80,7 @@ function AnimatedRoutes() {
 }
 
 function MenuRoute() {
-  const location = useLocation();
-  const params = new URLSearchParams(location.search);
-  const hasTableContext = params.has("table") || params.has("table_token") || params.has("t") || params.has("table_session");
-  return hasTableContext ? <TableMenu /> : <Home />;
+  return <Home />;
 }
 
 /**

@@ -389,13 +389,7 @@ const api = {
   getMenu: async (tableParam = '') => {
     if (USE_DEV_CUSTOMER_FALLBACKS && !tableParam) return DEV_MENU_ITEMS.map(normalizeMenuItem);
     const query = tableParam ? `?table=${encodeURIComponent(tableParam)}` : '';
-    let data;
-    try {
-      data = await request(`/api/menu${query}`);
-    } catch (err) {
-      if (!tableParam) return DEV_MENU_ITEMS.map(normalizeMenuItem);
-      throw err;
-    }
+    const data = await request(`/api/menu${query}`);
     if (tableParam) {
       return {
         ...data,

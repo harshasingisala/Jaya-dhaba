@@ -106,6 +106,7 @@ def create_app(overrides: dict | None = None) -> Flask:
         DB_ENCRYPTION_KEY=os.getenv("DB_ENCRYPTION_KEY", ""),
         ENCRYPTION_KEY=os.getenv("ENCRYPTION_KEY", ""),
         CLOUDFLARE_TUNNEL_SECRET=os.getenv("CLOUDFLARE_TUNNEL_SECRET", ""),
+        REQUIRE_CLOUDFLARE_TUNNEL_SECRET=os.getenv("REQUIRE_CLOUDFLARE_TUNNEL_SECRET", "true").lower() == "true",
         OPENAI_API_KEY=os.getenv("OPENAI_API_KEY", ""),
         GOOGLE_API_KEY=os.getenv("GOOGLE_API_KEY", ""),
         CHATBOT_ENABLED=os.getenv("CHATBOT_ENABLED", "false").lower() == "true",
@@ -514,7 +515,7 @@ def _validate_runtime_config(app: Flask, cors_origins: list[str], is_production:
         errors.append("REDIS_URL is required in production")
     if not app.config.get("DB_ENCRYPTION_KEY") and not app.config.get("ENCRYPTION_KEY"):
         errors.append("DB_ENCRYPTION_KEY or ENCRYPTION_KEY is required in production")
-    if not app.config.get("CLOUDFLARE_TUNNEL_SECRET"):
+    if app.config.get("REQUIRE_CLOUDFLARE_TUNNEL_SECRET") and not app.config.get("CLOUDFLARE_TUNNEL_SECRET"):
         errors.append("CLOUDFLARE_TUNNEL_SECRET is required in production")
     if not database_url:
         errors.append("DATABASE_URL must point to Supabase Postgres in production")

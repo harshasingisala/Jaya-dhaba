@@ -29,13 +29,13 @@ const loadRazorpayCheckout = () => {
 };
 
 export default function Checkout() {
-  const { cart, getTotal, clearCart, isOffline } = useApp();
+  const { cart, getTotal, clearCart, isOffline, tableOrderContext } = useApp();
   const navigate = useNavigate();
   const [isProcessing, setIsProcessing] = useState(false);
   const [status, setStatus] = useState('idle');
   const [orderComplete, setOrderComplete] = useState(null);
   const [checkoutError, setCheckoutError] = useState(null);
-  const [paymentMode, setPaymentMode] = useState('Online');
+  const [paymentMode, setPaymentMode] = useState('Cash');
   const [details, setDetails] = useState({
     name: '',
     phone: '',
@@ -120,7 +120,11 @@ export default function Checkout() {
         items: cart,
         customer_name: details.name,
         guest_phone: details.phone,
-        table_number: details.type,
+        table_number: tableOrderContext?.table_number || details.type,
+        table_id: tableOrderContext?.table?.id || tableOrderContext?.table_id,
+        table_session: tableOrderContext?.table_session,
+        table_token: tableOrderContext?.table_token,
+        order_type: tableOrderContext ? 'dine_in' : undefined,
         payment_mode: paymentMode,
         total: Math.round((getTotal() - (appliedCoupon?.discount || 0)) * 1.05),
         notes: details.occasion !== 'None' ? details.occasion : '',
@@ -293,7 +297,7 @@ export default function Checkout() {
                   disabled={isProcessing || status === 'loading' || cart.length === 0}
                   className="w-full py-6 bg-heritage-terracotta text-white rounded-[2.5rem] font-black text-[10px] uppercase tracking-[0.5em] shadow-xl hover:bg-heritage-espresso transition-all active:scale-95 flex items-center justify-center gap-4 disabled:opacity-50"
                 >
-                  {isProcessing || status === 'loading' ? <Loader2 size={16} className="animate-spin" /> : 'Confirm Order & Pay →'}
+                  {isProcessing || status === 'loading' ? <Loader2 size={16} className="animate-spin" /> : paymentMode === 'Online' ? 'Confirm Order & Pay →' : 'Place Order →'}
                 </button>
               </form>
             </div>

@@ -123,6 +123,8 @@ export default function KitchenDisplay() {
           return;
         }
         if (eventName === 'waiter_call' || eventName === 'waiter_call_resolved') {
+          if (eventName === 'waiter_call') playWaiterChime();
+          window.dispatchEvent(new CustomEvent('rt:waiter', { detail: { action: eventName } }));
           fetchWaiterCalls();
           return;
         }
@@ -311,5 +313,24 @@ function playChime() {
     osc.stop(ctx.currentTime + 0.35);
   } catch (_) {
     // Ignore browsers that block audio before user interaction.
+  }
+}
+
+function playWaiterChime() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(1040, ctx.currentTime);
+    osc.frequency.setValueAtTime(1320, ctx.currentTime + 0.08);
+    gain.gain.setValueAtTime(0.16, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.3);
+  } catch (_) {
+    // Staff browsers can block audio before interaction.
   }
 }

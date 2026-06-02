@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../../../api/index';
 import { Save, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
-import { useApp } from '../../../context/AppContext';
 
 const DEFAULT_SETTINGS = {
   name: 'Jaya Dhaba',
@@ -16,23 +15,22 @@ const DEFAULT_SETTINGS = {
 };
 
 // ─── HOOK: paste into your SettingsManager component ─────────────────────────
-export function useSettings(restaurantId) {
+export function useSettings() {
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState(null); // { type: 'success'|'error', text: string }
 
   useEffect(() => {
-    if (!restaurantId) return;
     setLoading(true);
-    api.getSettings(restaurantId)
+    api.getSettings()
       .then((data) => setSettings((prev) => ({ ...prev, ...data })))
       .catch((err) => {
         console.error('Failed to load settings:', err);
         /* defaults already set */
       })
       .finally(() => setLoading(false));
-  }, [restaurantId]);
+  }, []);
 
   const handleSave = async (e) => {
     if (e?.preventDefault) e.preventDefault();
@@ -40,7 +38,7 @@ export function useSettings(restaurantId) {
     setMsg(null);
     try {
       const taxRate = Number(settings.taxRate ?? settings.tax_rate ?? DEFAULT_SETTINGS.taxRate);
-      await api.updateSettings(restaurantId, {
+      await api.updateSettings({
         name: String(settings.name || DEFAULT_SETTINGS.name).trim(),
         tagline: String(settings.tagline ?? DEFAULT_SETTINGS.tagline).trim(),
         hours: String(settings.hours || DEFAULT_SETTINGS.hours).trim(),
@@ -93,8 +91,7 @@ const FIELD_GROUPS = [
 ];
 
 export function SettingsPage() {
-  const { restaurantId } = useApp();
-  const { settings, setSettings, loading, saving, msg, handleSave } = useSettings(restaurantId);
+  const { settings, setSettings, loading, saving, msg, handleSave } = useSettings();
 
   if (loading) {
     return (

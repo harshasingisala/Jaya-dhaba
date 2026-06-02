@@ -1,16 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Archive, Bell, Download, Loader2, Plus, Menu, Volume2 } from 'lucide-react';
+import { Archive, Bell, BellRing, Download, Loader2, Plus, Menu, Volume2 } from 'lucide-react';
 import api from '../../api';
 import { RTStatus } from './RTStatus';
 import { useToast } from '../../context/ToastContext';
 
-export default function AdminHeader({ onMenuToggle, onTestSound }) {
+export default function AdminHeader({ onMenuToggle, onTestSound, onWaiterSound }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { showToast } = useToast();
   const [ordersPaused, setOrdersPaused] = useState(false);
   const [isClearingServed, setIsClearingServed] = useState(false);
+  const [waiterCount, setWaiterCount] = useState(0);
 
   useEffect(() => {
     api.getAdminOrderPauseStatus().then((data) => setOrdersPaused(!!data.paused)).catch(() => {});
@@ -20,6 +21,43 @@ export default function AdminHeader({ onMenuToggle, onTestSound }) {
     window.addEventListener('rt:settings', handler);
     return () => window.removeEventListener('rt:settings', handler);
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    let previousCount = 0;
+
+    const loadWaiterCalls = async ({ notify = false } = {}) => {
+      try {
+        const calls = await api.getWaiterCalls();
+        if (cancelled) return;
+        const nextCount = Array.isArray(calls) ? calls.length : 0;
+        if (notify && nextCount > previousCount) {
+          onWaiterSound?.();
+          showToast(`${nextCount - previousCount} waiter call${nextCount - previousCount === 1 ? '' : 's'} pending`, 'info');
+          if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('Waiter Call - Jaya Dhaba', {
+              body: `${nextCount} waiter call${nextCount === 1 ? '' : 's'} pending`,
+              icon: '/logo.png',
+            });
+          }
+        }
+        previousCount = nextCount;
+        setWaiterCount(nextCount);
+      } catch {
+        // Keep the header usable if the waiter endpoint is briefly unavailable.
+      }
+    };
+
+    loadWaiterCalls();
+    const realtimeHandler = () => loadWaiterCalls({ notify: true });
+    window.addEventListener('rt:waiter', realtimeHandler);
+    const timer = window.setInterval(() => loadWaiterCalls({ notify: true }), 15000);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('rt:waiter', realtimeHandler);
+      window.clearInterval(timer);
+    };
+  }, [onWaiterSound, showToast]);
 
   const getBreadcrumbs = () => {
     const path = location.pathname.split('/').filter((x) => x);
@@ -120,6 +158,18 @@ export default function AdminHeader({ onMenuToggle, onTestSound }) {
             className="p-2 md:p-3 text-heritage-espresso/40 hover:text-heritage-gold hover:bg-heritage-gold/5 rounded-2xl transition-all"
           >
             <Bell size={16} />
+          </button>
+          <button
+            onClick={() => navigate('/admin/tables')}
+            title="Waiter Calls"
+            className={`relative p-2 md:p-3 rounded-2xl transition-all ${waiterCount > 0 ? 'text-amber-700 bg-amber-100' : 'text-heritage-espresso/40 hover:text-heritage-gold hover:bg-heritage-gold/5'}`}
+          >
+            <BellRing size={16} />
+            {waiterCount > 0 && (
+              <span className="absolute -right-1 -top-1 grid min-h-5 min-w-5 place-items-center rounded-full bg-red-600 px-1 text-[9px] font-black text-white">
+                {waiterCount}
+              </span>
+            )}
           </button>
           <button
             onClick={handleClearServed}

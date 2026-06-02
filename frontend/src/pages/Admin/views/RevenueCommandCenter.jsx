@@ -174,7 +174,7 @@ export default function RevenueCommandCenter() {
         <div className="space-y-8">
 
           {/* DAILY BRIEFING */}
-          <AIBriefingCard restaurantId={restaurantId} restaurantName="Sunil's" />
+          <AIBriefingCard restaurantId={restaurantId} restaurantName="Jaya Dhaba" />
 
           {/* HEALTH MONITOR */}
           <div className="bg-white/40 backdrop-blur-xl rounded-[3.5rem] p-10 border border-heritage-espresso/5 space-y-8">

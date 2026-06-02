@@ -12,6 +12,7 @@ import time
 from flask import current_app, request
 
 from auth import redis_client
+from request_context import get_real_ip
 
 
 QR_TTL_SECONDS = 30 * 24 * 60 * 60
@@ -103,7 +104,7 @@ def create_table_session(
         "created_at": int(time.time()),
         "group_cart": [],
         "orders": [],
-        "ip": request.headers.get("CF-Connecting-IP") or request.remote_addr,
+        "ip": get_real_ip(),
     }
     client = redis_client()
     if client is not None:

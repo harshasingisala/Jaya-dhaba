@@ -20,7 +20,11 @@ def init_security_middleware(app: Flask):
             return None
 
         runtime_env = (os.getenv("APP_ENV") or os.getenv("FLASK_ENV") or "").lower()
-        if not current_app.config.get("TESTING") and runtime_env == "production":
+        if (
+            not current_app.config.get("TESTING")
+            and runtime_env == "production"
+            and current_app.config.get("REQUIRE_CLOUDFLARE_TUNNEL_SECRET")
+        ):
             expected = current_app.config.get("CLOUDFLARE_TUNNEL_SECRET")
             if not expected or not secrets.compare_digest(request.headers.get("X-Cloudflare-Secret", ""), expected):
                 return jsonify({"success": False, "message": "Forbidden"}), 403

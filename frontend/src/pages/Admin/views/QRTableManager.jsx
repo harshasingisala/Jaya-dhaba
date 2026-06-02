@@ -189,8 +189,12 @@ export default function QRTableManager() {
       onRefresh: (eventName) => {
         if (eventName === 'waiter_call') {
           playWaiterPing();
+          window.dispatchEvent(new CustomEvent('rt:waiter', { detail: { action: 'waiter_call' } }));
           setWaiterFlash(true);
           window.setTimeout(() => setWaiterFlash(false), 2000);
+        }
+        if (eventName === 'waiter_call_resolved') {
+          window.dispatchEvent(new CustomEvent('rt:waiter', { detail: { action: 'waiter_call_resolved' } }));
         }
         loadTables();
       },

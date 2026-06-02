@@ -112,6 +112,17 @@ def test_real_ip_ignores_x_forwarded_for_without_cloudflare(app):
         headers={"X-Forwarded-For": "203.0.113.10", "CF-Connecting-IP": "198.51.100.4"},
         environ_base={"REMOTE_ADDR": "10.0.0.7"},
     ):
+        assert get_real_ip() == "10.0.0.7"
+
+    app.config["CLOUDFLARE_TUNNEL_SECRET"] = "test-cloudflare-secret"
+    with app.test_request_context(
+        "/api/health",
+        headers={
+            "CF-Connecting-IP": "198.51.100.4",
+            "X-Cloudflare-Secret": "test-cloudflare-secret",
+        },
+        environ_base={"REMOTE_ADDR": "10.0.0.7"},
+    ):
         assert get_real_ip() == "198.51.100.4"
 
 

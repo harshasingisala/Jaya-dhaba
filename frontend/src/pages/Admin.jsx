@@ -47,6 +47,27 @@ export const playNewOrderSound = () => {
   }
 };
 
+export const playWaiterCallSound = () => {
+  try {
+    const ctx = getAdminAudioCtx();
+    if (ctx.state === 'suspended') ctx.resume();
+    const oscillator = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    oscillator.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    oscillator.type = 'triangle';
+    oscillator.frequency.setValueAtTime(1040, ctx.currentTime);
+    oscillator.frequency.setValueAtTime(1320, ctx.currentTime + 0.08);
+    oscillator.frequency.setValueAtTime(1040, ctx.currentTime + 0.16);
+    gainNode.gain.setValueAtTime(0.22, ctx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.32);
+    oscillator.start(ctx.currentTime);
+    oscillator.stop(ctx.currentTime + 0.32);
+  } catch (e) {
+    console.warn('Waiter sound failed:', e);
+  }
+};
+
 /**
  * JAYA DHABA ADMIN SUITE - v5.0
  * Features: Responsive Sidebar, Global Utility Header, and Saffron Theme
@@ -122,7 +143,7 @@ export default function Admin() {
       <div className="flex-1 flex min-h-dvh min-w-0 flex-col relative z-10 w-full">
         
         {/* Header with Mobile Toggle Trigger */}
-        <AdminHeader onMenuToggle={() => setMobileOpen(true)} onTestSound={playNewOrderSound} />
+        <AdminHeader onMenuToggle={() => setMobileOpen(true)} onTestSound={playNewOrderSound} onWaiterSound={playWaiterCallSound} />
         
         <main className="flex-1 w-full overflow-x-hidden p-4 md:p-10">
           <div className="max-w-[1600px] mx-auto w-full">
