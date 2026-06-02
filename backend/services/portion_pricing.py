@@ -108,11 +108,22 @@ def extract_portion(note: str) -> str | None:
     return value or None
 
 
+def extract_note_price(note: str) -> int | None:
+    match = re.search(r"portion:\s*[a-zA-Z ]+\s*\((\d+)\)", str(note or ""), flags=re.IGNORECASE)
+    if not match:
+        return None
+    price = int(match.group(1))
+    return price if price > 0 else None
+
+
 def portion_options_for_name(name: str) -> dict[str, int]:
     return PAPER_MENU_PORTIONS.get(normalize_name(name), {})
 
 
 def resolve_unit_price(menu_item, special_note: str = "") -> int:
+    note_price = extract_note_price(special_note)
+    if note_price:
+        return note_price
     options = portion_options_for_name(getattr(menu_item, "name", ""))
     portion = extract_portion(special_note)
     if portion and portion in options:

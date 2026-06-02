@@ -3,7 +3,7 @@ import { useApp } from "../context/AppContext";
 import useTilt from "../hooks/useTilt";
 import Reveal from "./Reveal";
 import CustomizationModal from "./CustomizationModal";
-import { getDefaultPortion, getPortionOptions } from "../utils/portionOptions";
+import { getDefaultPortion, getPortionOptions, isOnlyPortionPriceText } from "../utils/portionOptions";
 
 function MenuItem({ item, onAddClicked, disabled }) {
   const ref = useTilt();
@@ -11,6 +11,7 @@ function MenuItem({ item, onAddClicked, disabled }) {
   const [selectedPortionId, setSelectedPortionId] = useState(getDefaultPortion(item)?.id || "regular");
   const selectedPortion = portionOptions.find((portion) => portion.id === selectedPortionId) || getDefaultPortion(item);
   const displayPrice = Number(selectedPortion?.price ?? item.price ?? 0);
+  const description = item.desc || item.description || "";
 
   return (
     <Reveal>
@@ -22,7 +23,9 @@ function MenuItem({ item, onAddClicked, disabled }) {
           <img src={item.img} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt={item.name} loading="lazy" width="420" height="420" />
         </div>
         <h3 className="text-xl font-serif italic text-heritage-espresso mb-1">{item.name}</h3>
-        <p className="text-[11px] text-heritage-espresso/40 mb-5 font-sans font-medium line-clamp-2">{item.desc}</p>
+        {description && !isOnlyPortionPriceText(description) && (
+          <p className="text-[11px] text-heritage-espresso/40 mb-5 font-sans font-medium line-clamp-2">{description}</p>
+        )}
 
         {portionOptions.length > 1 && (
           <div className="mb-4 flex rounded-2xl border border-heritage-espresso/5 bg-heritage-stone/30 p-1">

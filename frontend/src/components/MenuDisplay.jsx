@@ -6,7 +6,7 @@ import api from '../api';
 import { apiUrl, USE_DEV_CUSTOMER_FALLBACKS } from '../api/config';
 import { createManagedEventSource } from '../api/realtime';
 import { MenuSchema } from './SEO/PageSchemas';
-import { applyPortionToItem, getDefaultPortion, getPortionOptions } from '../utils/portionOptions';
+import { applyPortionToItem, getDefaultPortion, getPortionOptions, isOnlyPortionPriceText } from '../utils/portionOptions';
 
 /**
  * PRODUCTION MENU ENGINE - v4.0
@@ -129,6 +129,7 @@ function MenuItemCard({ item, onAdd }) {
   const [added, setAdded] = useState(false);
   const selectedPortion = portionOptions.find((portion) => portion.id === selectedSize) || getDefaultPortion(item);
   const price = Number(selectedPortion?.price ?? item.price ?? 0);
+  const description = item.description || '';
 
   const handleAdd = (e) => {
     e.stopPropagation();
@@ -176,9 +177,11 @@ function MenuItemCard({ item, onAdd }) {
           <div className="text-xl font-serif italic text-heritage-espresso">₹{price}</div>
         </div>
 
-        <div className="space-y-4">
-          <p className="text-xs text-heritage-espresso/60 leading-relaxed font-medium">{item.description || "A heritage masterpiece crafted with secret spices."}</p>
-        </div>
+        {description && !isOnlyPortionPriceText(description) && (
+          <div className="space-y-4">
+            <p className="text-xs text-heritage-espresso/60 leading-relaxed font-medium">{description}</p>
+          </div>
+        )}
 
         {portionOptions.length > 1 && (
           <div className="flex p-1 bg-heritage-stone/30 rounded-2xl border border-heritage-espresso/5">
