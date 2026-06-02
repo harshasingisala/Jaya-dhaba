@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Archive, Check, ChefHat, ClipboardList, Loader2, MessageCircle, PauseCircle, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
+import { Archive, Ban, Check, ChefHat, ClipboardList, Loader2, MessageCircle, PauseCircle, Plus, RefreshCw, Search, ShieldCheck, Trash2 } from 'lucide-react';
 import api from '../../../api';
 import { getSocket } from '../../../lib/socket';
 import { usePollingFallback } from '../../../hooks/usePollingFallback';
@@ -21,6 +21,14 @@ const STATUS_LABELS = {
   served: 'served',
 };
 
+const ORDER_CONTROLS = [
+  { status: 'confirmed', label: 'Confirm', icon: ShieldCheck },
+  { status: 'preparing', label: 'Prep', icon: ChefHat },
+  { status: 'ready', label: 'Ready', icon: Check },
+  { status: 'served', label: 'Enjoying', icon: Check },
+  { status: 'cancelled', label: 'Cancel', icon: Ban, danger: true },
+];
+
 function apiStatus(order) {
   return STATUS_LABELS[order.status] || String(order.status || 'pending').toLowerCase();
 }
@@ -40,6 +48,13 @@ function formatItems(order) {
 
 function tableDisplay(order) {
   return order.table_label || order.table || order.table_number || (order.table_id ? `ID ${String(order.table_id).slice(0, 8)}` : 'Guest');
+}
+
+function orderControlDisabled(current, target) {
+  if (current === target) return true;
+  if (current === 'served') return !['cancelled'].includes(target);
+  if (current === 'cancelled') return true;
+  return false;
 }
 
 function buildWhatsAppReceipt(order) {
@@ -559,9 +574,11 @@ export default function OrdersManager() {
           {selectedIds.size > 0 && (
             <div className="bg-heritage-espresso text-white rounded-2xl p-4 flex flex-wrap items-center gap-3 shadow-xl">
               <span className="text-sm font-black">{selectedIds.size} selected</span>
+              <ActionButton disabled={bulkLoading} onClick={() => bulkSetStatus('confirmed')} icon={<ShieldCheck size={15} />} label="Confirm" />
               <ActionButton disabled={bulkLoading} onClick={() => bulkSetStatus('preparing')} icon={<ChefHat size={15} />} label="Start Prep" />
               <ActionButton disabled={bulkLoading} onClick={() => bulkSetStatus('ready')} icon={<Check size={15} />} label="Ready" />
               <ActionButton disabled={bulkLoading} onClick={() => bulkSetStatus('served')} icon={<Check size={15} />} label="Enjoying" />
+              <ActionButton disabled={bulkLoading} onClick={() => bulkSetStatus('cancelled')} icon={<Ban size={15} />} label="Cancel" />
               <ActionButton disabled={bulkLoading} onClick={() => bulkArchive()} icon={<Archive size={15} />} label="Archive Selected" />
               {clearConfirm ? (
                 <div className="flex items-center gap-2 text-xs font-bold">
@@ -600,7 +617,7 @@ export default function OrdersManager() {
               </div>
             ) : visibleOrders.map((order) => (
               <div key={order.id} className={`border-b border-heritage-espresso/5 ${rowClass(order)}`}>
-              <div className="grid grid-cols-[44px_1fr_auto] xl:grid-cols-[44px_100px_1.5fr_1fr_110px_150px_220px] gap-4 items-center px-5 py-5">
+              <div className="grid grid-cols-[44px_1fr_auto] xl:grid-cols-[44px_100px_1.5fr_1fr_110px_150px_140px] gap-4 items-center px-5 py-5">
                 <button onClick={() => toggleSelect(order.id)} className="w-6 h-6 rounded border border-heritage-espresso/20 flex items-center justify-center">
                   {selectedIds.has(order.id) ? 'x' : ''}
                 </button>
@@ -616,12 +633,26 @@ export default function OrdersManager() {
                 <StatusBadge status={apiStatus(order)} />
                 <div className="flex flex-wrap items-center justify-end gap-2">
                   <span className="text-[11px] font-bold" style={{ color: getAgeColor(order) }}>{getAge(order)}</span>
-                  {apiStatus(order) === 'pending' && <MiniButton onClick={() => singleSetStatus(order.id, 'preparing')} icon={<ChefHat size={17} />} label="Prep" />}
-                  {apiStatus(order) === 'preparing' && <MiniButton onClick={() => singleSetStatus(order.id, 'ready')} icon={<Check size={17} />} label="Ready" />}
-                  {apiStatus(order) !== 'served' && <MiniButton onClick={() => singleSetStatus(order.id, 'served')} icon={<Check size={17} />} label="Enjoying" />}
                   <MiniButton onClick={() => shareWhatsAppReceipt(order)} icon={<MessageCircle size={17} />} label="WhatsApp" />
-                  {apiStatus(order) === 'served' && <MiniButton onClick={() => bulkArchive([order.id])} icon={<Archive size={17} />} label="Archive" />}
                 </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 px-5 pb-5 pl-16">
+                {ORDER_CONTROLS.map(({ status, label, icon: Icon, danger }) => {
+                  const current = apiStatus(order);
+                  return (
+                    <MiniButton
+                      key={status}
+                      disabled={bulkLoading || orderControlDisabled(current, status)}
+                      onClick={() => singleSetStatus(order.id, status)}
+                      icon={<Icon size={16} />}
+                      label={label}
+                      tone={danger ? 'danger' : current === status ? 'active' : 'default'}
+                    />
+                  );
+                })}
+                {apiStatus(order) === 'served' && (
+                  <MiniButton onClick={() => bulkArchive([order.id])} icon={<Archive size={16} />} label="Archive" tone="archive" />
+                )}
               </div>
               {expandedIds.has(order.id) && (
                 <div className="mx-5 mb-5 rounded-2xl bg-heritage-stone/30 p-5 text-sm text-heritage-espresso/70">
@@ -665,9 +696,19 @@ function ActionButton({ disabled, onClick, icon, label }) {
   );
 }
 
-function MiniButton({ onClick, icon, label }) {
+function MiniButton({ disabled = false, onClick, icon, label, tone = 'default' }) {
+  const toneClass = {
+    default: 'bg-heritage-stone text-heritage-espresso/70 hover:bg-heritage-gold hover:text-white',
+    active: 'bg-green-100 text-green-800 ring-1 ring-green-200',
+    danger: 'bg-red-50 text-red-700 hover:bg-red-600 hover:text-white',
+    archive: 'bg-slate-100 text-slate-700 hover:bg-slate-800 hover:text-white',
+  }[tone] || 'bg-heritage-stone text-heritage-espresso/70 hover:bg-heritage-gold hover:text-white';
   return (
-    <button onClick={onClick} className="min-h-[54px] min-w-[78px] px-3 py-2 rounded-2xl bg-heritage-stone text-[9px] font-black uppercase tracking-widest text-heritage-espresso/70 hover:bg-heritage-gold hover:text-white flex flex-col items-center justify-center gap-1 shadow-sm">
+    <button
+      disabled={disabled}
+      onClick={onClick}
+      className={`min-h-[54px] min-w-[78px] px-3 py-2 rounded-2xl text-[9px] font-black uppercase tracking-widest flex flex-col items-center justify-center gap-1 shadow-sm transition disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-300 disabled:shadow-none ${toneClass}`}
+    >
       <span className="leading-none">{icon}</span>
       <span>{label}</span>
     </button>

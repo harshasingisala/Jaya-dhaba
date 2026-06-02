@@ -685,7 +685,7 @@ def list_admin_orders():
 def bulk_order_status():
     data = request.get_json(silent=True) or {}
     status = data.get("status")
-    if status not in {"pending", "preparing", "ready", "served"}:
+    if status not in {"pending", "confirmed", "preparing", "ready", "served", "cancelled"}:
         return jsonify({"success": False, "message": "Invalid status"}), 400
     order_ids, error = _parse_order_ids(data.get("order_ids"))
     if error:
