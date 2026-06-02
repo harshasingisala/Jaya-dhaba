@@ -194,7 +194,7 @@ export function AppProvider({ children }) {
     if (navigator.vibrate) navigator.vibrate(pattern);
   };
 
-  const addToCart = (item, qty = 1, spiceLevel = "Medium", addons = [], instructions = "") => {
+  const addToCart = (item, qty = 1, spiceLevel = "", addons = [], instructions = "") => {
     const finalInstructions = [item.instructions, instructions].filter(Boolean).join(" | ");
     setCart((prev) => {
       // Find index based on exact customization match
@@ -234,7 +234,7 @@ export function AppProvider({ children }) {
   const addItemsToCart = (items) => {
     setCart((prev) => {
       let newCart = [...prev];
-      items.forEach(({ item, qty = 1, spiceLevel = "Medium", addons = [], instructions = "" }) => {
+      items.forEach(({ item, qty = 1, spiceLevel = "", addons = [], instructions = "" }) => {
         const finalInstructions = [item.instructions, instructions].filter(Boolean).join(" | ");
         const idx = newCart.findIndex((x) =>
           x.id === item.id &&

@@ -123,36 +123,31 @@ export default function MenuDisplay() {
 }
 
 function MenuItemCard({ item, onAdd }) {
-  const { vibrate, t } = useApp();
+  const { t } = useApp();
   const portionOptions = getPortionOptions(item);
   const [selectedSize, setSelectedSize] = useState(getDefaultPortion(item)?.id || 'regular');
   const [added, setAdded] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [spiceLevel, setSpiceLevel] = useState(item.spice_level || 2); // Default 1-5
   const selectedPortion = portionOptions.find((portion) => portion.id === selectedSize) || getDefaultPortion(item);
   const price = Number(selectedPortion?.price ?? item.price ?? 0);
 
   const handleAdd = (e) => {
     e.stopPropagation();
-    onAdd(applyPortionToItem({ ...item, spiceLevel, img: item.img || '/biryani.png' }, selectedPortion));
+    onAdd(applyPortionToItem({ ...item, img: item.img || '/biryani.png' }, selectedPortion), 1, '', [], '');
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   };
-
-  const spiceLabels = ["Mild Heritage", "Zesty Stone", "Flame Saffron", "Inferno", "Hellfire"];
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
-      className="mobile-menu-card group space-y-4 md:space-y-6 cursor-pointer"
-      onClick={() => setIsExpanded(!isExpanded)}
+      className="mobile-menu-card group space-y-4 md:space-y-6"
     >
       <div className="relative aspect-[4/3] md:aspect-square rounded-[1.5rem] md:rounded-[3rem] overflow-hidden bg-heritage-stone shadow-xl border border-heritage-espresso/5">
         <img
           src={item.img || '/biryani.png'}
-          className={`w-full h-full object-cover transition-transform duration-1000 contrast-[1.05] ${isExpanded ? 'scale-105' : 'group-hover:scale-110'}`}
+          className="w-full h-full object-cover transition-transform duration-1000 contrast-[1.05] group-hover:scale-110"
           alt={item.name}
           loading="eager"
           width="420"
@@ -181,44 +176,11 @@ function MenuItemCard({ item, onAdd }) {
           <div className="text-xl font-serif italic text-heritage-espresso">₹{price}</div>
         </div>
 
-        <motion.div
-          initial={false}
-          animate={{ height: isExpanded ? 'auto' : 0, opacity: isExpanded ? 1 : 0 }}
-          className="overflow-hidden space-y-6"
-        >
+        <div className="space-y-4">
           <p className="text-xs text-heritage-espresso/60 leading-relaxed font-medium">{item.description || "A heritage masterpiece crafted with secret spices."}</p>
+        </div>
 
-          {/* SPICE CUSTOMIZER */}
-          <div className="space-y-3">
-            <div className="flex justify-between text-[8px] font-black uppercase tracking-[0.2em] text-heritage-gold">
-              <span>Spice Intensity</span>
-              <span>{spiceLabels[spiceLevel - 1]}</span>
-            </div>
-            <div className="flex gap-2">
-              {[1, 2, 3, 4, 5].map(i => (
-                <button
-                  key={i}
-                  onClick={(e) => { e.stopPropagation(); setSpiceLevel(i); vibrate(5); }}
-                  className={`flex-1 h-1.5 rounded-full transition-all ${i <= spiceLevel ? 'bg-heritage-gold shadow-[0_0_10px_rgba(212,160,23,0.5)]' : 'bg-heritage-espresso/5'}`}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* PAIRINGS */}
-          <div className="p-4 bg-heritage-stone/30 rounded-3xl border border-heritage-espresso/5">
-            <h5 className="text-[9px] font-black uppercase tracking-widest text-heritage-espresso/40 mb-3">AI Flavor Pairings</h5>
-            <div className="flex gap-4">
-              <div className="w-10 h-10 rounded-full bg-heritage-gold/20 flex items-center justify-center text-heritage-gold text-[8px] font-black">R</div>
-              <div className="flex-1">
-                <p className="text-[10px] font-bold text-heritage-espresso">Heritage Raita</p>
-                <p className="text-[8px] text-heritage-espresso/40">Perfectly balances the spices of {item.name}.</p>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-
-        {portionOptions.length > 1 && !isExpanded && (
+        {portionOptions.length > 1 && (
           <div className="flex p-1 bg-heritage-stone/30 rounded-2xl border border-heritage-espresso/5">
             {portionOptions.map(portion => (
               <button key={portion.id} onClick={(e) => { e.stopPropagation(); setSelectedSize(portion.id); }} className={`flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedSize === portion.id ? 'bg-white text-heritage-espresso shadow-md' : 'text-heritage-espresso/30'}`}>

@@ -80,9 +80,11 @@ export default function CartDrawer() {
                               {item.portionLabel}
                             </span>
                           )}
-                          <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 bg-heritage-espresso/5 text-heritage-espresso/40 rounded-full">
-                            {item.spiceLevel}
-                          </span>
+                          {item.spiceLevel && (
+                            <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 bg-heritage-espresso/5 text-heritage-espresso/40 rounded-full">
+                              {item.spiceLevel}
+                            </span>
+                          )}
                           {(item.addons || []).map(a => (
                             <span key={a} className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 bg-heritage-gold/10 text-heritage-gold rounded-full">
                               +{a}
