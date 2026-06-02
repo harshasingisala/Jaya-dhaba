@@ -70,9 +70,9 @@ export default function CustomizationModal({ item, isOpen, onClose, onAdd }) {
           </div>
 
           <div className="flex-1 space-y-10 overflow-y-auto p-8">
-            <section className="space-y-5">
-              <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-heritage-espresso/40">Choose Rate</h3>
-              {portionOptions.length > 1 ? (
+            {portionOptions.length > 1 && (
+              <section className="space-y-5">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-heritage-espresso/40">Choose Rate</h3>
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                   {portionOptions.map((portion) => (
                     <button
@@ -85,14 +85,8 @@ export default function CustomizationModal({ item, isOpen, onClose, onAdd }) {
                     </button>
                   ))}
                 </div>
-              ) : (
-                <div className="rounded-[1.75rem] border border-heritage-espresso/5 bg-heritage-stone/30 p-5">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-heritage-espresso/40">
-                    {selectedPortion?.label || 'Regular'} • ₹{Number(selectedPortion?.price ?? item.price ?? 0)}
-                  </p>
-                </div>
-              )}
-            </section>
+              </section>
+            )}
 
             <section className="space-y-5">
               <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-heritage-espresso/40">Quantity</h3>
