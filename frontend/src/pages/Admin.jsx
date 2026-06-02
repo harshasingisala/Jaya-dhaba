@@ -5,6 +5,7 @@ import AdminHeader from '../components/Admin/AdminHeader';
 import PageMeta from '../components/SEO/PageMeta';
 import { useAdminRealtime } from '../hooks/useAdminRealtime';
 import { ToastContainer, useToast } from '../components/Toast';
+import { getAdminAudioCtx, installAdminAudioUnlock, playNewOrderSound, playWaiterCallSound } from '../utils/adminAudio';
 
 // Sub-views (Lazy Loaded for performance)
 const DashboardHome = React.lazy(() => import('./Admin/views/DashboardHome'));
@@ -19,54 +20,7 @@ const KitchenDisplay = React.lazy(() => import('./Admin/views/KitchenDisplay'));
 const DailyReport = React.lazy(() => import('./Admin/views/DailyReport'));
 const InboxManager = React.lazy(() => import('./Admin/views/InboxManager'));
 
-let audioCtx = null;
-
-export const getAdminAudioCtx = () => {
-  if (!audioCtx) {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  }
-  return audioCtx;
-};
-
-export const playNewOrderSound = () => {
-  try {
-    const ctx = getAdminAudioCtx();
-    if (ctx.state === 'suspended') ctx.resume();
-    const oscillator = ctx.createOscillator();
-    const gainNode = ctx.createGain();
-    oscillator.connect(gainNode);
-    gainNode.connect(ctx.destination);
-    oscillator.frequency.setValueAtTime(800, ctx.currentTime);
-    oscillator.frequency.setValueAtTime(600, ctx.currentTime + 0.1);
-    gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
-    oscillator.start(ctx.currentTime);
-    oscillator.stop(ctx.currentTime + 0.5);
-  } catch (e) {
-    console.warn('Sound failed:', e);
-  }
-};
-
-export const playWaiterCallSound = () => {
-  try {
-    const ctx = getAdminAudioCtx();
-    if (ctx.state === 'suspended') ctx.resume();
-    const oscillator = ctx.createOscillator();
-    const gainNode = ctx.createGain();
-    oscillator.connect(gainNode);
-    gainNode.connect(ctx.destination);
-    oscillator.type = 'triangle';
-    oscillator.frequency.setValueAtTime(1040, ctx.currentTime);
-    oscillator.frequency.setValueAtTime(1320, ctx.currentTime + 0.08);
-    oscillator.frequency.setValueAtTime(1040, ctx.currentTime + 0.16);
-    gainNode.gain.setValueAtTime(0.22, ctx.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.32);
-    oscillator.start(ctx.currentTime);
-    oscillator.stop(ctx.currentTime + 0.32);
-  } catch (e) {
-    console.warn('Waiter sound failed:', e);
-  }
-};
+export { getAdminAudioCtx, playNewOrderSound, playWaiterCallSound };
 
 /**
  * JAYA DHABA ADMIN SUITE - v5.0
@@ -76,6 +30,8 @@ export default function Admin() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const { toasts, show: toast } = useToast();
+
+  useEffect(() => installAdminAudioUnlock(), []);
 
   useAdminRealtime({
     onOrdersUpdate: useCallback((data) => {

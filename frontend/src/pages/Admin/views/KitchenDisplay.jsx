@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import api from '../../../api';
 import { createTicketedEventSource } from '../../../api/realtime';
 import { usePollingFallback } from '../../../hooks/usePollingFallback';
+import { installAdminAudioUnlock, playNewOrderSound, playWaiterCallSound } from '../../../utils/adminAudio';
 
 const ITEM_STATUS_ORDER = ['pending', 'preparing', 'ready'];
 const ITEM_STATUS_LABELS = {
@@ -98,15 +99,19 @@ export default function KitchenDisplay() {
 
   useEffect(() => {
     document.title = 'Kitchen Display - Jaya Dhaba';
+    const removeAudioUnlock = installAdminAudioUnlock();
     fetchOrders();
     fetchWaiterCalls();
     const timer = window.setInterval(() => setNow(new Date()), 30000);
-    return () => window.clearInterval(timer);
+    return () => {
+      window.clearInterval(timer);
+      removeAudioUnlock();
+    };
   }, [fetchOrders, fetchWaiterCalls]);
 
   useEffect(() => {
     const handler = (event) => {
-      if (event.detail?.action === 'new_order') playChime();
+      if (event.detail?.action === 'new_order') playNewOrderSound();
       fetchOrders();
     };
     window.addEventListener('rt:orders', handler);
@@ -123,7 +128,7 @@ export default function KitchenDisplay() {
           return;
         }
         if (eventName === 'waiter_call' || eventName === 'waiter_call_resolved') {
-          if (eventName === 'waiter_call') playWaiterChime();
+          if (eventName === 'waiter_call') playWaiterCallSound();
           window.dispatchEvent(new CustomEvent('rt:waiter', { detail: { action: eventName } }));
           fetchWaiterCalls();
           return;
@@ -297,40 +302,4 @@ export default function KitchenDisplay() {
       )}
     </main>
   );
-}
-
-function playChime() {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.frequency.value = 660;
-    gain.gain.setValueAtTime(0.15, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
-    osc.start();
-    osc.stop(ctx.currentTime + 0.35);
-  } catch (_) {
-    // Ignore browsers that block audio before user interaction.
-  }
-}
-
-function playWaiterChime() {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(1040, ctx.currentTime);
-    osc.frequency.setValueAtTime(1320, ctx.currentTime + 0.08);
-    gain.gain.setValueAtTime(0.16, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
-    osc.start();
-    osc.stop(ctx.currentTime + 0.3);
-  } catch (_) {
-    // Staff browsers can block audio before interaction.
-  }
 }
