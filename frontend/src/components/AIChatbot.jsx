@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, useId } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, Loader2 } from 'lucide-react';
+import { API_BASE_URL } from '../api/config';
 
 // ── Constants & Enums ──────────────────────────────────────────────────
 const UI_STATE = Object.freeze({ TOAST: 'toast', CHAT: 'chat', HIDDEN: 'hidden' });
 const HISTORY_WINDOW = 6;
 const INPUT_MAX_LEN = 500;
 const TOAST_DELAY_MS = 6000;
-const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 const makeInitialMsg = (uid) => ({
   id: `init-${uid}`,
