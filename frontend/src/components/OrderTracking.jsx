@@ -132,6 +132,18 @@ export function OrderTrackingPage({ orderId, token = '' }) {
         )}
       </div>
 
+      {isCancelled && (
+        <div className="mb-6 rounded-[2rem] border border-red-200 bg-red-50 p-7 text-center shadow-sm">
+          <AlertCircle size={30} className="mx-auto mb-4 text-red-500" />
+          <p className="text-[10px] font-black uppercase tracking-widest text-red-500">
+            Order Cancelled
+          </p>
+          <p className="mt-3 text-2xl font-serif italic leading-tight text-heritage-espresso">
+            Sorry, we are not able to serve you today.
+          </p>
+        </div>
+      )}
+
       {/* Progress stepper */}
       {!isCancelled && (
         <div className="bg-white rounded-[3rem] p-8 shadow-sm ring-1 ring-heritage-espresso/5 mb-6">

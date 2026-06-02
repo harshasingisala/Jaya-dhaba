@@ -170,6 +170,7 @@ export default function Track() {
    const currentStepIndex = foundStepIndex >= 0 ? foundStepIndex : 0;
    const orderItems = order?.items || [];
    const allItemsReady = Boolean(order?.all_items_ready || (orderItems.length && orderItems.every((item) => normalizeItemStatus(item.status) === 'ready')));
+   const isCancelled = String(order?.status || '').toLowerCase() === 'cancelled';
 
    return (
       <div className="min-h-screen heritage-stone-bg relative overflow-hidden py-20 px-6">
@@ -231,8 +232,18 @@ export default function Track() {
                         </div>
                      </div>
 
+                     {isCancelled && (
+                        <div className="rounded-3xl border border-red-200 bg-red-50 p-8 text-center shadow-sm">
+                           <Info size={34} className="mx-auto mb-4 text-red-500" />
+                           <p className="text-[10px] font-black uppercase tracking-widest text-red-500">Order Cancelled</p>
+                           <h2 className="mt-3 text-3xl font-serif italic leading-tight text-heritage-espresso">
+                              Sorry, we are not able to serve you today.
+                           </h2>
+                        </div>
+                     )}
+
                      {/* ETA ESTIMATOR */}
-                     {order.status !== 'Enjoying' && (
+                     {!isCancelled && order.status !== 'Enjoying' && (
                         <div className="bg-heritage-gold/5 p-6 rounded-3xl border border-heritage-gold/10 flex justify-between items-center">
                            <div className="flex gap-4 items-center">
                               <div className="w-10 h-10 rounded-full bg-heritage-gold flex items-center justify-center text-white">
@@ -254,7 +265,7 @@ export default function Track() {
                         </div>
                      )}
 
-                     {allItemsReady && (
+                     {!isCancelled && allItemsReady && (
                         <div className="rounded-3xl border border-green-200 bg-green-50 p-5 text-center text-lg font-black text-green-800">
                            Your order is ready! 🎉
                         </div>
@@ -290,6 +301,7 @@ export default function Track() {
                      )}
 
                      {/* TIMELINE */}
+                     {!isCancelled && (
                      <div className="grid grid-cols-1 md:grid-cols-4 gap-12 relative">
                         {/* Connector Line (Desktop) */}
                         <div className="hidden md:block absolute top-10 left-10 right-10 h-0.5 bg-heritage-espresso/5 -z-10" />
@@ -318,6 +330,7 @@ export default function Track() {
                            );
                         })}
                      </div>
+                     )}
                   </div>
 
                   {/* ORDER SUMMARY PREVIEW */}
@@ -340,6 +353,7 @@ export default function Track() {
                   </div>
 
                   {/* POST-SERVICE ACTIONS */}
+                  {!isCancelled && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                      <button
                         onClick={shareReceipt}
@@ -355,6 +369,7 @@ export default function Track() {
                         </button>
                      )}
                   </div>
+                  )}
 
                   {ratingOpen && (
                      <div className="bg-white rounded-[3rem] border border-heritage-espresso/5 p-8 shadow-xl space-y-5">
