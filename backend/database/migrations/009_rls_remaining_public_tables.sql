@@ -1,9 +1,30 @@
 -- Production safety patch.
--- 1) Add order item kitchen status columns if an older production database missed migration 007.
+-- 1) Add missed production columns if an older production database skipped migrations.
 -- 2) Enable RLS for public tables flagged by Supabase Advisor.
 --
 -- The tables below are server-managed and should not be directly readable or
 -- writable through the Supabase browser/client API.
+
+ALTER TABLE IF EXISTS public.orders
+    ADD COLUMN IF NOT EXISTS source VARCHAR(20) NOT NULL DEFAULT 'customer';
+
+ALTER TABLE IF EXISTS public.orders
+    ADD COLUMN IF NOT EXISTS payment_method VARCHAR(20) NOT NULL DEFAULT '';
+
+ALTER TABLE IF EXISTS public.orders
+    ADD COLUMN IF NOT EXISTS payment_status VARCHAR(20) NOT NULL DEFAULT 'unpaid';
+
+ALTER TABLE IF EXISTS public.orders
+    ADD COLUMN IF NOT EXISTS is_archived BOOLEAN NOT NULL DEFAULT false;
+
+ALTER TABLE IF EXISTS public.orders
+    ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;
+
+ALTER TABLE IF EXISTS public.orders
+    ADD COLUMN IF NOT EXISTS preparing_at TIMESTAMPTZ;
+
+ALTER TABLE IF EXISTS public.tables
+    ADD COLUMN IF NOT EXISTS qr_rotated_at TIMESTAMPTZ;
 
 ALTER TABLE IF EXISTS public.order_items
     ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'pending';
