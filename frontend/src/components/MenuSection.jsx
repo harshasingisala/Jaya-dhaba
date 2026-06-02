@@ -3,7 +3,7 @@ import { useApp } from "../context/AppContext";
 import useTilt from "../hooks/useTilt";
 import Reveal from "./Reveal";
 import CustomizationModal from "./CustomizationModal";
-import { getDefaultPortion, getPortionOptions, isOnlyPortionPriceText } from "../utils/portionOptions";
+import { getDefaultPortion, getPortionOptions, isOnlyPortionPriceText, isOnlySinglePriceText } from "../utils/portionOptions";
 
 function MenuItem({ item, onAddClicked, disabled }) {
   const ref = useTilt();
@@ -23,7 +23,7 @@ function MenuItem({ item, onAddClicked, disabled }) {
           <img src={item.img} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt={item.name} loading="lazy" width="420" height="420" />
         </div>
         <h3 className="text-xl font-serif italic text-heritage-espresso mb-1">{item.name}</h3>
-        {description && !isOnlyPortionPriceText(description) && (
+        {description && !isOnlyPortionPriceText(description) && !isOnlySinglePriceText(description) && (
           <p className="text-[11px] text-heritage-espresso/40 mb-5 font-sans font-medium line-clamp-2">{description}</p>
         )}
 

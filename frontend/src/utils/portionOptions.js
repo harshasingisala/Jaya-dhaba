@@ -56,6 +56,12 @@ export function isOnlyPortionPriceText(text = "") {
     .trim().length === 0;
 }
 
+export function isOnlySinglePriceText(text = "") {
+  const value = String(text || "").trim();
+  if (!value) return false;
+  return /^price\s*(?:rs\.?|₹)?\s*\d+$/i.test(value) || /^(?:rs\.?|₹)\s*\d+$/i.test(value);
+}
+
 export function getPortionOptions(item = {}) {
   const paperPrices = PAPER_MENU_PORTIONS[normalizePaperMenuName(item.name)];
   if (paperPrices) {

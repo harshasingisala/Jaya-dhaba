@@ -6,7 +6,7 @@ import api from '../api';
 import { apiUrl, USE_DEV_CUSTOMER_FALLBACKS } from '../api/config';
 import { createManagedEventSource } from '../api/realtime';
 import { MenuSchema } from './SEO/PageSchemas';
-import { applyPortionToItem, getDefaultPortion, getPortionOptions, isOnlyPortionPriceText } from '../utils/portionOptions';
+import { applyPortionToItem, getDefaultPortion, getPortionOptions, isOnlyPortionPriceText, isOnlySinglePriceText } from '../utils/portionOptions';
 
 /**
  * PRODUCTION MENU ENGINE - v4.0
@@ -177,7 +177,7 @@ function MenuItemCard({ item, onAdd }) {
           <div className="text-xl font-serif italic text-heritage-espresso">₹{price}</div>
         </div>
 
-        {description && !isOnlyPortionPriceText(description) && (
+        {description && !isOnlyPortionPriceText(description) && !isOnlySinglePriceText(description) && (
           <div className="space-y-4">
             <p className="text-xs text-heritage-espresso/60 leading-relaxed font-medium">{description}</p>
           </div>
