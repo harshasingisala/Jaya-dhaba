@@ -75,6 +75,11 @@ export default function CartDrawer() {
                       <div>
                         <h4 className="font-serif italic text-base md:text-lg text-heritage-espresso">{item.name}</h4>
                         <div className="flex flex-wrap gap-2 mt-1">
+                          {item.portionLabel && (
+                            <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 bg-heritage-gold/10 text-heritage-gold rounded-full">
+                              {item.portionLabel}
+                            </span>
+                          )}
                           <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 bg-heritage-espresso/5 text-heritage-espresso/40 rounded-full">
                             {item.spiceLevel}
                           </span>

@@ -330,12 +330,15 @@ function normalizeOrder(order) {
 }
 
 function sanitizeOrderItem(item) {
-  const rawId = item.id ?? item.menu_item_id;
+  const rawId = item.menu_item_id ?? item.id;
   const qty = Math.max(1, parseInt(item.qty ?? item.quantity ?? 1, 10) || 1);
+  const existingNote = [item.instructions, item.special_note].filter(Boolean).join(' | ');
+  const portionNote = item.portionLabel && !existingNote.includes(`Portion: ${item.portionLabel}`) ? `Portion: ${item.portionLabel}` : '';
+  const note = [portionNote, existingNote].filter(Boolean).join(' | ');
   const cleanItem = {
     menu_item_id: String(rawId || ''),
     qty,
-    special_note: String(item.instructions ?? item.special_note ?? ''),
+    special_note: String(note),
   };
 
   return cleanItem;

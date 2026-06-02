@@ -6,6 +6,7 @@ import api from '../api';
 import { apiUrl, USE_DEV_CUSTOMER_FALLBACKS } from '../api/config';
 import { createManagedEventSource } from '../api/realtime';
 import { MenuSchema } from './SEO/PageSchemas';
+import { applyPortionToItem, getDefaultPortion, getPortionOptions } from '../utils/portionOptions';
 
 /**
  * PRODUCTION MENU ENGINE - v4.0
@@ -123,16 +124,17 @@ export default function MenuDisplay() {
 
 function MenuItemCard({ item, onAdd }) {
   const { vibrate, t } = useApp();
-  const hasDualPrice = item.price_half && item.price_full;
-  const [selectedSize, setSelectedSize] = useState(hasDualPrice ? 'half' : 'full');
+  const portionOptions = getPortionOptions(item);
+  const [selectedSize, setSelectedSize] = useState(getDefaultPortion(item)?.id || 'regular');
   const [added, setAdded] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [spiceLevel, setSpiceLevel] = useState(item.spice_level || 2); // Default 1-5
-  const price = selectedSize === 'half' ? item.price_half : item.price_full;
+  const selectedPortion = portionOptions.find((portion) => portion.id === selectedSize) || getDefaultPortion(item);
+  const price = Number(selectedPortion?.price ?? item.price ?? 0);
 
   const handleAdd = (e) => {
     e.stopPropagation();
-    onAdd({ ...item, id: `${item.id}-${selectedSize}`, price, selectedSize, spiceLevel, img: item.img || '/biryani.png' });
+    onAdd(applyPortionToItem({ ...item, spiceLevel, img: item.img || '/biryani.png' }, selectedPortion));
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   };
@@ -216,11 +218,11 @@ function MenuItemCard({ item, onAdd }) {
           </div>
         </motion.div>
 
-        {hasDualPrice && !isExpanded && (
+        {portionOptions.length > 1 && !isExpanded && (
           <div className="flex p-1 bg-heritage-stone/30 rounded-2xl border border-heritage-espresso/5">
-            {['half', 'full'].map(size => (
-              <button key={size} onClick={(e) => { e.stopPropagation(); setSelectedSize(size); }} className={`flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedSize === size ? 'bg-white text-heritage-espresso shadow-md' : 'text-heritage-espresso/30'}`}>
-                {size} • ₹{size === 'half' ? item.price_half : item.price_full}
+            {portionOptions.map(portion => (
+              <button key={portion.id} onClick={(e) => { e.stopPropagation(); setSelectedSize(portion.id); }} className={`flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedSize === portion.id ? 'bg-white text-heritage-espresso shadow-md' : 'text-heritage-espresso/30'}`}>
+                {portion.label} • ₹{portion.price}
               </button>
             ))}
           </div>

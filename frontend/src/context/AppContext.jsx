@@ -195,13 +195,15 @@ export function AppProvider({ children }) {
   };
 
   const addToCart = (item, qty = 1, spiceLevel = "Medium", addons = [], instructions = "") => {
+    const finalInstructions = [item.instructions, instructions].filter(Boolean).join(" | ");
     setCart((prev) => {
       // Find index based on exact customization match
       const idx = prev.findIndex((x) =>
         x.id === item.id &&
+        x.portion === item.portion &&
         x.spiceLevel === spiceLevel &&
         JSON.stringify(x.addons) === JSON.stringify(addons) &&
-        x.instructions === instructions
+        x.instructions === finalInstructions
       );
 
       if (idx >= 0) {
@@ -217,7 +219,7 @@ export function AppProvider({ children }) {
           qty,
           spiceLevel,
           addons,
-          instructions,
+          instructions: finalInstructions,
           _key: `${item.id}-${Date.now()}`
         }
       ];
@@ -233,11 +235,13 @@ export function AppProvider({ children }) {
     setCart((prev) => {
       let newCart = [...prev];
       items.forEach(({ item, qty = 1, spiceLevel = "Medium", addons = [], instructions = "" }) => {
+        const finalInstructions = [item.instructions, instructions].filter(Boolean).join(" | ");
         const idx = newCart.findIndex((x) =>
           x.id === item.id &&
+          x.portion === item.portion &&
           x.spiceLevel === spiceLevel &&
           JSON.stringify(x.addons) === JSON.stringify(addons) &&
-          x.instructions === instructions
+          x.instructions === finalInstructions
         );
 
         if (idx >= 0) {
@@ -248,7 +252,7 @@ export function AppProvider({ children }) {
             qty,
             spiceLevel,
             addons,
-            instructions,
+            instructions: finalInstructions,
             _key: `${item.id}-${Date.now()}-${Math.random()}`
           });
         }

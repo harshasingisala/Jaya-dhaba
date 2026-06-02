@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Minus, Plus, Flame, Sparkles, ChefHat } from 'lucide-react';
+import { applyPortionToItem, getDefaultPortion, getPortionOptions } from '../utils/portionOptions';
 
 const SPICE_LEVELS = [
   { id: 'Mild', label: 'Mild Heritage', color: 'text-sky-500', bg: 'bg-sky-500/10' },
@@ -19,6 +20,20 @@ export default function CustomizationModal({ item, isOpen, onClose, onAdd }) {
   const [spice, setSpice] = useState('Medium');
   const [selectedAddons, setSelectedAddons] = useState([]);
   const [instructions, setInstructions] = useState('');
+  const [selectedPortionId, setSelectedPortionId] = useState('');
+  const portionOptions = getPortionOptions(item);
+  const selectedPortion = portionOptions.find((portion) => portion.id === selectedPortionId) || getDefaultPortion(item);
+  const addonTotal = selectedAddons.reduce((sum, id) => sum + ADDONS.find(a => a.id === id).price, 0);
+  const unitPrice = Number(selectedPortion?.price ?? item.price ?? 0) + addonTotal;
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setQty(1);
+    setSpice('Medium');
+    setSelectedAddons([]);
+    setInstructions('');
+    setSelectedPortionId(getDefaultPortion(item)?.id || '');
+  }, [isOpen, item]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -79,10 +94,38 @@ export default function CustomizationModal({ item, isOpen, onClose, onAdd }) {
 
           <div className="flex-1 overflow-y-auto no-scrollbar p-10 space-y-12">
              
+             {/* PORTION SECTION */}
+             <section className="space-y-6">
+                <div className="flex justify-between items-end">
+                   <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-heritage-espresso/40">1. Choose Portion</h3>
+                   <span className="text-sm font-bold text-heritage-espresso">Select serving size</span>
+                </div>
+                {portionOptions.length > 1 ? (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {portionOptions.map((portion) => (
+                      <button
+                        key={portion.id}
+                        onClick={() => setSelectedPortionId(portion.id)}
+                        className={`p-5 rounded-[2rem] border text-left transition-all ${selectedPortion?.id === portion.id ? 'bg-heritage-espresso text-white border-heritage-espresso shadow-xl' : 'bg-white border-heritage-espresso/5 hover:border-heritage-gold/40'}`}
+                      >
+                        <p className="text-[10px] font-black uppercase tracking-widest">{portion.label}</p>
+                        <p className={`mt-2 text-lg font-serif italic ${selectedPortion?.id === portion.id ? 'text-heritage-gold' : 'text-heritage-espresso'}`}>₹{portion.price}</p>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-[2rem] border border-heritage-espresso/5 bg-heritage-stone/30 p-5">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-heritage-espresso/40">
+                      {selectedPortion?.label || 'Regular'} • ₹{Number(selectedPortion?.price ?? item.price ?? 0)}
+                    </p>
+                  </div>
+                )}
+             </section>
+
              {/* QUANTITY SECTION */}
              <section className="space-y-6">
                 <div className="flex justify-between items-end">
-                   <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-heritage-espresso/40">1. Define Portion</h3>
+                   <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-heritage-espresso/40">2. Define Quantity</h3>
                    <span className="text-sm font-bold text-heritage-espresso">Manual Entry Supported</span>
                 </div>
                 <div className="flex items-center gap-8 bg-heritage-stone/30 p-4 rounded-[2.5rem] border border-heritage-espresso/5">
@@ -112,7 +155,7 @@ export default function CustomizationModal({ item, isOpen, onClose, onAdd }) {
 
              {/* SPICE SELECTOR */}
              <section className="space-y-6">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-heritage-espresso/40">2. Heat Archetype</h3>
+                <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-heritage-espresso/40">3. Heat Archetype</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                    {SPICE_LEVELS.map(s => (
                       <button 
@@ -132,7 +175,7 @@ export default function CustomizationModal({ item, isOpen, onClose, onAdd }) {
 
              {/* ADDONS */}
              <section className="space-y-6">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-heritage-espresso/40">3. Quick Guest Add-ons</h3>
+                <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-heritage-espresso/40">4. Quick Guest Add-ons</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                    {ADDONS.map(a => (
                       <button 
@@ -159,7 +202,7 @@ export default function CustomizationModal({ item, isOpen, onClose, onAdd }) {
 
              {/* INSTRUCTIONS */}
              <section className="space-y-6">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-heritage-espresso/40">4. Special Directives</h3>
+                <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-heritage-espresso/40">5. Special Directives</h3>
                 <textarea 
                   placeholder="Ex: No cilantro, Extra gravy in separate bowl..."
                   className="w-full h-32 p-8 bg-heritage-stone/40 border border-heritage-espresso/5 rounded-[2.5rem] outline-none focus:bg-white focus:shadow-xl transition-all font-serif italic text-lg text-heritage-espresso"
@@ -174,12 +217,12 @@ export default function CustomizationModal({ item, isOpen, onClose, onAdd }) {
              <div className="space-y-1">
                 <p className="text-[9px] font-black uppercase tracking-[0.4em] text-heritage-espresso/20">Final Valuation</p>
                 <p className="text-3xl font-serif italic text-heritage-gold">
-                   ₹{ (item.price + selectedAddons.reduce((sum, id) => sum + ADDONS.find(a => a.id === id).price, 0)) * (parseInt(qty) || 0) }
+                   ₹{ unitPrice * (parseInt(qty) || 0) }
                 </p>
              </div>
              <button 
                onClick={() => {
-                 onAdd(item, parseInt(qty) || 1, spice, selectedAddons, instructions);
+                 onAdd(applyPortionToItem(item, selectedPortion), parseInt(qty) || 1, spice, selectedAddons, instructions);
                  onClose();
                }}
                className="px-12 py-6 bg-heritage-espresso text-white rounded-full font-black text-[10px] uppercase tracking-[0.5em] shadow-xl hover:bg-heritage-gold transition-all"
