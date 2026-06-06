@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import { ExternalLink, ShoppingBag, Globe } from "lucide-react";
 
 const apps = [
@@ -36,12 +35,8 @@ export default function Platforms() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-10 max-w-7xl mx-auto">
         {apps.map((app, i) => (
-          <motion.div
+          <div
             key={i}
-            initial={{ y: 30, opacity: 0 }}
-            whileInView={{ y: 0, opacity: 1 }}
-            transition={{ delay: i * 0.2, duration: 0.8 }}
-            viewport={{ once: true }}
             onClick={() => {
               if (app.isInternal) {
                 document.getElementById('menu')?.scrollIntoView({ behavior: 'smooth' });
@@ -66,7 +61,7 @@ export default function Platforms() {
                <span>{app.isInternal ? 'Select Plates' : 'External Link'}</span>
                <ExternalLink size={12} />
             </div>
-          </motion.div>
+          </div>
         ))}
       </div>
     </section>

@@ -25,6 +25,7 @@ await build({
     assetsInlineLimit: 2048,
     modulePreload: {
       polyfill: false,
+      resolveDependencies: (_url, deps) => deps.filter((dep) => !/(motion|charts|supabaseClient|ScrollTrigger)/.test(dep)),
     },
     rollupOptions: {
       output: {

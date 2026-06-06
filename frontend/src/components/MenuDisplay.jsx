@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingBag, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
-import { motion } from 'framer-motion';
 import { useApp } from '../context/AppContext';
 import api from '../api';
 import { apiUrl, USE_DEV_CUSTOMER_FALLBACKS } from '../api/config';
@@ -141,10 +140,7 @@ function MenuItemCard({ item, onAdd }) {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
+    <div
       className="mobile-menu-card group space-y-4 md:space-y-6"
     >
       <div className="relative aspect-[4/3] md:aspect-square rounded-[1.5rem] md:rounded-[3rem] overflow-hidden bg-heritage-stone shadow-xl border border-heritage-espresso/5">
@@ -204,6 +200,6 @@ function MenuItemCard({ item, onAdd }) {
           {added ? <><CheckCircle2 size={16} /> Added</> : <><ShoppingBag size={16} /> Add to Order</>}
         </button>
       </div>
-    </motion.div>
+    </div>
   );
 }

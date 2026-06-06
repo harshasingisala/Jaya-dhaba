@@ -1,9 +1,6 @@
-import { useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
 import { Clock, Truck, CheckCircle } from "lucide-react";
 import ResponsiveImage from "./ResponsiveImage";
-import { scrambleText } from "../utils/textAnimations";
 
 /**
  * JAYA DHABA — HERO CONTAINER (GOLDEN COURTYARD)
@@ -16,16 +13,6 @@ import { scrambleText } from "../utils/textAnimations";
 
 const BIRYANI_IMAGE = "/hero.jpg";
 
-const CONTAINER_VARIANTS = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.12 } },
-};
-
-const ITEM_VARIANTS = {
-  hidden: { opacity: 0, y: 28 },
-  show:   { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] } },
-};
-
 const TRUST_ITEMS = [
   { icon: Clock,       label: "Open 11:00 AM – 11:00 PM" },
   { icon: Truck,       label: "Free Delivery > ₹300"      },
@@ -34,12 +21,6 @@ const TRUST_ITEMS = [
 
 export default function HeroContainer() {
   const navigate = useNavigate();
-  const heroRef  = useRef(null);
-  const headingRef = useRef(null);
-
-  useEffect(() => {
-    if (headingRef.current) scrambleText(headingRef.current, "Heritage Restored.\nFlavor Perfected.");
-  }, []);
 
   const scrollToMenu = () => {
     const el = document.getElementById("menu");
@@ -48,7 +29,6 @@ export default function HeroContainer() {
 
   return (
     <section
-      ref={heroRef}
       id="hero"
       className="pt-[4.75rem] pb-7 px-3 sm:px-6 md:px-10 max-w-7xl mx-auto sm:pt-24 sm:pb-12"
     >
@@ -85,28 +65,22 @@ export default function HeroContainer() {
         />
 
         {/* ── TEXT CONTENT ── */}
-        <motion.div
-          variants={CONTAINER_VARIANTS}
-          initial="hidden"
-          animate="show"
+        <div
           className="relative z-10 h-full flex items-center justify-end"
           style={{ minHeight: "inherit" }}
         >
           <div className="mobile-hero-copy w-full max-w-lg px-6 py-10 md:px-14 md:py-16 text-left">
-            <motion.p
-              variants={ITEM_VARIANTS}
+            <p
               className="mobile-hero-kicker uppercase tracking-[0.25em] text-[11px] font-bold mb-5"
               style={{ color: "var(--gold-brand)", opacity: 0.85 }}
             >
               Est. 1995 · East Marredpally
-            </motion.p>
+            </p>
 
-            <motion.h1
-              ref={headingRef}
-              variants={ITEM_VARIANTS}
+            <h1
               className="leading-[1.1] font-bold text-white mb-5"
               style={{
-                fontFamily: "'Playfair Display', serif",
+                fontFamily: "var(--font-serif)",
                 fontSize: "clamp(2rem, 4.5vw, 3.4rem)",
                 whiteSpace: "pre-line",
               }}
@@ -114,24 +88,23 @@ export default function HeroContainer() {
               Heritage Restored.
               <br />
               Flavor Perfected.
-            </motion.h1>
+            </h1>
 
-            <motion.p
-              variants={ITEM_VARIANTS}
+            <p
               className="mobile-hero-subtitle text-white/70 text-base md:text-lg font-normal mb-8 leading-relaxed"
-              style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+              style={{ fontFamily: "var(--font-sans)" }}
             >
               Experience the soul of East Marredpally.
-            </motion.p>
+            </p>
 
-            <motion.div variants={ITEM_VARIANTS} className="mobile-hero-actions flex flex-wrap gap-3 sm:gap-4">
+            <div className="mobile-hero-actions flex flex-wrap gap-3 sm:gap-4">
               <button
                 onClick={scrollToMenu}
                 className="font-semibold text-sm px-8 py-3.5 rounded-full transition-all duration-300 hover:brightness-110 active:scale-95 shadow-lg"
                 style={{
                   backgroundColor: "var(--gold-brand)",
                   color: "#fff",
-                  fontFamily: "'Plus Jakarta Sans', sans-serif",
+                  fontFamily: "var(--font-sans)",
                 }}
               >
                 Order Now
@@ -139,20 +112,17 @@ export default function HeroContainer() {
               <button
                 onClick={() => navigate("/reservation")}
                 className="font-semibold text-sm px-8 py-3.5 rounded-full transition-all duration-300 active:scale-95 border border-white/25 text-white hover:bg-white/10"
-                style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                style={{ fontFamily: "var(--font-sans)" }}
               >
                 Book a Table
               </button>
-            </motion.div>
+            </div>
           </div>
-        </motion.div>
+        </div>
       </div>
 
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━ TRUST BAR ━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5, duration: 0.6, ease: "easeOut" }}
+      <div
         className="grid grid-cols-1 sm:grid-cols-3 mt-0 divide-y sm:divide-y-0 sm:divide-x"
         style={{ borderColor: "var(--brown-brand)" }}
       >
@@ -180,7 +150,7 @@ export default function HeroContainer() {
             </span>
           </div>
         ))}
-      </motion.div>
+      </div>
     </section>
   );
 }

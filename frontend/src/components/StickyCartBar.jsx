@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../context/AppContext';
 import { ShoppingBag, ChevronRight } from "lucide-react";
 
@@ -8,12 +7,9 @@ const StickyCartBar = () => {
   const cartCount = cart.reduce((acc, item) => acc + item.qty, 0);
 
   return (
-    <AnimatePresence>
+    <>
       {cartCount > 0 && (
-        <motion.div 
-          initial={{ y: 100, x: '-50%', opacity: 0 }}
-          animate={{ y: 0, x: '-50%', opacity: 1 }}
-          exit={{ y: 100, x: '-50%', opacity: 0 }}
+        <div
           onClick={() => setCartOpen(true)}
           className="mobile-cart-bar fixed bottom-24 md:bottom-8 left-1/2 -translate-x-1/2 z-[100] w-[calc(100%-1rem)] max-w-lg cursor-pointer group"
         >
@@ -42,9 +38,9 @@ const StickyCartBar = () => {
             </div>
 
           </div>
-        </motion.div>
+        </div>
       )}
-    </AnimatePresence>
+    </>
   );
 };
 

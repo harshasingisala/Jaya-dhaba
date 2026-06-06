@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
 import { useApp } from "../context/AppContext";
 import { useStore } from "../store/useStore";
 
@@ -129,12 +128,8 @@ export default function Navbar() {
       </div>
 
       {/* ── MOBILE DRAWER ── */}
-      <AnimatePresence>
-        {mobileOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
+      {mobileOpen && (
+          <div
             className="lg:hidden border-t"
             style={{
               backgroundColor: "var(--bg-primary)",
@@ -168,9 +163,8 @@ export default function Navbar() {
                 {language === "en" ? "English | తెలుగు" : "తెలుగు | English"}
               </button>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </div>
+      )}
     </nav>
   );
 }

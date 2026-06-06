@@ -1,6 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
-import { AnimatePresence, motion } from "framer-motion";
 import SmoothScroll from "./components/SmoothScroll";
 import Home from "./pages/Home";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -23,14 +22,6 @@ const ScrollToTop = lazy(() => import("./components/ScrollToTop"));
 const FloatingBookBar = lazy(() => import("./components/FloatingBookBar"));
 const MobileActionDock = lazy(() => import("./components/MobileActionDock"));
 
-const pageVariants = {
-  initial: { opacity: 0, y: 16 },
-  animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -16 },
-};
-
-const pageTransition = { duration: 0.3, ease: "easeOut" };
-
 function AnimatedRoutes() {
   const location = useLocation();
   const isAdmin = location.pathname.startsWith("/admin");
@@ -48,16 +39,7 @@ function AnimatedRoutes() {
   }, [isAdmin]);
 
   return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={location.pathname}
-        initial="initial"
-        animate="animate"
-        exit="exit"
-        variants={pageVariants}
-        transition={pageTransition}
-        className={isAdmin ? "" : "min-h-screen"}
-      >
+      <div className={isAdmin ? "" : "min-h-screen"}>
         {!isAdmin && <Navbar />}
 
         <Suspense fallback={null}>
@@ -91,8 +73,7 @@ function AnimatedRoutes() {
             </Suspense>
           </>
         )}
-      </motion.div>
-    </AnimatePresence>
+      </div>
   );
 }
 
