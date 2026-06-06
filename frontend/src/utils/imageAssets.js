@@ -17,7 +17,7 @@ const OPTIMIZED_IMAGE_WIDTHS = {
   food3: [320, 480, 640, 960],
   haleem: [320, 480, 640, 960],
   "handi-biryani-poster": [320, 480],
-  hero: [320, 480, 640, 960],
+  hero: [320, 480, 640],
   kheer: [320, 480, 640, 960],
   kofta: [320, 480, 640, 960],
   lassi: [320, 480, 640, 960],

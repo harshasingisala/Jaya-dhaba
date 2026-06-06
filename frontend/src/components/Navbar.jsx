@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../context/AppContext";
-import { useStore } from "../store/useStore";
 
 /**
  * JAYA DHABA — GOLDEN COURTYARD NAVBAR
@@ -9,8 +8,7 @@ import { useStore } from "../store/useStore";
  * language toggle (English | తెలుగు). Minimal, high-contrast, premium.
  */
 export default function Navbar() {
-  const { language, setLanguage, t, cart } = useApp();
-  const { theme, toggleTheme } = useStore();
+  const { language, setLanguage, cart } = useApp();
   const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
