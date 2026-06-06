@@ -7,6 +7,8 @@ import { apiUrl, USE_DEV_CUSTOMER_FALLBACKS } from '../api/config';
 import { createManagedEventSource } from '../api/realtime';
 import { MenuSchema } from './SEO/PageSchemas';
 import { applyPortionToItem, getDefaultPortion, getPortionOptions, isOnlyPortionPriceText, isOnlySinglePriceText } from '../utils/portionOptions';
+import ResponsiveImage from './ResponsiveImage';
+import { menuImageSrc, optimizedImage } from '../utils/imageAssets';
 
 /**
  * PRODUCTION MENU ENGINE - v4.0
@@ -133,7 +135,7 @@ function MenuItemCard({ item, onAdd }) {
 
   const handleAdd = (e) => {
     e.stopPropagation();
-    onAdd(applyPortionToItem({ ...item, img: item.img || '/biryani.png' }, selectedPortion), 1, '', [], '');
+    onAdd(applyPortionToItem({ ...item, img: item.img || item.image_url || '/biryani.png' }, selectedPortion), 1, '', [], '');
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   };
@@ -146,14 +148,15 @@ function MenuItemCard({ item, onAdd }) {
       className="mobile-menu-card group space-y-4 md:space-y-6"
     >
       <div className="relative aspect-[4/3] md:aspect-square rounded-[1.5rem] md:rounded-[3rem] overflow-hidden bg-heritage-stone shadow-xl border border-heritage-espresso/5">
-        <img
-          src={item.img || '/biryani.png'}
+        <ResponsiveImage
+          src={menuImageSrc(item)}
           className="w-full h-full object-cover transition-transform duration-1000 contrast-[1.05] group-hover:scale-110"
           alt={item.name}
-          loading="eager"
+          loading="lazy"
+          sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
           width="420"
           height="420"
-          onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1563379091339-03b17af4a4f9?q=80&w=800'; }}
+          onError={(e) => { e.target.src = optimizedImage('/biryani.png', 640); }}
         />
         {item.available === false && (
           <div className="absolute inset-0 bg-heritage-espresso/80 backdrop-blur-sm flex items-center justify-center">

@@ -4,6 +4,8 @@ import useTilt from "../hooks/useTilt";
 import Reveal from "./Reveal";
 import CustomizationModal from "./CustomizationModal";
 import { getDefaultPortion, getPortionOptions, isOnlyPortionPriceText, isOnlySinglePriceText } from "../utils/portionOptions";
+import ResponsiveImage from "./ResponsiveImage";
+import { menuImageSrc } from "../utils/imageAssets";
 
 function MenuItem({ item, onAddClicked, disabled }) {
   const ref = useTilt();
@@ -20,7 +22,7 @@ function MenuItem({ item, onAddClicked, disabled }) {
         className="bg-white p-5 rounded-[2.5rem] card-hover h-full flex flex-col group border border-heritage-espresso/5 relative overflow-hidden"
       >
         <div className="relative overflow-hidden rounded-[1.8rem] mb-5 aspect-square bg-heritage-stone">
-          <img src={item.img} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt={item.name} loading="lazy" width="420" height="420" />
+          <ResponsiveImage src={menuImageSrc(item)} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt={item.name} loading="lazy" sizes="(max-width: 768px) 100vw, 33vw" width="420" height="420" />
         </div>
         <h3 className="text-xl font-serif italic text-heritage-espresso mb-1">{item.name}</h3>
         {description && !isOnlyPortionPriceText(description) && !isOnlySinglePriceText(description) && (

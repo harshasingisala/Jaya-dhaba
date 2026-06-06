@@ -26,6 +26,35 @@ const PageSkeleton = () => (
   </div>
 );
 
+function LazyOnView({ children, rootMargin = "450px 0px", minHeight = 300 }) {
+  const [visible, setVisible] = useState(false);
+  const ref = React.useRef(null);
+
+  useEffect(() => {
+    if (visible) return undefined;
+    const node = ref.current;
+    if (!node) return undefined;
+    if (!("IntersectionObserver" in window)) {
+      setVisible(true);
+      return undefined;
+    }
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setVisible(true);
+        observer.disconnect();
+      }
+    }, { rootMargin });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [rootMargin, visible]);
+
+  return (
+    <div ref={ref} style={!visible ? { minHeight } : undefined}>
+      {visible ? children : null}
+    </div>
+  );
+}
+
 const WAITER_REASONS = [
   { value: "need_assistance", label: "Need assistance" },
   { value: "need_water", label: "Need water" },
@@ -173,21 +202,27 @@ export default function Home() {
         </section>
 
         <section id="owner">
-          <Suspense fallback={<PageSkeleton />}>
-            <AboutOwner />
-          </Suspense>
+          <LazyOnView minHeight={520}>
+            <Suspense fallback={<PageSkeleton />}>
+              <AboutOwner />
+            </Suspense>
+          </LazyOnView>
         </section>
 
         <section id="offers">
-          <Suspense fallback={<PageSkeleton />}>
-            <SpecialOffers />
-          </Suspense>
+          <LazyOnView minHeight={420}>
+            <Suspense fallback={<PageSkeleton />}>
+              <SpecialOffers />
+            </Suspense>
+          </LazyOnView>
         </section>
 
         <section id="services">
-          <Suspense fallback={<PageSkeleton />}>
-            <Services />
-          </Suspense>
+          <LazyOnView minHeight={620}>
+            <Suspense fallback={<PageSkeleton />}>
+              <Services />
+            </Suspense>
+          </LazyOnView>
         </section>
 
         <section id="menu">
@@ -197,15 +232,19 @@ export default function Home() {
         </section>
 
         <section id="gallery">
-          <Suspense fallback={<PageSkeleton />}>
-            <Gallery />
-          </Suspense>
+          <LazyOnView minHeight={620}>
+            <Suspense fallback={<PageSkeleton />}>
+              <Gallery />
+            </Suspense>
+          </LazyOnView>
         </section>
 
         <section id="testimonials">
-          <Suspense fallback={<PageSkeleton />}>
-            <Testimonials />
-          </Suspense>
+          <LazyOnView minHeight={420}>
+            <Suspense fallback={<PageSkeleton />}>
+              <Testimonials />
+            </Suspense>
+          </LazyOnView>
         </section>
 
         <section id="platforms">

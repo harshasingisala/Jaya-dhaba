@@ -2,7 +2,8 @@ import { useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Clock, Truck, CheckCircle } from "lucide-react";
-import { scrambleText } from "../utils/scrollAnimations";
+import ResponsiveImage from "./ResponsiveImage";
+import { scrambleText } from "../utils/textAnimations";
 
 /**
  * JAYA DHABA — HERO CONTAINER (GOLDEN COURTYARD)
@@ -61,13 +62,17 @@ export default function HeroContainer() {
         }}
       >
         {/* Background image */}
-        <img
+        <ResponsiveImage
           src={BIRYANI_IMAGE}
           alt="Signature Mutton Biryani in copper handi — Jaya Dhaba"
           className="absolute inset-0 w-full h-full object-cover hero-bg"
           style={{ objectPosition: "40% center", willChange: "transform", scale: 1.2 }}
           loading="eager"
+          fetchPriority="high"
           decoding="async"
+          sizes="100vw"
+          width="1280"
+          height="853"
         />
 
         {/* Dark gradient overlay — right-to-left so text is readable */}

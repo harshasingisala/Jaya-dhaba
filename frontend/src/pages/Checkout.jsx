@@ -3,6 +3,8 @@ import { Phone, ArrowLeft, Loader2, Sparkles, CheckCircle2, Info } from 'lucide-
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import api from '../api';
+import ResponsiveImage from '../components/ResponsiveImage';
+import { menuImageSrc } from '../utils/imageAssets';
 
 const formatINR = (amount) =>
   '₹' + Number(amount).toLocaleString('en-IN', {
@@ -15,7 +17,7 @@ const loadRazorpayCheckout = () => {
 
   return new Promise((resolve, reject) => {
     const script = document.createElement('script');
-    script.src = `https://checkout.razorpay.com/v1/checkout.js?v=${Date.now()}`;
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
     script.async = true;
     script.dataset.razorpayCheckout = 'true';
     script.onload = () => resolve();
@@ -317,7 +319,7 @@ export default function Checkout() {
                   <div key={`${item.id}-${i}`} className="flex justify-between items-center border-b border-white/5 pb-6 last:border-0 last:pb-0">
                     <div className="flex items-center gap-6">
                       <div className="w-16 h-16 rounded-2xl bg-white/10 overflow-hidden border border-white/10 shrink-0">
-                        <img src={item.image || '/biryani.png'} className="w-full h-full object-cover" alt={item.name} loading="lazy" width="64" height="64" />
+                        <ResponsiveImage src={menuImageSrc(item)} className="w-full h-full object-cover" alt={item.name} loading="lazy" sizes="64px" width="64" height="64" />
                       </div>
                       <div>
                         <p className="font-serif italic text-lg">{item.name}</p>

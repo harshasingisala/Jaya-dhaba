@@ -12,11 +12,18 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     build: {
       outDir: 'dist',
+      target: 'es2020',
+      cssCodeSplit: true,
+      assetsInlineLimit: 2048,
+      modulePreload: {
+        polyfill: false,
+      },
       rollupOptions: {
         output: {
           manualChunks: {
             vendor: ['react', 'react-dom'],
             router: ['react-router-dom'],
+            motion: ['framer-motion'],
             charts: ['recharts'],
             realtime: ['socket.io-client'],
           },

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Suspense, lazy } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, useLocation } from "react-router-dom";
 import { HelmetProvider } from "./vendor/react-helmet-async";
@@ -8,8 +8,9 @@ import { AuthProvider } from "./context/AuthContext";
 import { ToastProvider } from "./context/ToastContext";
 import { ErrorBoundary } from "react-error-boundary";
 import GlobalErrorBoundary from "./components/GlobalErrorBoundary";
-import AdminLogin from "./pages/Admin/Login";
 import "./index.css";
+
+const AdminLogin = lazy(() => import("./pages/Admin/Login"));
 
 if (import.meta.env.DEV && "serviceWorker" in navigator) {
   navigator.serviceWorker.getRegistrations()
@@ -24,7 +25,9 @@ function RootShell() {
     return (
       <AuthProvider>
         <ToastProvider>
-          <AdminLogin />
+          <Suspense fallback={null}>
+            <AdminLogin />
+          </Suspense>
         </ToastProvider>
       </AuthProvider>
     );

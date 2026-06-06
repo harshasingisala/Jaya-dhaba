@@ -5,6 +5,8 @@ import { Clock, Plus, ShoppingBag } from 'lucide-react';
 import api from '../../../api';
 import { useApp } from '../../../context/AppContext';
 import { countUp } from '../../../utils/scrollAnimations';
+import ResponsiveImage from '../../../components/ResponsiveImage';
+import { optimizedImage } from '../../../utils/imageAssets';
 
 export default function DashboardHome() {
   const { restaurantId } = useApp();
@@ -119,11 +121,15 @@ export default function DashboardHome() {
 
         {/* Action Card / Featured */}
         <div className="bg-heritage-espresso rounded-[4rem] p-1 shadow-2xl overflow-hidden relative group h-[400px]">
-          <img
+          <ResponsiveImage
             src="/biryani.png"
             className="w-full h-full object-cover rounded-[3.8rem] opacity-70 group-hover:scale-110 group-hover:opacity-90 transition-all duration-1000"
             alt="Featured Item"
-            onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1563379091339-03b17af4a4f9?q=80&w=800'; }}
+            loading="lazy"
+            sizes="(max-width: 1024px) 100vw, 33vw"
+            width="640"
+            height="640"
+            onError={(e) => { e.target.src = optimizedImage('/biryani.png', 640); }}
           />
           <div className="absolute inset-x-12 bottom-12 z-10 space-y-4">
             <span className="bg-heritage-gold text-white text-[9px] font-black uppercase tracking-[0.4em] px-5 py-2 rounded-full shadow-lg">Hero Choice</span>

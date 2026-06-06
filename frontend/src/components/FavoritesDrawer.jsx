@@ -1,6 +1,8 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Heart, ShoppingBag } from "lucide-react";
 import { useApp } from "../context/AppContext";
+import ResponsiveImage from "./ResponsiveImage";
+import { menuImageSrc } from "../utils/imageAssets";
 
 export default function FavoritesDrawer() {
   const { favoritesOpen, setFavoritesOpen, favorites, addToCart } = useApp();
@@ -52,7 +54,7 @@ export default function FavoritesDrawer() {
               favorites.map((item, i) => (
                 <div key={`${item.id}-${i}`} className="flex gap-6 items-center group">
                    <div className="w-16 h-16 rounded-2xl overflow-hidden border border-heritage-espresso/5 shrink-0">
-                      <img src={item.image || '/biryani.png'} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt={item.name} width="64" height="64" />
+                      <ResponsiveImage src={menuImageSrc(item)} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt={item.name} loading="lazy" sizes="64px" width="64" height="64" />
                    </div>
                    <div className="flex-1">
                       <h4 className="font-serif italic text-lg text-heritage-espresso">{item.name}</h4>

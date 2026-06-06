@@ -3,6 +3,8 @@ import { Plus, Edit, Trash2, Image as ImageIcon, ToggleLeft, ToggleRight, Info, 
 import { useApp } from '../../../context/AppContext';
 import api from '../../../api';
 import { usePollingFallback } from '../../../hooks/usePollingFallback';
+import ResponsiveImage from '../../../components/ResponsiveImage';
+import { menuImageSrc, optimizedImage } from '../../../utils/imageAssets';
 
 export default function MenuManager() {
   const { restaurantId, vibrate } = useApp();
@@ -214,13 +216,16 @@ export default function MenuManager() {
                 <td className="px-10 py-8">
                   <div className="flex items-center gap-8">
                     <div className="w-20 h-20 rounded-2xl bg-heritage-stone overflow-hidden border-2 border-white shadow-lg relative shrink-0">
-                      <img
-                        src={item.image || item.img || '/biryani.png'}
+                      <ResponsiveImage
+                        src={menuImageSrc(item)}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                         alt={item.name}
                         loading="lazy"
                         decoding="async"
-                        onError={(e) => { e.target.src = '/biryani.png'; }}
+                        sizes="80px"
+                        width="80"
+                        height="80"
+                        onError={(e) => { e.target.src = optimizedImage('/biryani.png', 320); }}
                       />
                     </div>
                     <div className="space-y-1">

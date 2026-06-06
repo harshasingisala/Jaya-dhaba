@@ -1,6 +1,9 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import fs from 'node:fs/promises';
+import { createReadStream, createWriteStream } from 'node:fs';
+import { pipeline } from 'node:stream/promises';
+import { createBrotliCompress, createGzip } from 'node:zlib';
 import react from '@vitejs/plugin-react';
 import { build, loadEnv } from 'vite';
 
@@ -17,11 +20,18 @@ await build({
   plugins: [react()],
   build: {
     outDir: 'dist',
+    target: 'es2020',
+    cssCodeSplit: true,
+    assetsInlineLimit: 2048,
+    modulePreload: {
+      polyfill: false,
+    },
     rollupOptions: {
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom'],
           router: ['react-router-dom'],
+          motion: ['framer-motion'],
           charts: ['recharts'],
           realtime: ['socket.io-client'],
         },
@@ -115,3 +125,23 @@ for (const page of publicPages) {
   await fs.mkdir(path.dirname(destination), { recursive: true });
   await fs.writeFile(destination, withPageMetadata(baseHtml, page), 'utf8');
 }
+
+const compressibleExtensions = new Set(['.js', '.css', '.html', '.json', '.svg']);
+
+async function compressAssets(directory) {
+  const entries = await fs.readdir(directory, { withFileTypes: true });
+  for (const entry of entries) {
+    const fullPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      await compressAssets(fullPath);
+      continue;
+    }
+    if (!compressibleExtensions.has(path.extname(entry.name))) continue;
+    const stat = await fs.stat(fullPath);
+    if (stat.size < 1024) continue;
+    await pipeline(createReadStream(fullPath), createGzip({ level: 9 }), createWriteStream(`${fullPath}.gz`));
+    await pipeline(createReadStream(fullPath), createBrotliCompress(), createWriteStream(`${fullPath}.br`));
+  }
+}
+
+await compressAssets(outputRoot);

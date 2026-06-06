@@ -1,6 +1,5 @@
 
 import { API_BASE_URL, USE_DEV_CUSTOMER_FALLBACKS } from './config.js';
-import { supabase } from '../supabaseClient.js';
 import { pickFields } from '../utils/sanitize.js';
 import { fetchWithRetry } from '../utils/retry.js';
 import { clearAuthSession, getAccessToken, setAuthSession } from '../utils/authSession.js';
@@ -997,7 +996,10 @@ const api = {
     throw new Error('Code not recognized by the vault.');
   },
 
-  supabase,
+  getSupabase: async () => {
+    const { requireSupabase } = await import('../supabaseClient.js');
+    return requireSupabase();
+  },
 };
 
 export default api;

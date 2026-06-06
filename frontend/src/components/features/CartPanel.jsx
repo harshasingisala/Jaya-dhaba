@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingBag, X, Plus, Minus, ArrowRight, Info } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import { useNavigate } from 'react-router-dom';
+import ResponsiveImage from '../ResponsiveImage';
+import { menuImageSrc } from '../../utils/imageAssets';
 
 export default function CartPanel() {
   const { items, removeFromCart, addToCart, cartTotal, cartCount } = useCart();
@@ -41,7 +43,7 @@ export default function CartPanel() {
                 className="flex items-center gap-4 group"
               >
                 <div className="w-16 h-16 rounded-2xl overflow-hidden flex-shrink-0">
-                  <img src={item.image_url || '/food1.jpg'} className="w-full h-full object-cover" alt={item.name} loading="lazy" width="64" height="64" />
+                  <ResponsiveImage src={menuImageSrc(item) || '/food1.jpg'} className="w-full h-full object-cover" alt={item.name} loading="lazy" sizes="64px" width="64" height="64" />
                 </div>
                 
                 <div className="flex-grow space-y-1">

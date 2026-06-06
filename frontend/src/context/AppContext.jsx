@@ -169,10 +169,13 @@ export function AppProvider({ children }) {
     };
     fetchMenu();
     api.getOrderPauseStatus().then((data) => setOrdersPaused(!!data.paused)).catch(() => {});
-    const timer = window.setInterval(fetchMenu, 10000);
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") fetchMenu();
+    }, 60000);
     const pauseTimer = window.setInterval(() => {
+      if (document.visibilityState !== "visible") return;
       api.getOrderPauseStatus().then((data) => setOrdersPaused(!!data.paused)).catch(() => {});
-    }, 10000);
+    }, 60000);
     return () => {
       window.clearInterval(timer);
       window.clearInterval(pauseTimer);

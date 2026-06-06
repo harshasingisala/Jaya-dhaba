@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import ResponsiveImage from "./ResponsiveImage";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -27,7 +28,7 @@ export default function Chef() {
         {/* IMAGE SIDE */}
         <div className="relative group overflow-hidden rounded-[4rem] h-[650px]">
           <div className="absolute inset-x-0 bottom-0 h-3/4 bg-heritage-terracotta/5 rounded-[4rem] group-hover:bg-heritage-terracotta/10 transition-colors z-20 pointer-events-none" />
-          <img ref={imageRef} src="/chef_adnan.png" alt="Master Chef Adnan" loading="lazy" width="640" height="780" className="absolute top-[-10%] left-0 w-full h-[120%] object-cover contrast-[1.05] z-10" />
+          <ResponsiveImage ref={imageRef} src="/chef_adnan.png" alt="Master Chef Adnan" loading="lazy" sizes="(max-width: 768px) 100vw, 50vw" width="640" height="780" className="absolute top-[-10%] left-0 w-full h-[120%] object-cover contrast-[1.05] z-10" />
         </div>
 
         {/* TEXT SIDE */}

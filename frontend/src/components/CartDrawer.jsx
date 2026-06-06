@@ -2,6 +2,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Minus, Plus, ShoppingBag, ChevronRight, Trash2 } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { useNavigate } from "react-router-dom";
+import ResponsiveImage from "./ResponsiveImage";
+import { menuImageSrc } from "../utils/imageAssets";
 
 export default function CartDrawer() {
   const navigate = useNavigate();
@@ -68,7 +70,7 @@ export default function CartDrawer() {
                    className="bg-white/50 p-4 md:p-6 rounded-[1.5rem] md:rounded-[2.5rem] border border-heritage-espresso/5 flex gap-4 md:gap-6 group hover:shadow-lg transition-all"
                 >
                   <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl overflow-hidden border border-heritage-espresso/5 bg-heritage-stone shrink-0">
-                    <img src={item.img || item.image || '/biryani.png'} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt={item.name} width="80" height="80" />
+                    <ResponsiveImage src={menuImageSrc(item)} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt={item.name} loading="lazy" sizes="80px" width="80" height="80" />
                   </div>
                   <div className="flex-1 space-y-3">
                     <div className="flex justify-between items-start">

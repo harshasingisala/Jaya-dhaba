@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import ResponsiveImage from './ResponsiveImage';
 
 /**
  * JAYA DHABA — ABOUT OWNER (HERITAGE RESTORED)
@@ -21,7 +22,7 @@ export default function AboutOwner() {
           
           {/* IMAGE SIDE */}
           <div className="relative h-[400px] md:h-auto border-b md:border-b-0 md:border-r border-[var(--gold-brand)]">
-            <img src="/assets/owner-portrait.webp" alt="Owner at desk" width="640" height="520" className="w-full h-full object-cover" />
+            <ResponsiveImage src="/assets/owner-portrait.webp" alt="Owner at desk" width="640" height="520" loading="lazy" sizes="(max-width: 768px) 100vw, 50vw" className="w-full h-full object-cover" />
           </div>
 
           {/* TEXT SIDE */}

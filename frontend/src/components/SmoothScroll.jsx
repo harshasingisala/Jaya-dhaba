@@ -1,13 +1,20 @@
 import { useEffect } from 'react';
-import { initLenis, initParallax, initScrollProgressBar } from '../utils/scrollAnimations';
 
 export default function SmoothScroll({ children }) {
   useEffect(() => {
-    const lenis = initLenis();
-    initScrollProgressBar();
-    initParallax();
+    let lenis;
+    let active = true;
+    const timer = window.setTimeout(async () => {
+      const { initLenis, initParallax, initScrollProgressBar } = await import('../utils/scrollAnimations');
+      if (!active) return;
+      lenis = initLenis();
+      initScrollProgressBar();
+      initParallax();
+    }, 1200);
 
     return () => {
+      active = false;
+      window.clearTimeout(timer);
       lenis?.destroy?.();
     };
   }, []);

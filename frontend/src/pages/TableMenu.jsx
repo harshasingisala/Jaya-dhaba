@@ -3,6 +3,8 @@ import { useSearchParams } from 'react-router-dom';
 import { AlertCircle, ArrowRight, BellRing, CheckCircle2, Clock3, Copy, Loader2, Minus, Plus, QrCode, ShoppingCart, X } from 'lucide-react';
 import api from '../api';
 import PageMeta from '../components/SEO/PageMeta';
+import ResponsiveImage from '../components/ResponsiveImage';
+import { menuImageSrc } from '../utils/imageAssets';
 
 function TableMenuMeta() {
   return (
@@ -42,7 +44,7 @@ function isVeg(item) {
 }
 
 function itemImage(item) {
-  return item.image_url || item.img || '/biryani.png';
+  return menuImageSrc(item);
 }
 
 const WAITER_REASONS = [
@@ -738,7 +740,7 @@ export default function TableMenu() {
           return (
             <article key={item.id} className="overflow-hidden rounded-[1.75rem] border border-orange-100 bg-white shadow-sm">
               <div className="aspect-[4/3] bg-amber-100">
-                <img src={itemImage(item)} alt={item.name} className="h-full w-full object-cover" loading="lazy" />
+                <ResponsiveImage src={itemImage(item)} alt={item.name} className="h-full w-full object-cover" loading="lazy" sizes="(max-width: 640px) 100vw, 33vw" width="420" height="315" />
               </div>
               <div className="p-4">
                 <div className="flex items-start justify-between gap-3">

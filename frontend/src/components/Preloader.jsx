@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useEffect, useState } from 'react'
 
 export default function Preloader() {
+  if (import.meta.env.PROD) return null;
   const [progress, setProgress] = useState(0)
   const [isFinished, setIsFinished] = useState(false)
 
