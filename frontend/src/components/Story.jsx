@@ -42,7 +42,7 @@ export default function Story() {
         {/* IMAGE SIDE */}
         <div className="md:w-1/2 order-1 md:order-2 overflow-hidden rounded-[4rem] relative">
           <div className="relative rounded-[4rem] overflow-hidden shadow-2xl border border-heritage-espresso/5 bg-heritage-stone h-[650px]">
-             <ResponsiveImage ref={imageRef} src="/ambiance.png" alt="Heritage Ambiance" loading="lazy" sizes="(max-width: 768px) 100vw, 50vw" width="640" height="780" className="absolute top-[-10%] left-0 w-full h-[120%] object-cover contrast-[1.1] filter brightness-[0.9] hover:scale-105 transition-transform duration-[2s]" />
+             <ResponsiveImage ref={imageRef} src="/ambiance.png" alt="Heritage Ambiance" loading="lazy" sizes="(max-width: 768px) 100vw, 50vw" width="1024" height="1024" className="absolute inset-0 w-full h-full object-cover contrast-[1.1] filter brightness-[0.9] hover:scale-105 transition-transform duration-[2s]" />
              <div className="absolute inset-0 bg-gradient-to-t from-heritage-espresso/40 to-transparent pointer-events-none" />
           </div>
         </div>

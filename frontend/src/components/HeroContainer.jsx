@@ -51,8 +51,8 @@ export default function HeroContainer() {
           fetchPriority="high"
           decoding="async"
           sizes="100vw"
-          width="1280"
-          height="853"
+          width="1024"
+          height="1024"
         />
 
         {/* Dark gradient overlay — right-to-left so text is readable */}

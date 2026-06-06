@@ -144,7 +144,7 @@ function MenuItemCard({ item, index = 0, onAdd }) {
       className="mobile-menu-card premium-menu-card group space-y-4 md:space-y-6"
       style={{ animationDelay: `${Math.min(index, 8) * 45}ms` }}
     >
-      <div className="relative aspect-[4/3] md:aspect-square rounded-[1.5rem] md:rounded-[3rem] overflow-hidden bg-heritage-stone shadow-xl border border-heritage-espresso/5">
+      <div className="relative aspect-square rounded-[1.5rem] md:rounded-[3rem] overflow-hidden bg-heritage-stone shadow-xl border border-heritage-espresso/5">
         <ResponsiveImage
           src={menuImageSrc(item)}
           className="w-full h-full object-cover transition-transform duration-1000 contrast-[1.05] group-hover:scale-110"

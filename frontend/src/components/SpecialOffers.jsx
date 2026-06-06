@@ -70,7 +70,7 @@ export default function SpecialOffers() {
               style={{ borderColor: 'var(--gold-brand)' }}
             >
               <div className="border border-gray-100 flex flex-col h-full">
-                <ResponsiveImage src={offer.img} alt={offer.title} width="640" height="427" loading="lazy" sizes="(max-width: 768px) 100vw, 33vw" className="w-full h-auto block" />
+                <ResponsiveImage src={offer.img} alt={offer.title} width="576" height="1024" loading="lazy" sizes="(max-width: 768px) 100vw, 33vw" className="w-full h-auto block" />
                 <div className="flex flex-col items-center justify-center pt-8 pb-6 space-y-6 flex-grow">
                   <p className="text-lg md:text-xl font-medium text-center" style={{ fontFamily: "'Playfair Display', serif", color: 'var(--brown-brand)' }}>
                     {offer.title}: {offer.items.map((item) => item.name).join(' + ')}

@@ -739,8 +739,8 @@ export default function TableMenu() {
           const dietLabel = veg === true ? 'Veg' : veg === false ? 'Non-Veg' : 'Ask staff';
           return (
             <article key={item.id} className="overflow-hidden rounded-[1.75rem] border border-orange-100 bg-white shadow-sm">
-              <div className="aspect-[4/3] bg-amber-100">
-                <ResponsiveImage src={itemImage(item)} alt={item.name} className="h-full w-full object-cover" loading="lazy" sizes="(max-width: 640px) 100vw, 33vw" width="420" height="315" />
+              <div className="aspect-square bg-amber-100">
+                <ResponsiveImage src={itemImage(item)} alt={item.name} className="h-full w-full object-cover" loading="lazy" sizes="(max-width: 640px) 100vw, 33vw" width="420" height="420" />
               </div>
               <div className="p-4">
                 <div className="flex items-start justify-between gap-3">
