@@ -118,7 +118,21 @@ function withPageMetadata(html, page) {
 }
 
 const outputRoot = path.join(root, 'dist');
-const baseHtml = await fs.readFile(path.join(outputRoot, 'index.html'), 'utf8');
+const criticalCss = `
+<style data-critical>
+:root{--font-serif:Georgia,'Times New Roman',serif;--font-sans:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;--bg-primary:#FAF9F6;--text-main:#1A1A1A;--heritage-gold:#8A5A00;--heritage-espresso:#1A1A1A;--gold-brand:#8A5A00;--brown-brand:#8B4513;--ease-out-expo:cubic-bezier(.19,1,.22,1)}
+*{box-sizing:border-box}body{margin:0;font-family:var(--font-sans);color:var(--text-main);background:var(--bg-primary);-webkit-font-smoothing:antialiased}button{font:inherit}#root,.app-container,.heritage-stone-bg{min-height:100vh;background:var(--bg-primary)}
+nav{position:fixed;top:0;left:0;width:100%;z-index:100;background:var(--bg-primary)}nav>div{max-width:80rem;margin-inline:auto;padding-inline:1rem;display:flex;align-items:center;justify-content:space-between}nav button{min-height:44px;background:transparent;border:0;color:var(--brown-brand)}
+#hero{padding:4.75rem .75rem 1.75rem;max-width:80rem;margin-inline:auto}.mobile-hero-card{position:relative;width:100%;overflow:hidden;border-radius:32px;min-height:clamp(300px,52vw,520px);background:#1C1008}.hero-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.hero-readable-overlay{position:absolute;inset:0}.mobile-hero-copy{position:relative;z-index:10;width:100%;max-width:32rem;padding:2.5rem 1.5rem;text-align:left;margin-left:auto}.mobile-hero-kicker{display:block;color:#F6C453;text-transform:uppercase;font-size:11px;font-weight:700;margin:0 0 1.25rem}.premium-hero-title{font-family:var(--font-serif);font-size:clamp(2rem,4.5vw,3.4rem);line-height:1.1;color:#fff;margin:0 0 1.25rem}.mobile-hero-subtitle{color:rgba(255,255,255,.7);font-size:1rem;line-height:1.6;margin:0 0 2rem}.mobile-hero-actions{display:flex;flex-wrap:wrap;gap:.75rem}.mobile-hero-actions button{border-radius:999px;padding:.875rem 2rem;font-size:.875rem;font-weight:600}.premium-button{position:relative;overflow:hidden;transform:translateZ(0)}
+@media(max-width:640px){#hero{padding-top:4.75rem}.mobile-hero-card{min-height:calc(100svh - 96px);border-radius:0 0 28px 28px;margin-inline:-.75rem}.mobile-hero-copy{padding:44svh 1.25rem 1.5rem}.premium-hero-title{font-size:clamp(2.75rem,15vw,4.1rem);line-height:.98;max-width:9ch}.mobile-hero-actions{display:grid;grid-template-columns:1fr 1fr}.mobile-hero-actions button{min-height:48px;padding-left:.75rem;padding-right:.75rem}}
+</style>`;
+
+function deferStylesheet(html) {
+  return html
+    .replace(/(<link rel="stylesheet" crossorigin href="([^"]+\.css)">)/, `${criticalCss}\n    <link rel="preload" as="style" crossorigin href="$2" onload="this.onload=null;this.rel='stylesheet'">\n    <noscript>$1</noscript>`);
+}
+
+const baseHtml = deferStylesheet(await fs.readFile(path.join(outputRoot, 'index.html'), 'utf8'));
 for (const page of publicPages) {
   const destination = page.path === '/'
     ? path.join(outputRoot, 'index.html')
