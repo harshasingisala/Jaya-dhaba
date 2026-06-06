@@ -3,9 +3,6 @@ import { BellRing, Loader2 } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import api from "../api";
 import HeroContainer from "../components/HeroContainer";
-import Info from "../components/Info";
-import Platforms from "../components/Platforms";
-import Contact from "../components/Contact";
 import Footer from "../components/Footer";
 import StickyCartBar from "../components/StickyCartBar";
 import PageMeta from "../components/SEO/PageMeta";
@@ -18,6 +15,9 @@ const Services = lazy(() => import("../components/Services"));
 const MenuDisplay = lazy(() => import("../components/MenuDisplay"));
 const Gallery = lazy(() => import("../components/Gallery"));
 const Testimonials = lazy(() => import("../components/Testimonials"));
+const Platforms = lazy(() => import("../components/Platforms"));
+const Info = lazy(() => import("../components/Info"));
+const Contact = lazy(() => import("../components/Contact"));
 
 const PageSkeleton = () => (
   <div className="py-20 flex flex-col items-center justify-center space-y-6 min-h-[300px]">
@@ -165,7 +165,9 @@ export default function Home() {
         <ContactSchema />
         <main>
           <section id="contact">
-            <Contact />
+            <Suspense fallback={<PageSkeleton />}>
+              <Contact />
+            </Suspense>
           </section>
         </main>
         <Footer />
@@ -250,15 +252,27 @@ export default function Home() {
         </section>
 
         <section id="platforms">
-          <Platforms />
+          <LazyOnView minHeight={540}>
+            <Suspense fallback={<PageSkeleton />}>
+              <Platforms />
+            </Suspense>
+          </LazyOnView>
         </section>
 
         <section id="info">
-          <Info />
+          <LazyOnView minHeight={620}>
+            <Suspense fallback={<PageSkeleton />}>
+              <Info />
+            </Suspense>
+          </LazyOnView>
         </section>
 
         <section id="contact">
-          <Contact />
+          <LazyOnView minHeight={720}>
+            <Suspense fallback={<PageSkeleton />}>
+              <Contact />
+            </Suspense>
+          </LazyOnView>
         </section>
       </main>
 

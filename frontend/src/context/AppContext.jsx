@@ -128,6 +128,9 @@ export function AppProvider({ children }) {
 
   // Fetch menu items from backend
   useEffect(() => {
+    const shouldSyncMenu = location.pathname === "/menu" || cart.length > 0 || favorites.length > 0;
+    if (!shouldSyncMenu) return undefined;
+
     const fetchMenu = async () => {
       try {
         const data = await api.getMenu();
@@ -180,7 +183,7 @@ export function AppProvider({ children }) {
       window.clearInterval(timer);
       window.clearInterval(pauseTimer);
     };
-  }, [restaurantId]);
+  }, [restaurantId, location.pathname, cart.length, favorites.length]);
 
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);

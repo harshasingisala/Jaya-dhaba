@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 
 import { useApp } from '../context/AppContext';
 import ResponsiveImage from './ResponsiveImage';
+import api from '../api';
 
 function buildOffers(menuItems) {
   const byCategory = (name) => menuItems.filter((item) => String(item.category || '').toLowerCase() === name.toLowerCase());
@@ -19,7 +20,28 @@ function buildOffers(menuItems) {
 
 export default function SpecialOffers() {
   const { addItemsToCart, menuItems } = useApp();
-  const offers = buildOffers(menuItems);
+  const [localMenu, setLocalMenu] = useState(menuItems);
+
+  useEffect(() => {
+    if (menuItems.length) {
+      setLocalMenu(menuItems);
+      return undefined;
+    }
+
+    let cancelled = false;
+    api.getMenu()
+      .then((items) => {
+        if (!cancelled) setLocalMenu(items || []);
+      })
+      .catch(() => {
+        if (!cancelled) setLocalMenu([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [menuItems]);
+
+  const offers = buildOffers(localMenu);
 
   if (!offers.length) return null;
 

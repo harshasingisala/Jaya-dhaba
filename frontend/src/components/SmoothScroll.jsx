@@ -4,17 +4,21 @@ export default function SmoothScroll({ children }) {
   useEffect(() => {
     let lenis;
     let active = true;
-    const timer = window.setTimeout(async () => {
+    const events = ["pointerdown", "keydown", "touchstart", "scroll"];
+    const init = async () => {
       const { initLenis, initParallax, initScrollProgressBar } = await import('../utils/scrollAnimations');
       if (!active) return;
       lenis = initLenis();
       initScrollProgressBar();
       initParallax();
-    }, 1200);
+      events.forEach((event) => window.removeEventListener(event, init));
+    };
+
+    events.forEach((event) => window.addEventListener(event, init, { once: true, passive: true }));
 
     return () => {
       active = false;
-      window.clearTimeout(timer);
+      events.forEach((event) => window.removeEventListener(event, init));
       lenis?.destroy?.();
     };
   }, []);
