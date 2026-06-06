@@ -30,12 +30,12 @@ function AnimatedRoutes() {
   useEffect(() => {
     if (isAdmin) return undefined;
     const load = () => setLoadChrome(true);
-    if ("requestIdleCallback" in window) {
-      const id = window.requestIdleCallback(load, { timeout: 2500 });
-      return () => window.cancelIdleCallback(id);
-    }
-    const timer = window.setTimeout(load, 1600);
-    return () => window.clearTimeout(timer);
+    const events = ["pointerdown", "keydown", "touchstart", "scroll"];
+    const onIntent = () => load();
+    events.forEach((event) => window.addEventListener(event, onIntent, { once: true, passive: true }));
+    return () => {
+      events.forEach((event) => window.removeEventListener(event, onIntent));
+    };
   }, [isAdmin]);
 
   return (

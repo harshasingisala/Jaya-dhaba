@@ -72,7 +72,7 @@ export default function HeroContainer() {
           <div className="mobile-hero-copy w-full max-w-lg px-6 py-10 md:px-14 md:py-16 text-left">
             <p
               className="mobile-hero-kicker uppercase tracking-[0.25em] text-[11px] font-bold mb-5"
-              style={{ color: "var(--gold-brand)", opacity: 0.85 }}
+              style={{ color: "#F6C453" }}
             >
               Est. 1995 · East Marredpally
             </p>
@@ -103,7 +103,7 @@ export default function HeroContainer() {
                 className="font-semibold text-sm px-8 py-3.5 rounded-full transition-all duration-300 hover:brightness-110 active:scale-95 shadow-lg"
                 style={{
                   backgroundColor: "var(--gold-brand)",
-                  color: "#fff",
+                  color: "#1A0F0A",
                   fontFamily: "var(--font-sans)",
                 }}
               >

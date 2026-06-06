@@ -26,8 +26,8 @@ const PageSkeleton = () => (
   </div>
 );
 
-function LazyOnView({ children, rootMargin = "450px 0px", minHeight = 300 }) {
-  const [visible, setVisible] = useState(false);
+function LazyOnView({ children, rootMargin = "450px 0px", minHeight = 300, initialVisible = false }) {
+  const [visible, setVisible] = useState(initialVisible);
   const ref = React.useRef(null);
 
   useEffect(() => {
@@ -226,9 +226,11 @@ export default function Home() {
         </section>
 
         <section id="menu">
-          <Suspense fallback={<PageSkeleton />}>
-            <MenuDisplay />
-          </Suspense>
+          <LazyOnView minHeight={720} initialVisible={hash === "#menu"}>
+            <Suspense fallback={<PageSkeleton />}>
+              <MenuDisplay />
+            </Suspense>
+          </LazyOnView>
         </section>
 
         <section id="gallery">

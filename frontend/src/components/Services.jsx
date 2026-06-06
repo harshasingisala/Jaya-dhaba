@@ -66,14 +66,14 @@ export default function Services() {
 
             <div className="px-8 space-y-4 relative z-10 -mt-12">
               <h3 className="text-3xl font-serif italic text-heritage-espresso leading-none">{s.title}</h3>
-              <p className="text-heritage-espresso/50 text-sm leading-relaxed font-medium font-sans">
+              <p className="text-heritage-espresso/75 text-sm leading-relaxed font-medium font-sans">
                 {s.desc}
               </p>
             </div>
 
             <div className="px-8 flex justify-center">
                <MagneticButton
-                 className="px-10 py-4 bg-heritage-espresso text-white rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-heritage-gold transition-colors font-sans w-full max-w-[200px]"
+                 className="min-h-12 px-10 py-4 bg-heritage-espresso text-white rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-heritage-gold transition-colors font-sans w-full max-w-[200px]"
                  onClick={openEnquiry}
                >
                  Enquire

@@ -12,11 +12,11 @@
     --cta-color: #C05621;
     --pattern-nav: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23c05621' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
     
-    --heritage-gold: #D4A017;
+    --heritage-gold: #8A5A00;
     --heritage-terracotta: #C05621;
     --heritage-espresso: #1A1A1A;
     --heritage-stone: #EAE5DD;
-    --gold-brand: #C9A050;
+    --gold-brand: #8A5A00;
     --brown-brand: #8B4513;
     --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
     --ease-in-out-circ: cubic-bezier(0.785, 0.135, 0.15, 0.86);

@@ -55,7 +55,7 @@ export default function SpecialOffers() {
                   </p>
                   <button
                     onClick={() => handleOrder(offer.items)}
-                    className="px-10 py-3 text-white text-sm font-bold tracking-wider uppercase transition-transform hover:scale-105"
+                    className="min-h-12 px-10 py-3 text-white text-sm font-bold tracking-wider uppercase transition-transform hover:scale-105"
                     style={{ backgroundColor: 'var(--gold-brand)' }}
                   >
                     Order Now
