@@ -2,12 +2,11 @@ import { lazy, Suspense, useEffect, useState } from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
 import SmoothScroll from "./components/SmoothScroll";
 import Home from "./pages/Home";
-import ProtectedRoute from "./components/ProtectedRoute";
 
 import Navbar from "./components/Navbar";
 
-const Admin = lazy(() => import("./pages/Admin"));
-const AdminLogin = lazy(() => import("./pages/Admin/Login"));
+const AdminRoute = lazy(() => import("./pages/AdminRoute"));
+const AdminLoginRoute = lazy(() => import("./pages/AdminLoginRoute"));
 const Checkout = lazy(() => import("./pages/Checkout"));
 const Reservation = lazy(() => import("./pages/Reservation"));
 const Track = lazy(() => import("./pages/Track"));
@@ -48,8 +47,8 @@ function AnimatedRoutes() {
             <Route path="/menu" element={<MenuRoute />} />
             <Route path="/about" element={<Home />} />
             <Route path="/contact" element={<Home />} />
-            <Route path="/admin/login" element={<AdminLogin />} />
-            <Route path="/admin/*" element={<ProtectedRoute allowedRoles={["admin", "owner", "staff", "manager"]}><Admin /></ProtectedRoute>} />
+            <Route path="/admin/login" element={<AdminLoginRoute />} />
+            <Route path="/admin/*" element={<AdminRoute />} />
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/reservation" element={<Reservation />} />
             <Route path="/reservations" element={<Reservation />} />
