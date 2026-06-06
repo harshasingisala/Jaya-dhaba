@@ -22,7 +22,7 @@ const Testimonials = lazy(() => import("../components/Testimonials"));
 const PageSkeleton = () => (
   <div className="py-20 flex flex-col items-center justify-center space-y-6 min-h-[300px]">
     <Loader2 className="animate-spin text-heritage-gold" size={36} />
-    <p className="text-[10px] font-black uppercase tracking-[0.4em] text-heritage-espresso/30">Loading Heritage Experience...</p>
+    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-heritage-espresso/70">Loading Heritage Experience...</p>
   </div>
 );
 

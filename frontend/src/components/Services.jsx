@@ -52,7 +52,7 @@ export default function Services() {
     <section ref={containerRef} className="py-32 px-6 md:px-20 bg-heritage-stone/50 overflow-hidden relative">
       <div className="max-w-7xl mx-auto text-center mb-20 space-y-6">
         <h2 className="text-5xl md:text-6xl font-serif italic text-heritage-espresso leading-tight">Bespoke Experiences</h2>
-        <p className="text-heritage-espresso/40 text-[11px] font-black uppercase tracking-[0.4em] font-sans">Crafting Memories Beyond the Plate</p>
+        <p className="text-heritage-espresso/70 text-[11px] font-black uppercase tracking-[0.3em] font-sans">Crafting Memories Beyond the Plate</p>
       </div>
       
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-12">

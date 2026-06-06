@@ -120,6 +120,8 @@ export default function Navbar() {
           className="relative z-[10000] lg:hidden flex min-h-[44px] min-w-[44px] flex-col items-center justify-center gap-1.5 p-2"
           onClick={() => setMobileOpen((v) => !v)}
           aria-label="Toggle menu"
+          aria-expanded={mobileOpen}
+          aria-controls="mobile-navigation"
         >
           <span className={`block h-0.5 w-6 transition-all duration-300 ${mobileOpen ? "rotate-45 translate-y-2" : ""}`} style={{ backgroundColor: "var(--brown-brand)" }} />
           <span className={`block h-0.5 w-6 transition-all duration-300 ${mobileOpen ? "opacity-0" : ""}`} style={{ backgroundColor: "var(--brown-brand)" }} />
@@ -130,6 +132,7 @@ export default function Navbar() {
       {/* ── MOBILE DRAWER ── */}
       {mobileOpen && (
           <div
+            id="mobile-navigation"
             className="lg:hidden border-t"
             style={{
               backgroundColor: "var(--bg-primary)",

@@ -20,7 +20,7 @@ export default function Testimonials() {
             <div className="flex items-center gap-3">
                <span className="text-3xl font-serif italic text-heritage-espresso">4.9/5</span>
                <div className="h-4 w-px bg-heritage-espresso/10" />
-               <span className="text-[10px] font-black uppercase tracking-[0.4em] text-heritage-espresso/30">Google Heritage Rating</span>
+               <span className="text-[10px] font-black uppercase tracking-[0.3em] text-heritage-espresso/70">Google Heritage Rating</span>
             </div>
          </div>
          <h2 className="text-4xl md:text-5xl font-serif italic text-heritage-espresso leading-tight">Voices of Heritage</h2>
@@ -41,7 +41,7 @@ export default function Testimonials() {
               {rev.text}
             </p>
             <div className="h-px w-8 bg-heritage-gold/40 mb-4" />
-            <span className="text-[10px] font-black uppercase tracking-[0.4em] text-heritage-espresso/30">{rev.author}</span>
+            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-heritage-espresso/70">{rev.author}</span>
           </motion.div>
         ))}
       </div>

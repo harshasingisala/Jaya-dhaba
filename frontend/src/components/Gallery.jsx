@@ -29,7 +29,7 @@ export default function Gallery() {
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-baseline gap-6 mb-16 px-2">
         <h2 className="text-5xl md:text-6xl font-serif italic text-heritage-espresso leading-none">Visual Palette</h2>
         <div className="flex-1 h-px bg-heritage-espresso/10 hidden md:block" />
-        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-heritage-espresso/30">From the Hearth</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-heritage-espresso/70">From the Hearth</p>
       </div>
 
       <div ref={containerRef} className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">

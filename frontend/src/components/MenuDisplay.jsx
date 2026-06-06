@@ -65,7 +65,7 @@ export default function MenuDisplay() {
   if (loading) return (
     <div className="py-40 flex flex-col items-center justify-center space-y-6">
       <Loader2 className="animate-spin text-heritage-gold" size={48} />
-      <p className="text-[10px] font-black uppercase tracking-[0.4em] text-heritage-espresso/30">Consulting the Vault...</p>
+      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-heritage-espresso/70">Consulting the Vault...</p>
     </div>
   );
 
@@ -78,7 +78,7 @@ export default function MenuDisplay() {
         <div className="flex flex-col md:flex-row items-baseline gap-4 md:gap-6 border-b border-heritage-espresso/5 pb-8 md:pb-12">
           <h2 className="text-5xl md:text-8xl font-serif italic text-heritage-espresso leading-none">{t('menu')}</h2>
           <div className="flex-1 h-px bg-heritage-espresso/10 hidden md:block" />
-          <p className="text-[11px] font-black uppercase tracking-[0.5em] text-heritage-espresso/20">Secunderabad Selection</p>
+          <p className="text-[11px] font-black uppercase tracking-[0.35em] text-heritage-espresso/70">Secunderabad Selection</p>
         </div>
 
         {error && (
@@ -94,7 +94,7 @@ export default function MenuDisplay() {
             <button
               key={cat}
               onClick={() => setActiveCategory(cat)}
-              className={`shrink-0 px-5 py-3 md:px-10 md:py-4 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border ${activeCategory === cat ? 'bg-heritage-espresso text-white border-heritage-espresso shadow-2xl' : 'bg-white/50 text-heritage-espresso/40 border-heritage-espresso/5 hover:bg-white'}`}
+              className={`shrink-0 min-h-11 px-5 py-3 md:px-10 md:py-4 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border ${activeCategory === cat ? 'bg-heritage-espresso text-white border-heritage-espresso shadow-2xl' : 'bg-white/80 text-heritage-espresso/75 border-heritage-espresso/10 hover:bg-white'}`}
             >
               {cat}
             </button>
@@ -185,7 +185,7 @@ function MenuItemCard({ item, onAdd }) {
         {portionOptions.length > 1 && (
           <div className="flex p-1 bg-heritage-stone/30 rounded-2xl border border-heritage-espresso/5">
             {portionOptions.map(portion => (
-              <button key={portion.id} onClick={(e) => { e.stopPropagation(); setSelectedSize(portion.id); }} className={`flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedSize === portion.id ? 'bg-white text-heritage-espresso shadow-md' : 'text-heritage-espresso/30'}`}>
+              <button key={portion.id} onClick={(e) => { e.stopPropagation(); setSelectedSize(portion.id); }} className={`flex-1 min-h-11 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedSize === portion.id ? 'bg-white text-heritage-espresso shadow-md' : 'text-heritage-espresso/75'}`}>
                 {portion.label} • ₹{portion.price}
               </button>
             ))}
@@ -195,7 +195,7 @@ function MenuItemCard({ item, onAdd }) {
         <button
           onClick={handleAdd}
           disabled={added || item.available === false}
-          className={`w-full py-4 md:py-5 rounded-[1.5rem] md:rounded-[2rem] text-[10px] font-black uppercase tracking-[0.2em] md:tracking-[0.3em] transition-all flex items-center justify-center gap-3 md:gap-4 ${added ? 'bg-green-500 text-white' : item.available === false ? 'bg-heritage-espresso/10 text-heritage-espresso/20 cursor-not-allowed' : 'bg-heritage-gold text-white hover:bg-heritage-espresso shadow-xl shadow-heritage-gold/20'}`}
+          className={`w-full min-h-12 py-4 md:py-5 rounded-[1.5rem] md:rounded-[2rem] text-[10px] font-black uppercase tracking-[0.2em] md:tracking-[0.3em] transition-all flex items-center justify-center gap-3 md:gap-4 ${added ? 'bg-green-500 text-white' : item.available === false ? 'bg-heritage-espresso/10 text-heritage-espresso/75 cursor-not-allowed' : 'bg-heritage-gold text-white hover:bg-heritage-espresso shadow-xl shadow-heritage-gold/20'}`}
         >
           {added ? <><CheckCircle2 size={16} /> Added</> : <><ShoppingBag size={16} /> Add to Order</>}
         </button>

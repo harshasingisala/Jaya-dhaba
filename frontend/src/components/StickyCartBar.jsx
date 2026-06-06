@@ -9,9 +9,11 @@ const StickyCartBar = () => {
   return (
     <>
       {cartCount > 0 && (
-        <div
+        <button
+          type="button"
           onClick={() => setCartOpen(true)}
-          className="mobile-cart-bar fixed bottom-24 md:bottom-8 left-1/2 -translate-x-1/2 z-[100] w-[calc(100%-1rem)] max-w-lg cursor-pointer group"
+          className="mobile-cart-bar fixed bottom-24 md:bottom-8 left-1/2 -translate-x-1/2 z-[100] w-[calc(100%-1rem)] max-w-lg cursor-pointer group text-left"
+          aria-label={`Open cart with ${cartCount} ${cartCount === 1 ? 'item' : 'items'}, total ${total} rupees`}
         >
           <div className="glass p-3 md:p-4 rounded-[1.5rem] md:rounded-full border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex items-center justify-between gap-3 group-hover:border-heritage-gold/30 transition-all duration-500 overflow-hidden relative">
             
@@ -23,7 +25,7 @@ const StickyCartBar = () => {
                 <ShoppingBag size={20} className="text-white" />
               </div>
               <div>
-                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-heritage-espresso/30 mb-0.5">Your Tray</div>
+                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-heritage-espresso/70 mb-0.5">Your Tray</div>
                 <div className="flex items-center gap-3">
                    <span className="text-sm font-black text-heritage-espresso">{cartCount} {cartCount === 1 ? 'Item' : 'Items'}</span>
                    <div className="w-1 h-1 rounded-full bg-heritage-espresso/10" />
@@ -34,11 +36,11 @@ const StickyCartBar = () => {
 
             <div className="flex items-center gap-2 md:gap-4 bg-heritage-espresso/5 group-hover:bg-heritage-gold transition-colors duration-500 px-4 md:px-6 py-3 rounded-full relative z-10 shrink-0">
                <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-heritage-espresso group-hover:text-white transition-colors duration-500">View</span>
-               <ChevronRight size={16} className="text-heritage-espresso/20 group-hover:text-white transition-colors duration-500" />
+               <ChevronRight size={16} className="text-heritage-espresso/70 group-hover:text-white transition-colors duration-500" />
             </div>
 
           </div>
-        </div>
+        </button>
       )}
     </>
   );
