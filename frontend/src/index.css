@@ -98,6 +98,26 @@
     border-radius: 9999px;
     transition: all 0.3s;
   }
+
+  .premium-button {
+    position: relative;
+    overflow: hidden;
+    transform: translateZ(0);
+  }
+
+  .premium-button::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(110deg, transparent 0%, rgba(255,255,255,0.24) 48%, transparent 56%);
+    transform: translateX(-120%);
+    transition: transform 0.7s var(--ease-out-expo);
+    pointer-events: none;
+  }
+
+  .premium-button:hover::after {
+    transform: translateX(120%);
+  }
 }
 
 ::-webkit-scrollbar { width: 6px; }
@@ -118,6 +138,90 @@
 [data-delay="200"]{transition-delay:0.2s}
 [data-delay="300"]{transition-delay:0.3s}
 [data-delay="400"]{transition-delay:0.4s}
+
+@keyframes premiumRise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes premiumImageSettle {
+  from {
+    transform: scale(1.045);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+@keyframes premiumOverlayBloom {
+  from {
+    opacity: 0.72;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes premiumDrawerIn {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -10px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.premium-hero-card .hero-bg {
+  animation: premiumImageSettle 900ms var(--ease-out-expo) both;
+}
+
+.premium-hero-overlay {
+  animation: premiumOverlayBloom 700ms ease-out both;
+}
+
+.premium-hero-kicker,
+.premium-hero-title,
+.premium-hero-subtitle,
+.premium-hero-actions,
+.premium-menu-group,
+.premium-menu-card {
+  animation: premiumRise 560ms var(--ease-out-expo) both;
+}
+
+.premium-hero-title { animation-delay: 60ms; }
+.premium-hero-subtitle { animation-delay: 110ms; }
+.premium-hero-actions { animation-delay: 160ms; }
+
+.premium-mobile-drawer {
+  animation: premiumDrawerIn 260ms var(--ease-out-expo) both;
+}
+
+.premium-menu-card {
+  will-change: transform, opacity;
+}
+
+.premium-menu-card:hover {
+  transform: translateY(-3px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
+  }
+}
 
 @media (max-width: 640px) {
   html {

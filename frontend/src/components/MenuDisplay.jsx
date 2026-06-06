@@ -104,15 +104,15 @@ export default function MenuDisplay() {
         {/* GRID */}
         <div className="space-y-20 md:space-y-32">
           {Object.entries(groupedMenu).map(([category, items]) => (
-            <div key={category} className="space-y-8 md:space-y-12">
+            <div key={category} className="premium-menu-group space-y-8 md:space-y-12">
               <div className="flex items-center gap-6">
                 <h3 className="text-3xl md:text-4xl font-serif italic text-heritage-gold whitespace-nowrap">{category}</h3>
                 <div className="w-full h-px bg-gradient-to-r from-heritage-gold/20 to-transparent" />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-10 md:gap-y-16">
-                {items.map(item => (
-                  <MenuItemCard key={item.id} item={item} onAdd={addToCart} />
+                {items.map((item, index) => (
+                  <MenuItemCard key={item.id} item={item} index={index} onAdd={addToCart} />
                 ))}
               </div>
             </div>
@@ -123,7 +123,7 @@ export default function MenuDisplay() {
   );
 }
 
-function MenuItemCard({ item, onAdd }) {
+function MenuItemCard({ item, index = 0, onAdd }) {
   const { t } = useApp();
   const portionOptions = getPortionOptions(item);
   const [selectedSize, setSelectedSize] = useState(getDefaultPortion(item)?.id || 'regular');
@@ -141,7 +141,8 @@ function MenuItemCard({ item, onAdd }) {
 
   return (
     <div
-      className="mobile-menu-card group space-y-4 md:space-y-6"
+      className="mobile-menu-card premium-menu-card group space-y-4 md:space-y-6"
+      style={{ animationDelay: `${Math.min(index, 8) * 45}ms` }}
     >
       <div className="relative aspect-[4/3] md:aspect-square rounded-[1.5rem] md:rounded-[3rem] overflow-hidden bg-heritage-stone shadow-xl border border-heritage-espresso/5">
         <ResponsiveImage

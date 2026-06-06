@@ -133,7 +133,7 @@ export default function Navbar() {
       {mobileOpen && (
           <div
             id="mobile-navigation"
-            className="lg:hidden border-t"
+            className="premium-mobile-drawer lg:hidden border-t"
             style={{
               backgroundColor: "var(--bg-primary)",
               borderColor: "var(--brown-brand)10",

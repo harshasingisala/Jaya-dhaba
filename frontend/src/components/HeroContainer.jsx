@@ -34,7 +34,7 @@ export default function HeroContainer() {
     >
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━ HERO CARD ━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <div
-        className="mobile-hero-card relative w-full overflow-hidden"
+        className="mobile-hero-card premium-hero-card relative w-full overflow-hidden"
         style={{
           borderRadius: "32px",
           minHeight: "clamp(300px, 52vw, 520px)",
@@ -57,7 +57,7 @@ export default function HeroContainer() {
 
         {/* Dark gradient overlay — right-to-left so text is readable */}
         <div
-          className="hero-readable-overlay absolute inset-0"
+          className="hero-readable-overlay premium-hero-overlay absolute inset-0"
           style={{
             background:
               "linear-gradient(to right, transparent 0%, transparent 35%, rgba(20,10,4,0.65) 55%, rgba(20,10,4,0.82) 100%)",
@@ -69,16 +69,16 @@ export default function HeroContainer() {
           className="relative z-10 h-full flex items-center justify-end"
           style={{ minHeight: "inherit" }}
         >
-          <div className="mobile-hero-copy w-full max-w-lg px-6 py-10 md:px-14 md:py-16 text-left">
+          <div className="mobile-hero-copy premium-hero-copy w-full max-w-lg px-6 py-10 md:px-14 md:py-16 text-left">
             <p
-              className="mobile-hero-kicker uppercase tracking-[0.25em] text-[11px] font-bold mb-5"
+              className="mobile-hero-kicker premium-hero-kicker uppercase tracking-[0.25em] text-[11px] font-bold mb-5"
               style={{ color: "#F6C453" }}
             >
               Est. 1995 · East Marredpally
             </p>
 
             <h1
-              className="leading-[1.1] font-bold text-white mb-5"
+              className="premium-hero-title leading-[1.1] font-bold text-white mb-5"
               style={{
                 fontFamily: "var(--font-serif)",
                 fontSize: "clamp(2rem, 4.5vw, 3.4rem)",
@@ -91,16 +91,16 @@ export default function HeroContainer() {
             </h1>
 
             <p
-              className="mobile-hero-subtitle text-white/70 text-base md:text-lg font-normal mb-8 leading-relaxed"
+              className="mobile-hero-subtitle premium-hero-subtitle text-white/70 text-base md:text-lg font-normal mb-8 leading-relaxed"
               style={{ fontFamily: "var(--font-sans)" }}
             >
               Experience the soul of East Marredpally.
             </p>
 
-            <div className="mobile-hero-actions flex flex-wrap gap-3 sm:gap-4">
+            <div className="mobile-hero-actions premium-hero-actions flex flex-wrap gap-3 sm:gap-4">
               <button
                 onClick={scrollToMenu}
-                className="font-semibold text-sm px-8 py-3.5 rounded-full transition-all duration-300 hover:brightness-110 active:scale-95 shadow-lg"
+                className="premium-button font-semibold text-sm px-8 py-3.5 rounded-full transition-all duration-300 hover:brightness-110 active:scale-95 shadow-lg"
                 style={{
                   backgroundColor: "var(--gold-brand)",
                   color: "#fff",
@@ -111,7 +111,7 @@ export default function HeroContainer() {
               </button>
               <button
                 onClick={() => navigate("/reservation")}
-                className="font-semibold text-sm px-8 py-3.5 rounded-full transition-all duration-300 active:scale-95 border border-white/25 text-white hover:bg-white/10"
+                className="premium-button font-semibold text-sm px-8 py-3.5 rounded-full transition-all duration-300 active:scale-95 border border-white/25 text-white hover:bg-white/10"
                 style={{ fontFamily: "var(--font-sans)" }}
               >
                 Book a Table
