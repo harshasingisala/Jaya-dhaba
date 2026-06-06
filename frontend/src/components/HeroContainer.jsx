@@ -103,7 +103,7 @@ export default function HeroContainer() {
                 className="font-semibold text-sm px-8 py-3.5 rounded-full transition-all duration-300 hover:brightness-110 active:scale-95 shadow-lg"
                 style={{
                   backgroundColor: "var(--gold-brand)",
-                  color: "#1A0F0A",
+                  color: "#fff",
                   fontFamily: "var(--font-sans)",
                 }}
               >

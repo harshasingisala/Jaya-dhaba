@@ -13,7 +13,7 @@ export default function Footer() {
               <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--text-main)]/70">Heritage Excellence Since 1995</p>
               <div className="flex items-center gap-3">
                  <div className="px-3 py-1 border border-green-600/30 rounded-md">
-                    <span className="text-[8px] font-black text-green-600 uppercase tracking-widest">100% Halal Verified</span>
+                    <span className="text-[8px] font-black text-green-800 uppercase tracking-widest">100% Halal Verified</span>
                  </div>
               </div>
            </div>
@@ -22,7 +22,7 @@ export default function Footer() {
               <div className="space-y-2">
                  <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--text-main)]">Timing & Delivery</h3>
                  <p className="text-sm text-[var(--text-main)]/75 font-medium">Dining: 11:00 AM - 11:00 PM</p>
-                 <p className="text-sm text-[var(--text-accent)] font-bold">Free Home Delivery on Min. ₹300 Order</p>
+                 <p className="text-sm text-[var(--text-main)] font-bold">Free Home Delivery on Min. ₹300 Order</p>
               </div>
               <div className="space-y-2">
                  <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--text-main)]">Contact</h3>
@@ -35,7 +35,7 @@ export default function Footer() {
               <p className="text-sm text-[var(--text-main)]/75 leading-relaxed font-medium max-w-xs">
                  East Marredpally, Secunderabad, Telangana 500026
               </p>
-              <a href="https://share.google/6efBsQaOasTY9Tnvt" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-[9px] font-black uppercase tracking-widest text-[var(--text-accent)] border-b border-[var(--text-accent)]/20">Heritage Exclusive Since 2020</a>
+              <a href="https://share.google/6efBsQaOasTY9Tnvt" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-[9px] font-black uppercase tracking-widest text-[var(--text-main)] border-b border-[var(--text-main)]/30">Heritage Exclusive Since 2020</a>
            </div>
         </div>
 
