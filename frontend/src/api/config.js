@@ -42,9 +42,23 @@ function normalizeApiBaseUrl(value) {
   return baseUrl;
 }
 
-export const API_BASE_URL = normalizeApiBaseUrl(
-  import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || productionApiFallback(),
-);
+// In production, always resolve to the correct API domain based on the actual
+// window hostname. This is the authoritative override — it prevents stale or
+// misconfigured VITE_API_URL env vars (e.g. pointing at the raw Render URL)
+// from breaking the live site on www.jayadhaba.online.
+function resolveApiBaseUrl() {
+  if (import.meta.env.PROD && typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (host === 'jayadhaba.online' || host === 'www.jayadhaba.online') {
+      return 'https://api.jayadhaba.online';
+    }
+  }
+  return normalizeApiBaseUrl(
+    import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || productionApiFallback(),
+  );
+}
+
+export const API_BASE_URL = resolveApiBaseUrl();
 export const USE_DEV_CUSTOMER_FALLBACKS =
   import.meta.env.DEV && import.meta.env.VITE_USE_DEV_CUSTOMER_FALLBACKS === 'true';
 
