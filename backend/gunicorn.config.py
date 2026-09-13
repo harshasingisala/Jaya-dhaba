@@ -19,7 +19,7 @@ loglevel = os.environ.get("GUNICORN_LOG_LEVEL", "warning")
 
 max_requests = int(os.environ.get("GUNICORN_MAX_REQUESTS", "1000"))
 max_requests_jitter = int(os.environ.get("GUNICORN_MAX_REQUESTS_JITTER", "100"))
-preload_app = True
+preload_app = False
 
 if os.path.isdir("/dev/shm"):  # nosec B108
     worker_tmp_dir = "/dev/shm"  # nosec B108
